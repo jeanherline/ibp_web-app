@@ -1,0 +1,91 @@
+.sidebar {
+  width: 250px;
+  background-color: #ececec;
+  color: rgb(22, 22, 22);
+  padding: 20px;
+  height: 100vh;
+  box-shadow: 5px 0 5px rgba(0, 0, 0, 0.1);
+  border-radius: 30px;
+}
+
+.sidebar .logo-container {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.sidebar .logo {
+  width: 90px; /* Specific to the sidebar */
+  height: auto;
+}
+
+.sidebar .organization-name h1 {
+  font-size: 18px;
+  margin-bottom: 30px;
+}
+
+.sidebar .nav-menu ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar .nav-menu li {
+  margin-bottom: 15px;
+}
+
+.sidebar .nav-menu a {
+  text-decoration: none;
+  color: inherit;
+  font-size: 16px;
+  display: block;
+  padding: 12px;
+  border-radius: 4px;
+}
+
+.sidebar .nav-menu .active {
+  background-color: #580049;
+  color: #ffffff;
+}
+
+.sidebar .nav-menu a:hover {
+  background-color: #BB8FCE;
+  color: #111111;
+}
+
+.sidebar .footer {
+  text-align: center;
+  font-size: 12px;
+  color: #292929;
+  position: absolute;
+  bottom: 20px;
+  width: 210px;
+}
+
+.top-right-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background-color: #ffffff;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.top-right-container .member-type {
+  font-size: 16px;
+  color: #580049;
+}
+
+.top-right-container .icon {
+  font-size: 26px;
+  color: #580049;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.top-right-container .icon:hover {
+  transform: scale(1.2);
+}
