@@ -47,22 +47,67 @@ const getAppointments = async (
       doc.data().applicantProfile.contactNumber.includes(searchText)
   );
 
-  return filtered.map((doc) => ({
-    id: doc.id,
-    ...doc.data().applicantProfile,
-    ...doc.data().employmentProfile,
-    ...doc.data().legalAssistanceRequested,
-    ...doc.data().uploadedImages,
-
-    createdDate: doc.data().createdDate,
-    appointmentStatus: doc.data().appointmentStatus,
-    controlNumber: doc.data().controlNumber,
-  }));
+  return filtered.map((doc) => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data.applicantProfile,
+      ...data.employmentProfile,
+      ...data.legalAssistanceRequested,
+      ...data.uploadedImages,
+      createdDate: data.createdDate,
+      appointmentStatus: data.appointmentStatus,
+      controlNumber: data.controlNumber,
+      // Ensure these fields are included
+      appointmentDate: data.appointmentDate,
+      clientEligibility: data.clientEligibility,
+    };
+  });
 };
 
 const updateAppointment = async (appointmentId, updatedData) => {
   const appointmentRef = doc(fs, "appointments", appointmentId);
   await updateDoc(appointmentRef, updatedData);
 };
+
+
+// In src/Config/FirebaseServices.js or wherever your Firebase utils are located
+export const getBookedSlots = async () => {
+  const appointmentsRef = collection(fs, 'appointments');
+  const q = query(appointmentsRef, where('appointmentStatus', '==', 'approved')); // Assuming 'approved' appointments are booked
+  const querySnapshot = await getDocs(q);
+
+  const bookedSlots = [];
+  querySnapshot.forEach(doc => {
+    const appointmentData = doc.data();
+    if (appointmentData.appointmentDate) {
+      bookedSlots.push(appointmentData.appointmentDate.toDate());
+    }
+  });
+
+  return bookedSlots;
+};
+
+
+export const getCalendar = async () => {
+  const appointmentsRef = collection(fs, 'appointments');
+  const q = query(appointmentsRef, where('appointmentStatus', '==', 'approved')); // Assuming 'approved' appointments are booked
+  const querySnapshot = await getDocs(q);
+
+  const bookedSlots = [];
+  querySnapshot.forEach(doc => {
+    const data = doc.data();
+    if (data.appointmentDate) {
+      bookedSlots.push({
+        appointmentDate: data.appointmentDate.toDate(), // Convert Firestore Timestamp to JavaScript Date
+        fullName: data.applicantProfile.fullName,       // Fetch fullName from applicantProfile
+        contactNumber: data.applicantProfile.contactNumber // Fetch contactNumber from applicantProfile
+      });
+    }
+  });
+
+  return bookedSlots;
+};
+
 
 export { getAppointments, updateAppointment };

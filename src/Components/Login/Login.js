@@ -29,9 +29,9 @@ function Login() {
         const userData = userSnap.data();
         if (userData.user_status === 'active') {
           if (userData.member_type === 'lawyer') {
-            navigate('/lawyer_dashboard');
+            navigate('/dashboard');
           } else if (userData.member_type === 'admin') {
-            navigate('/admin_dashboard');
+            navigate('/dashboard');
           } else {
             setError('Unauthorized user type');
           }

@@ -1,4 +1,3 @@
-
 /* appointment.css */
 .dashboard-container {
   display: flex;
@@ -161,66 +160,160 @@ button:disabled {
   background-color: #c82333;
 }
 
-/* Container holding the client eligibility form */
+/* Specific styles for the client eligibility form */
 .client-eligibility {
-  max-width: 600px; /* Limits the width of the form */
-  margin: 20px auto; /* Centers the form and provides some margin around */
-  padding: 20px; /* Padding inside the container */
-  background: #fff; /* White background */
-  border-radius: 8px; /* Rounded corners */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
-  font-family: "Arial", sans-serif; /* Font style */
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+  width: auto;
 }
 
-/* Styling headings within the form */
 .client-eligibility h2 {
-  color: #333333; /* Dark grey color for headings */
-  margin-bottom: 15px; /* Space below the heading */
+  color: #333;
+  margin-bottom: 20px;
 }
 
-/* General text and labels styling */
-.client-eligibility p,
 .client-eligibility label {
-  color: #666; /* Light grey color for text */
-  font-size: 14px; /* Font size for readability */
+  display: block;
+  margin: 10px 0;
 }
 
-/* Styling for input types: radio and checkbox */
-.client-eligibility input[type="radio"],
-.client-eligibility input[type="checkbox"] {
-  margin-right: 10px; /* Space between the checkbox/radio and the label */
-}
-
-/* Input and textarea field styling */
 .client-eligibility input[type="text"],
 .client-eligibility textarea {
-  width: 97%; /* Full width */
-  padding: 8px; /* Padding inside the input/textarea */
-  margin-top: 5px; /* Margin on top for spacing */
-  margin-bottom: 15px; /* Margin on bottom for spacing */
-  border: 1px solid #ccc; /* Light grey border */
-  border-radius: 4px; /* Rounded corners for the input/textarea */
+  width: calc(100% - 20px);
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
 }
 
-/* Button styling */
-.client-eligibility button {
-  background-color: #4caf50; /* Green background */
-  color: white; /* White text */
-  border: none; /* No border */
-  padding: 10px 20px; /* Padding inside the button */
-  border-radius: 4px; /* Rounded corners */
-  cursor: pointer; /* Cursor indicates clickable */
-  display: block; /* Block display to fit the width */
-  width: 100%; /* Full width */
+/* Styling for React DatePicker */
+.react-datepicker {
+  font-size: 16px;
+  border: none;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 350px; /* Adjust this value as needed */
 }
 
-.client-eligibility button:hover {
-  background-color: #45a049; /* Slightly darker green on hover */
+.react-datepicker__header {
+  background-color: #f2f2f2;
+  border-bottom: none;
 }
 
-/* Responsive adjustments */
+.react-datepicker__day-name,
+.react-datepicker__day,
+.react-datepicker__time-name {
+  color: #666;
+  width: 2.5rem;
+  line-height: 2.5rem;
+  margin: 0.166rem;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-range,
+.react-datepicker__day--in-selecting-range {
+  background-color: #4caf50;
+  color: white;
+}
+
+.react-datepicker__day--disabled {
+  color: #ccc;
+}
+
+.react-datepicker__time-container
+  .react-datepicker__time
+  .react-datepicker__time-box
+  ul.react-datepicker__time-list {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.react-datepicker__time-container
+  .react-datepicker__time
+  .react-datepicker__time-box.react-datepicker__time-list-item--disabled {
+  opacity: 0.5; /* make disabled times appear faded */
+  cursor: not-allowed; /* change cursor to indicate unavailability */
+}
+
+.react-datepicker__time-list-item--selected {
+  background-color: #4caf50;
+  color: white;
+}
+
+.booked-time {
+  background-color: #d9534f; /* Red color to indicate the slot is booked */
+  color: white;
+  pointer-events: none; /* Make the time unclickable */
+}
+
+.fully-booked-day {
+  background-color: red !important;
+  pointer-events: none;
+}
+
+/* Adjustments for mobile responsiveness */
 @media (max-width: 768px) {
-  .client-eligibility {
-    padding: 10px; /* Reduced padding on smaller screens */
+  .dashboard-container {
+    flex-direction: column;
   }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .client-eligibility {
+    padding: 10px;
+  }
+}
+
+.preview-image {
+  width: 100px; /* Set a smaller width or adjust according to your needs */
+  height: auto;
+  cursor: pointer;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+}
+
+.disabled-day {
+  cursor: not-allowed;
+}
+
+/* Appointments.css */
+.dashboard-container {
+  display: flex;
+}
+
+.main-content {
+  flex-grow: 1;
+  padding: 20px;
+}
+
+.appointment-calendar {
+  margin-top: 80px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
 }
