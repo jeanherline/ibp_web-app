@@ -1,22 +1,23 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './Components/Login/Login';
-import LawyerDashboard from './Components/Dashboard/LawyerDashboard';
-import Appointments from './Components/Appointments/Appointments'; // Ensure all used components are imported
-import { NameProvider } from './Components/SideNavBar/NameContext';
+import Dashboard from './Components/Dashboard/Dashboard';
+import Appointments from './Components/Appointments/Appointments'; 
+import ApptsCalendar from './Components/Appointments/ApptsCalendar';
+import Profile from './Components/Profile/Profile';// Ensure all used components are imported
 import './App.css';
 
 function App() {
   return (
     <Router>
-      <NameProvider>
         <Routes>
           <Route path="/" element={<Login />} />
-          <Route path="/lawyer_dashboard" element={<LawyerDashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/appointments" element={<Appointments />} />
+          <Route path="/apptsCalendar" element={<ApptsCalendar />} />
+          <Route path="/profile" element={<Profile />} />
           {/* Ensure all routes are properly declared */}
         </Routes>
-      </NameProvider>
     </Router>
   );
 }

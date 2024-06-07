@@ -13,7 +13,8 @@ import {
     orderBy,
     updateDoc  // Import orderBy here
 } from 'firebase/firestore';
-import { getAuth, onAuthStateChanged } from 'firebase/auth'; // Import onAuthStateChanged
+
+import { getAuth, signOut } from 'firebase/auth'; // Import onAuthStateChanged
 import { getStorage } from 'firebase/storage';
 
 // Your web app's Firebase configuration
@@ -34,8 +35,10 @@ const auth = getAuth(app);
 const fs = getFirestore(app);
 const storage = getStorage(app);
 
+
+
 export { 
     app, auth, fs, storage, 
     doc, collection, query, where, getDocs, 
-    limit, startAfter, orderBy, updateDoc // Make sure to export updateDoc here
+    limit, startAfter, orderBy, updateDoc, signOut // Make sure to export updateDoc here
 };

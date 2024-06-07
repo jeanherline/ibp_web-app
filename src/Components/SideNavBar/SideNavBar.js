@@ -1,57 +1,91 @@
-import React, { useEffect } from "react";
-import { useName } from "./NameContext";
+import React, { useState, useEffect } from "react";
+import { Tooltip } from "react-tooltip";
 import { useNavigate, NavLink, useLocation } from "react-router-dom";
-import { auth, doc, fs } from "../../Config/Firebase";
+import { auth, doc, fs, signOut } from "../../Config/Firebase";
 import { getDoc } from "firebase/firestore";
+import "react-tooltip/dist/react-tooltip.css"; // Make sure to import the CSS for react-tooltip
 import "./SideNavBar.css";
+import { Link } from "react-router-dom";
 
 function SideNavBar() {
-  const { display_name, setName } = useName(); // Corrected from disply_name to display_name
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    fetchNameTypeFromFirebase();
-  }, []);
-
-  const fetchNameTypeFromFirebase = async () => {
-    try {
-      const user = auth.currentUser;
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        const userDocRef = doc(fs, "users", user.uid);
-        const userDocSnapshot = await getDoc(userDocRef);
-        if (userDocSnapshot.exists()) {
-          const userData = userDocSnapshot.data();
-          if (userData && userData.display_name) {
-            const capitalizedNameType = capitalizeFirstLetter(userData.display_name);
-            setName(capitalizedNameType);
+        try {
+          const userDocRef = doc(fs, "users", user.uid);
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            setUserData(userDoc.data());
+          } else {
+            console.log("User document does not exist");
           }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
         }
       }
-    } catch (error) {
-      console.error("Error fetching display name:", error);
-    }
-  };
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   const capitalizeFirstLetter = (str) => {
     return str.charAt(0).toUpperCase() + str.slice(1);
   };
 
   const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      navigate("/");
-    } catch (error) {
-      console.error("Error logging out:", error);
-    }
+    await signOut(auth);
+    window.location.replace("/");
   };
 
   return (
     <>
       <div className="top-right-container">
-        <div className="member-type">Kumusta, {display_name}</div>
-        <span className="material-icons icon">help_outline</span>
-        <span className="material-icons icon" onClick={handleLogout}>exit_to_app</span>
+        {loading ? (
+          <div className="member-type">Loading...</div>
+        ) : userData ? (
+          <div className="member-type">
+            Kumusta,{" "}
+            {userData.member_type === "lawyer"
+              ? `Atty. ${capitalizeFirstLetter(userData.display_name)}`
+              : userData.member_type === "admin"
+              ? `Admin ${capitalizeFirstLetter(userData.display_name)}`
+              : capitalizeFirstLetter(userData.display_name)}
+          </div>
+        ) : (
+          <div className="member-type">User data not available</div>
+        )}
+        <Link to="/profile">
+          <span
+            className="material-icons icon"
+            data-tooltip-id="tooltip"
+            data-tooltip-content="Profile"
+          >
+            person
+          </span>
+        </Link>
+
+        <span
+          className="material-icons icon"
+          data-tooltip-id="tooltip"
+          data-tooltip-content="Help"
+        >
+          help_outline
+        </span>
+        <span
+          className="material-icons icon"
+          onClick={handleLogout}
+          data-tooltip-id="tooltip"
+          data-tooltip-content="Logout"
+        >
+          exit_to_app
+        </span>
       </div>
 
       <div className="sidebar">
@@ -63,28 +97,50 @@ function SideNavBar() {
           />
         </div>
         <div className="organization-name">
-          <center><h1>IBP - Bulacan Chapter</h1></center>
+          <center>
+            <h1>IBP - Bulacan Chapter</h1>
+          </center>
         </div>
         <nav className="nav-menu">
           <ul>
             <li>
-              <NavLink to="/lawyer_dashboard" className={({ isActive }) => isActive ? "active" : ""}>Dashboard</NavLink>
+              <NavLink
+                to="/dashboard"
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
+                Dashboard
+              </NavLink>
             </li>
             <li>
-              <NavLink to="/appointments" className={({ isActive }) => isActive ? "active" : ""}>Appointments</NavLink>
+              <NavLink
+                to="/apptsCalendar"
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
+                Appts. Calendar
+              </NavLink>
             </li>
             <li>
+              <NavLink
+                to="/appointments"
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
+                Appointments
+              </NavLink>
+            </li>
+            {/* <li>
               <NavLink to="/laws" className={({ isActive }) => isActive ? "active" : ""}>Laws</NavLink>
             </li>
             <li>
               <NavLink to="/feedbacks" className={({ isActive }) => isActive ? "active" : ""}>Feedbacks</NavLink>
-            </li>
+            </li> */}
           </ul>
         </nav>
         <footer className="footer">
           <p>Copyright © 2024. All Rights Reserved</p>
         </footer>
       </div>
+
+      <Tooltip id="tooltip" />
     </>
   );
 }

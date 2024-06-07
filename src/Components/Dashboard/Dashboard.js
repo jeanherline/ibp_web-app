@@ -2,7 +2,7 @@ import React from 'react';
 import SideNavBar from '../SideNavBar/SideNavBar'; // Corrected path
 import './Dashboard.css';
 
-function LawyerDashboard() {
+function Dashboard() {
   return (
     <div className="dashboard-container">
       <SideNavBar />
@@ -13,4 +13,4 @@ function LawyerDashboard() {
   );
 }
 
-export default LawyerDashboard;
+export default Dashboard;
