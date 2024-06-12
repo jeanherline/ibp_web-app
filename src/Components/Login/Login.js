@@ -28,10 +28,10 @@ function Login() {
       if (userSnap.exists()) {
         const userData = userSnap.data();
         if (userData.user_status === 'active') {
-          if (userData.member_type === 'lawyer') {
+          if (userData.member_type === 'lawyer' || userData.member_type === 'admin') {
             navigate('/dashboard');
-          } else if (userData.member_type === 'admin') {
-            navigate('/dashboard');
+          } else if (userData.member_type === 'frontdesk') {
+            navigate('/welcome');
           } else {
             setError('Unauthorized user type');
           }
@@ -42,7 +42,6 @@ function Login() {
         setError('No such user found');
       }
     } catch (err) {
-    //   setError(err.message);
       setError('Invalid credentials');
     }
   };

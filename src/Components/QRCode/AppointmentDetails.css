@@ -1,0 +1,105 @@
+.appointment-details-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh; /* Ensures full height on mobile devices */
+    text-align: center;
+    background-color: #f9f9f9;
+    padding: 20px;
+    box-sizing: border-box; /* Ensures padding is included in the total width and height */
+  }
+  
+  .appointment-details-container h2 {
+    color: green;
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .appointment-details-container .error {
+    color: red;
+    margin-top: 20px;
+  }
+  
+  .appointment-details {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px;
+    box-sizing: border-box; /* Ensures padding is included in the total width */
+    margin-bottom: 20px;
+  }
+  
+  .appointment-details h3 {
+    color: #580049;
+    margin-top: 20px;
+  }
+  
+  .appointment-details p {
+    color: #333;
+    margin: 5px 0;
+  }
+  
+  .appointment-details img {
+    max-width: 100%;
+    height: auto;
+    margin-top: 10px;
+  }
+  
+  /* Media Queries for responsiveness */
+  @media (max-width: 768px) {
+    .appointment-details-container {
+      padding: 15px;
+    }
+  
+    .appointment-details-container h2 {
+      font-size: 22px;
+    }
+  
+    .appointment-details {
+      padding: 15px;
+    }
+  
+    .appointment-details h3 {
+      font-size: 20px;
+      margin-top: 15px;
+    }
+  
+    .appointment-details p {
+      font-size: 14px;
+    }
+  
+    .appointment-details img {
+      margin-top: 8px;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .appointment-details-container {
+      padding: 10px;
+    }
+  
+    .appointment-details-container h2 {
+      font-size: 20px;
+    }
+  
+    .appointment-details {
+      padding: 10px;
+    }
+  
+    .appointment-details h3 {
+      font-size: 18px;
+      margin-top: 10px;
+    }
+  
+    .appointment-details p {
+      font-size: 12px;
+    }
+  
+    .appointment-details img {
+      margin-top: 5px;
+    }
+  }
+  

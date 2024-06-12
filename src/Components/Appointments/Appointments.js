@@ -8,7 +8,10 @@ import {
   getAppointments,
   updateAppointment,
   getBookedSlots,
+  getUserById, // Import the function to get user by ID
 } from "../../Config/FirebaseServices";
+import { Timestamp } from "firebase/firestore"; // Import Timestamp
+import { useAuth } from "../../AuthContext"; // Correct import path
 
 function Appointments() {
   const [appointments, setAppointments] = useState([]);
@@ -27,12 +30,14 @@ function Appointments() {
     ibpParalegalStaff: "",
     assistingCounsel: "",
   });
-  const [appointmentDate, setAppointmentDate] = useState(new Date());
+  const [appointmentDate, setAppointmentDate] = useState(null); // Set to null initially
   const [bookedSlots, setBookedSlots] = useState([]);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState("");
+  const { currentUser } = useAuth(); // Get current authenticated user
+  const [reviewerDetails, setReviewerDetails] = useState(null); // State to store reviewer details
 
   const openImageModal = (url) => {
     setCurrentImageUrl(url);
@@ -98,6 +103,20 @@ function Appointments() {
     setSelectedAppointment(null); // Close details when filter changes
   }, [filter]);
 
+  useEffect(() => {
+    const fetchReviewerDetails = async (reviewedBy) => {
+      if (reviewedBy) {
+        const userData = await getUserById(reviewedBy);
+        console.log("Fetched reviewer details:", userData);
+        setReviewerDetails(userData);
+      }
+    };
+
+    if (selectedAppointment && selectedAppointment.appointmentDetails?.reviewedBy) {
+      fetchReviewerDetails(selectedAppointment.appointmentDetails.reviewedBy);
+    }
+  }, [selectedAppointment]);
+
   const isWeekday = (date) => {
     const day = date.getDay();
     return day === 2 || day === 4; // Only allow Tuesdays (2) and Thursdays (4)
@@ -109,13 +128,10 @@ function Appointments() {
     const minutes = time.getMinutes();
 
     return !(
-      (
-        hours < 1 ||
-        (hours === 0 && minutes < 45) ||
-        (hours >= 12 && hours < 13) || // 12 PM to 12:45 PM
-        (hours >= 17 && (hours < 23 || (hours === 23 && minutes < 45)))
-      ) // 5 PM to 11:45 PM
-    );
+      (hours < 1 || (hours === 0 && minutes < 45) ||
+      (hours >= 12 && hours < 13) || // 12 PM to 12:45 PM
+      (hours >= 17 && (hours < 23 || (hours === 23 && minutes < 45))))
+    ); // 5 PM to 11:45 PM
   };
 
   const isSlotBooked = (dateTime) => {
@@ -197,6 +213,7 @@ function Appointments() {
 
   const handleEligibilityChange = (e) => {
     setClientEligibility({ ...clientEligibility, eligibility: e.target.value });
+    setAppointmentDate(null); // Reset appointment date when eligibility changes
   };
 
   const handleDenialReasonChange = (e) => {
@@ -227,8 +244,9 @@ function Appointments() {
 
     const updatedData = {
       clientEligibility,
-      appointmentDate,
-      appointmentStatus: status,
+      "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate), // Convert appointmentDate to Timestamp and save in appointmentDetails
+      "appointmentDetails.appointmentStatus": status,
+      "appointmentDetails.reviewedBy": currentUser.uid, // Save the id of the current authenticated user
     };
 
     // Update the appointment in the database
@@ -260,6 +278,18 @@ function Appointments() {
     setTimeout(() => {
       setShowSnackbar(false);
     }, 3000);
+  };
+
+  const getFormattedDate = (timestamp, includeTime = false) => {
+    if (!timestamp) return "N/A";
+    const date = new Date(timestamp.seconds * 1000);
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    if (includeTime) {
+      options.hour = "numeric";
+      options.minute = "numeric";
+      options.hour12 = true;
+    }
+    return date.toLocaleString("en-US", options);
   };
 
   const getDayClassName = (date) => {
@@ -315,11 +345,7 @@ function Appointments() {
                 <td>{appointment.address}</td>
                 <td>{appointment.contactNumber}</td>
                 <td>
-                  {appointment.createdDate
-                    ? new Date(
-                        appointment.createdDate.seconds * 1000
-                      ).toLocaleDateString()
-                    : "N/A"}
+                  {getFormattedDate(appointment.createdDate)}
                 </td>
                 <td>
                   <button onClick={() => toggleDetails(appointment)}>
@@ -355,11 +381,7 @@ function Appointments() {
                 <tr>
                   <th>Date Request Created</th>
                   <td>
-                    {selectedAppointment.createdDate
-                      ? new Date(
-                          selectedAppointment.createdDate.seconds * 1000
-                        ).toLocaleDateString()
-                      : "N/A"}
+                    {getFormattedDate(selectedAppointment.createdDate)}
                   </td>
                 </tr>
                 <tr>
@@ -375,11 +397,7 @@ function Appointments() {
                     <tr>
                       <th>Appointment Date</th>
                       <td>
-                        {selectedAppointment.appointmentDate
-                          ? new Date(
-                              selectedAppointment.appointmentDate.seconds * 1000
-                            ).toLocaleString()
-                          : "-"}
+                        {getFormattedDate(selectedAppointment.appointmentDate, true)}
                       </td>
                     </tr>
                     <tr>
@@ -391,7 +409,7 @@ function Appointments() {
                         )}
                       </td>
                     </tr>
-                    {selectedAppointment.appointmentStatus == "cancelled" && (
+                    {selectedAppointment.appointmentStatus === "cancelled" && (
                       <tr>
                         <th>Denial Reason</th>
                         <td>
@@ -420,6 +438,14 @@ function Appointments() {
                           ?.assistingCounsel || "-"}
                       </td>
                     </tr>
+                    <tr>
+                      <th>Reviewed By</th>
+                      <td>
+                        {reviewerDetails
+                          ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
+                          : "Not Available"}
+                      </td>
+                    </tr>
                   </>
                 )}
               </tbody>
@@ -435,16 +461,16 @@ function Appointments() {
                 <tr>
                   <th>Araw ng Kapanganakan</th>
                   <td>
-                    {selectedAppointment.createdDate
-                      ? new Date(
-                          selectedAppointment.createdDate.seconds * 1000
-                        ).toLocaleDateString()
+                    {selectedAppointment.dob
+                      ? new Date(selectedAppointment.dob).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' })
                       : "N/A"}
                   </td>
                 </tr>
                 <tr>
                   <th>Adres o Tinitirahan</th>
-                  <td>{selectedAppointment?.address || "Not Available"}</td>
+                  <td>
+                    {selectedAppointment?.address || "Not Available"}
+                  </td>
                 </tr>
                 <tr>
                   <th>Numero ng Telepono</th>
@@ -460,7 +486,9 @@ function Appointments() {
                 </tr>
                 <tr>
                   <th>Pangalan ng Asawa</th>
-                  <td>{selectedAppointment.spouseName || "Not Available"}</td>
+                  <td>
+                    {selectedAppointment.spouseName || "Not Available"}
+                  </td>
                 </tr>
                 <tr>
                   <th>Trabaho ng Asawa</th>
@@ -480,7 +508,9 @@ function Appointments() {
               <tbody>
                 <tr>
                   <th>Hanapbuhay</th>
-                  <td>{selectedAppointment.occupation || "Not Available"}</td>
+                  <td>
+                    {selectedAppointment.occupation || "Not Available"}
+                  </td>
                 </tr>
                 <tr>
                   <th>Klase ng Trabaho</th>
@@ -515,18 +545,20 @@ function Appointments() {
                 <tr>
                   <th>Klase ng tulong legal</th>
                   <td>
-                    {selectedAppointment?.selectedAssistanceType ||
+                    {selectedAppointment.selectedAssistanceType ||
                       "Not Specified"}
                   </td>
                 </tr>
                 <tr>
                   <th>Ano ang iyong problema?</th>
-                  <td>{selectedAppointment?.problems || "Not Available"}</td>
+                  <td>
+                    {selectedAppointment.problems || "Not Available"}
+                  </td>
                 </tr>
                 <tr>
                   <th>Bakit o papaano nagkaroon ng ganoong problema?</th>
                   <td>
-                    {selectedAppointment?.problemReason || "Not Available"}
+                    {selectedAppointment.problemReason || "Not Available"}
                   </td>
                 </tr>
                 <tr>
@@ -535,7 +567,7 @@ function Appointments() {
                     Abogado sa iyo?
                   </th>
                   <td>
-                    {selectedAppointment?.desiredSolutions || "Not Available"}
+                    {selectedAppointment.desiredSolutions || "Not Available"}
                   </td>
                 </tr>
               </tbody>
@@ -552,7 +584,9 @@ function Appointments() {
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
-                          openImageModal(selectedAppointment.barangayImageUrl);
+                          openImageModal(
+                            selectedAppointment.barangayImageUrl
+                          );
                         }}
                       >
                         <img

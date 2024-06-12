@@ -1,22 +1,28 @@
 .login-container {
   display: flex;
+  flex-direction: column; /* Stack the sides vertically on smaller screens */
   height: 100vh;
 }
 
+.left-side, .right-side {
+  flex: none;
+  width: 100%;
+  height: 50%; /* Use half of the screen height for each side */
+}
+
 .left-side {
-  flex: 1;
   background: url('../../Assets/img/login_header.png') no-repeat center center;
   background-size: cover;
   position: relative;
   color: white;
-  display: flex; /* Ensure this container is also a flex container */
-  align-items: center; /* Center content vertically */
-  justify-content: center; /* Center content horizontally */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .left-side .logo-overlay {
   position: absolute;
-  top: 0; /* Ensure it covers the entire .left-side */
+  top: 0;
   left: 0;
   width: 100%;
   height: 100%;
@@ -32,7 +38,7 @@
 }
 
 .left-side .logo {
-  width: 130px; /* Specific to the login page */
+  width: 130px;
   height: auto;
 }
 
@@ -40,41 +46,37 @@
   text-align: center;
   font-size: 24px;
   line-height: 1.4;
-  width: 100%; /* Ensures the text alignment has full width to work with */
-  margin: 0; /* Remove any default margins */
-  padding: 0; /* Ensure there is no padding affecting positioning */
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .right-side {
-  flex: 1;
   background: linear-gradient(to bottom, #ff3cde80, #f0f0f0);
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-/* Further styles remain unchanged */
-
-
 .login-box {
   background: #ffffff;
-  padding: 40px;
+  padding: 20px;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
-  width: 80%;
+  width: 90%;
   max-width: 400px;
 }
 
 .login-box h2 {
   margin-top: 0;
   color: #580049;
-  font-size: 30px;
+  font-size: 24px;
 }
 
 .login-box p {
   color: #666666;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .login-box form {
@@ -84,17 +86,17 @@
 
 .login-box label {
   text-align: left;
-  margin-top: 20px;
+  margin-top: 10px;
   color: #0c253f;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .login-box input {
-  padding: 10px;
+  padding: 8px;
   margin-top: 5px;
   border-radius: 9px;
   border: 1px solid #cccccc;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .login-box .forgot-password {
@@ -105,17 +107,17 @@
 .login-box .forgot-password a {
   color: #57636C;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .login-box button {
-  margin-top: 20px;
+  margin-top: 15px;
   padding: 10px;
   background: #580049;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 18px;
+  font-size: 16px;
   cursor: pointer;
 }
 
@@ -137,5 +139,45 @@
 .error {
   color: red !important;
   margin-top: 10px;
-  font-size: 14px; /* Optional: Adjust the font size if necessary */
+  font-size: 14px;
+}
+
+/* Media Queries for responsiveness */
+@media (min-width: 768px) {
+  .login-container {
+    flex-direction: row; /* Stack the sides horizontally on larger screens */
+  }
+
+  .left-side, .right-side {
+    flex: 1;
+    height: 100%; /* Use full screen height */
+  }
+
+  .login-box {
+    padding: 40px;
+  }
+
+  .login-box h2 {
+    font-size: 30px;
+  }
+
+  .login-box p {
+    font-size: 16px;
+  }
+
+  .login-box label {
+    font-size: 14px;
+  }
+
+  .login-box input {
+    font-size: 16px;
+  }
+
+  .login-box .forgot-password a {
+    font-size: 14px;
+  }
+
+  .login-box button {
+    font-size: 18px;
+  }
 }

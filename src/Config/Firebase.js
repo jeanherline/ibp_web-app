@@ -1,19 +1,19 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { initializeApp } from 'firebase/app';
+import { getAnalytics } from 'firebase/analytics';
 import { 
-    getFirestore, 
-    doc, 
-    collection, 
-    query, 
-    where, 
-    getDocs, 
-    limit, 
-    startAfter, 
-    orderBy,
-    updateDoc  // Import orderBy here
+  getFirestore, 
+  doc, 
+  collection, 
+  query, 
+  where, 
+  getDocs, 
+  limit, 
+  startAfter, 
+  orderBy, 
+  updateDoc,
+  getDoc  // Import getDoc here
 } from 'firebase/firestore';
-
 import { getAuth, signOut } from 'firebase/auth'; // Import onAuthStateChanged
 import { getStorage } from 'firebase/storage';
 
@@ -35,10 +35,8 @@ const auth = getAuth(app);
 const fs = getFirestore(app);
 const storage = getStorage(app);
 
-
-
 export { 
-    app, auth, fs, storage, 
-    doc, collection, query, where, getDocs, 
-    limit, startAfter, orderBy, updateDoc, signOut // Make sure to export updateDoc here
+  app, auth, fs, storage, 
+  doc, collection, query, where, getDocs, 
+  limit, startAfter, orderBy, updateDoc, getDoc, signOut // Export getDoc here
 };
