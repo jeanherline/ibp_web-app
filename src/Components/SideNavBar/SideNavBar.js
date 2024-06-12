@@ -6,7 +6,6 @@ import { getDoc } from "firebase/firestore";
 import "react-tooltip/dist/react-tooltip.css"; // Make sure to import the CSS for react-tooltip
 import "./SideNavBar.css";
 import { Link } from "react-router-dom";
-
 function SideNavBar() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -127,12 +126,16 @@ function SideNavBar() {
                 Appointments
               </NavLink>
             </li>
-            {/* <li>
-              <NavLink to="/laws" className={({ isActive }) => isActive ? "active" : ""}>Laws</NavLink>
-            </li>
-            <li>
-              <NavLink to="/feedbacks" className={({ isActive }) => isActive ? "active" : ""}>Feedbacks</NavLink>
-            </li> */}
+            {userData && userData.member_type === 'admin' && (
+              <li>
+                <NavLink
+                  to="/listOfUsers"
+                  className={({ isActive }) => (isActive ? "active" : "")}
+                >
+                  Users
+                </NavLink>
+              </li>
+            )}
           </ul>
         </nav>
         <footer className="footer">

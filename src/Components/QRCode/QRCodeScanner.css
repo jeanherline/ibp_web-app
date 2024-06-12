@@ -1,0 +1,35 @@
+.qr-code-scanner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
+  
+  .error {
+    color: red;
+    margin-top: 10px;
+  }
+  
+  .logout-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+  }
+  
+  .scanner-preview {
+    position: relative;
+    width: 320px;
+    height: 240px;
+    border: 4px dashed #007bff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  
+  .qr-reader {
+    width: 100%;
+    height: 100%;
+  }
+  
