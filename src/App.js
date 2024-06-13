@@ -10,7 +10,7 @@ import QRCodeScanner from './Components/QRCode/QRCodeScanner';
 import AppointmentDetails from './Components/QRCode/AppointmentDetails';
 import Welcome from './Components/QRCode/Welcome';
 import './App.css';
-
+import 'bootstrap/dist/css/bootstrap.min.css';
 function App() {
   return (
     <Router>

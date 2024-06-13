@@ -4,14 +4,15 @@ import "../Dashboard/Dashboard.css";
 import "./Appointments.css";
 import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import Pagination from "react-bootstrap/Pagination";
 import {
   getAppointments,
   updateAppointment,
   getBookedSlots,
-  getUserById, // Import the function to get user by ID
+  getUserById,
 } from "../../Config/FirebaseServices";
-import { Timestamp } from "firebase/firestore"; // Import Timestamp
-import { useAuth } from "../../AuthContext"; // Correct import path
+import { Timestamp } from "firebase/firestore";
+import { useAuth } from "../../AuthContext";
 
 function Appointments() {
   const [appointments, setAppointments] = useState([]);
@@ -19,10 +20,9 @@ function Appointments() {
   const [filter, setFilter] = useState("pending");
   const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [lastVisible, setLastVisible] = useState(null);
-  const [cursors, setCursors] = useState([]);
   const pageSize = 7;
-  const [hasMore, setHasMore] = useState(true);
   const [clientEligibility, setClientEligibility] = useState({
     eligibility: "",
     denialReason: "",
@@ -30,14 +30,60 @@ function Appointments() {
     ibpParalegalStaff: "",
     assistingCounsel: "",
   });
-  const [appointmentDate, setAppointmentDate] = useState(null); // Set to null initially
+  const [appointmentDate, setAppointmentDate] = useState(null);
+  const [rescheduleDate, setRescheduleDate] = useState(null);
+  const [rescheduleReason, setRescheduleReason] = useState("");
   const [bookedSlots, setBookedSlots] = useState([]);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState("");
-  const { currentUser } = useAuth(); // Get current authenticated user
-  const [reviewerDetails, setReviewerDetails] = useState(null); // State to store reviewer details
+  const { currentUser } = useAuth();
+  const [reviewerDetails, setReviewerDetails] = useState(null);
+  const [proceedingNotes, setProceedingNotes] = useState("");
+  const [showProceedingNotesForm, setShowProceedingNotesForm] = useState(false);
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      const { data, total } = await getAppointments(
+        filter,
+        lastVisible,
+        pageSize,
+        searchText
+      );
+      setAppointments(data);
+      setTotalPages(Math.ceil(total / pageSize));
+    };
+    fetchAppointments();
+  }, [filter, lastVisible, searchText]);
+
+  useEffect(() => {
+    const fetchBookedSlots = async () => {
+      const data = await getBookedSlots();
+      setBookedSlots(data.map((slot) => new Date(slot)));
+    };
+    fetchBookedSlots();
+  }, []);
+
+  useEffect(() => {
+    setSelectedAppointment(null);
+    setShowProceedingNotesForm(false);
+    setShowRescheduleForm(false);
+  }, [filter]);
+
+  useEffect(() => {
+    const fetchReviewerDetails = async (reviewedBy) => {
+      if (reviewedBy) {
+        const userData = await getUserById(reviewedBy);
+        setReviewerDetails(userData);
+      }
+    };
+
+    if (selectedAppointment?.appointmentDetails?.reviewedBy) {
+      fetchReviewerDetails(selectedAppointment.appointmentDetails.reviewedBy);
+    }
+  }, [selectedAppointment]);
 
   const openImageModal = (url) => {
     setCurrentImageUrl(url);
@@ -52,90 +98,13 @@ function Appointments() {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
-  const ImageModal = ({ isOpen, url, onClose }) => {
-    if (!isOpen) return null;
-
-    return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-          <img
-            src={url}
-            alt="Fullscreen Image"
-            style={{ width: "100%", height: "auto", maxHeight: "90vh" }}
-          />
-          <button
-            onClick={onClose}
-            style={{ position: "absolute", top: 20, right: 20 }}
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      const data = await getAppointments(
-        filter,
-        lastVisible,
-        pageSize,
-        searchText
-      );
-      setAppointments(data);
-      setHasMore(data.length === pageSize);
-    };
-
-    fetchAppointments();
-  }, [filter, lastVisible, searchText]);
-
-  useEffect(() => {
-    const fetchBookedSlots = async () => {
-      const data = await getBookedSlots();
-      console.log("Fetched booked slots:", data);
-      setBookedSlots(data.map((slot) => new Date(slot))); // Ensure they are Date objects
-    };
-
-    fetchBookedSlots();
-  }, []);
-
-  useEffect(() => {
-    setSelectedAppointment(null); // Close details when filter changes
-  }, [filter]);
-
-  useEffect(() => {
-    const fetchReviewerDetails = async (reviewedBy) => {
-      if (reviewedBy) {
-        const userData = await getUserById(reviewedBy);
-        console.log("Fetched reviewer details:", userData);
-        setReviewerDetails(userData);
-      }
-    };
-
-    if (selectedAppointment && selectedAppointment.appointmentDetails?.reviewedBy) {
-      fetchReviewerDetails(selectedAppointment.appointmentDetails.reviewedBy);
-    }
-  }, [selectedAppointment]);
-
   const isWeekday = (date) => {
     const day = date.getDay();
-    return day === 2 || day === 4; // Only allow Tuesdays (2) and Thursdays (4)
-  };
-
-  const isTimeAllowed = (time) => {
-    if (!(time instanceof Date)) return false;
-    const hours = time.getHours();
-    const minutes = time.getMinutes();
-
-    return !(
-      (hours < 1 || (hours === 0 && minutes < 45) ||
-      (hours >= 12 && hours < 13) || // 12 PM to 12:45 PM
-      (hours >= 17 && (hours < 23 || (hours === 23 && minutes < 45))))
-    ); // 5 PM to 11:45 PM
+    return day === 2 || day === 4;
   };
 
   const isSlotBooked = (dateTime) => {
-    const result = bookedSlots.some(
+    return bookedSlots.some(
       (bookedDate) =>
         dateTime.getDate() === bookedDate.getDate() &&
         dateTime.getMonth() === bookedDate.getMonth() &&
@@ -143,13 +112,11 @@ function Appointments() {
         dateTime.getHours() === bookedDate.getHours() &&
         dateTime.getMinutes() === bookedDate.getMinutes()
     );
-    console.log(`Checking if slot is booked for ${dateTime}: ${result}`);
-    return result;
   };
 
   const filterDate = (date) => {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time portion to midnight
+    today.setHours(0, 0, 0, 0);
     const isFullyBooked =
       bookedSlots.filter(
         (slot) =>
@@ -159,61 +126,58 @@ function Appointments() {
           slot.getHours() >= 13 &&
           slot.getHours() < 17
       ).length === 4;
-    return isWeekday(date) && date >= today && !isFullyBooked; // Disable fully booked dates
+    return isWeekday(date) && date >= today && !isFullyBooked;
   };
 
   const filterTime = (time) => {
-    if (!(time instanceof Date)) {
-      console.error("Invalid time object:", time);
-      return false;
-    }
-
+    if (!(time instanceof Date)) return false;
     const hours = time.getHours();
     const minutes = time.getMinutes();
 
-    // Allow only times between 1 PM to 5 PM
-    if (hours < 13 || hours >= 17) {
-      // Excludes all hours before 1 PM and from 5 PM onwards
-      return false;
-    }
+    if (hours < 13 || hours >= 17) return false;
 
     const dateTime = new Date(appointmentDate);
     dateTime.setHours(hours, minutes, 0, 0);
-
-    return !isSlotBooked(dateTime); // Exclude booked slots
+    return !isSlotBooked(dateTime);
   };
 
   const handleNext = () => {
-    setCursors([...cursors, lastVisible]);
     setLastVisible(appointments[appointments.length - 1]);
-    setCurrentPage(currentPage + 1);
+    setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
   };
 
   const handlePrevious = () => {
-    if (currentPage > 1) {
-      const newCursors = [...cursors];
-      const newLastVisible = newCursors.pop();
-      setCursors(newCursors);
-      setLastVisible(newLastVisible);
-      setCurrentPage(currentPage - 1);
-    }
+    setLastVisible(appointments[0]);
+    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+  };
+
+  const handleFirst = () => {
+    setLastVisible(null);
+    setCurrentPage(1);
+  };
+
+  const handleLast = () => {
+    setLastVisible(appointments[appointments.length - 1]);
+    setCurrentPage(totalPages);
   };
 
   const toggleDetails = (appointment) => {
-    if (selectedAppointment && selectedAppointment.id === appointment.id) {
-      setSelectedAppointment(null); // Close details if currently showing
-    } else {
-      setSelectedAppointment(appointment); // Show details for the selected appointment
-    }
+    setSelectedAppointment(
+      selectedAppointment?.id === appointment.id ? null : appointment
+    );
+    setShowProceedingNotesForm(false);
+    setShowRescheduleForm(false);
   };
 
   const handleCloseDetails = () => {
     setSelectedAppointment(null);
+    setShowProceedingNotesForm(false);
+    setShowRescheduleForm(false);
   };
 
   const handleEligibilityChange = (e) => {
     setClientEligibility({ ...clientEligibility, eligibility: e.target.value });
-    setAppointmentDate(null); // Reset appointment date when eligibility changes
+    setAppointmentDate(null);
   };
 
   const handleDenialReasonChange = (e) => {
@@ -235,24 +199,37 @@ function Appointments() {
     setClientEligibility({ ...clientEligibility, [name]: value });
   };
 
+  const handleNotesChange = (e) => {
+    setProceedingNotes(e.target.value);
+  };
+
+  const handleRescheduleChange = (e) => {
+    setRescheduleReason(e.target.value);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Set the status based on eligibility
     const status =
-      clientEligibility.eligibility === "yes" ? "approved" : "cancelled";
+      clientEligibility.eligibility === "yes"
+        ? "approved"
+        : clientEligibility.eligibility === "no"
+        ? "denied"
+        : "done";
 
     const updatedData = {
       clientEligibility,
-      "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate), // Convert appointmentDate to Timestamp and save in appointmentDetails
+      "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": status,
-      "appointmentDetails.reviewedBy": currentUser.uid, // Save the id of the current authenticated user
+      "appointmentDetails.reviewedBy": currentUser.uid,
     };
 
-    // Update the appointment in the database
+    if (status === "done") {
+      updatedData["appointmentDetails.proceedingNotes"] = proceedingNotes;
+    }
+
     await updateAppointment(selectedAppointment.id, updatedData);
 
-    // Clear the form
     setSelectedAppointment(null);
     setClientEligibility({
       eligibility: "",
@@ -261,23 +238,52 @@ function Appointments() {
       ibpParalegalStaff: "",
       assistingCounsel: "",
     });
+    setProceedingNotes("");
+    setShowProceedingNotesForm(false);
+    setShowRescheduleForm(false);
 
-    // Optionally, refresh the appointments list to reflect the changes
-    const data = await getAppointments(
+    const { data, total } = await getAppointments(
       filter,
       lastVisible,
       pageSize,
       searchText
     );
     setAppointments(data);
-    setHasMore(data.length === pageSize);
+    setTotalPages(Math.ceil(total / pageSize));
 
-    // Show snackbar notification
     setSnackbarMessage("Form has been successfully submitted.");
     setShowSnackbar(true);
-    setTimeout(() => {
-      setShowSnackbar(false);
-    }, 3000);
+    setTimeout(() => setShowSnackbar(false), 3000);
+  };
+
+  const handleRescheduleSubmit = async (e) => {
+    e.preventDefault();
+
+    const updatedData = {
+      "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
+      "appointmentDetails.rescheduleReason": rescheduleReason,
+      "appointmentDetails.reviewedBy": currentUser.uid,
+    };
+
+    await updateAppointment(selectedAppointment.id, updatedData);
+
+    setSelectedAppointment(null);
+    setRescheduleDate(null);
+    setRescheduleReason("");
+    setShowRescheduleForm(false);
+
+    const { data, total } = await getAppointments(
+      filter,
+      lastVisible,
+      pageSize,
+      searchText
+    );
+    setAppointments(data);
+    setTotalPages(Math.ceil(total / pageSize));
+
+    setSnackbarMessage("Appointment has been successfully rescheduled.");
+    setShowSnackbar(true);
+    setTimeout(() => setShowSnackbar(false), 3000);
   };
 
   const getFormattedDate = (timestamp, includeTime = false) => {
@@ -324,15 +330,16 @@ function Appointments() {
         <select onChange={(e) => setFilter(e.target.value)} value={filter}>
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="denied">Denied</option>
+          <option value="done">Done</option>
         </select>
-        <table>
+        <table className="table table-striped table-bordered">
           <thead>
             <tr>
               <th>Control Number</th>
               <th>Full Name</th>
-              <th>Address</th>
               <th>Contact Number</th>
+              <th>Nature of Legal Assistance Requested</th>
               <th>Date Submitted</th>
               <th>Action</th>
             </tr>
@@ -342,319 +349,357 @@ function Appointments() {
               <tr key={appointment.id}>
                 <td>{appointment.controlNumber}</td>
                 <td>{appointment.fullName}</td>
-                <td>{appointment.address}</td>
                 <td>{appointment.contactNumber}</td>
-                <td>
-                  {getFormattedDate(appointment.createdDate)}
-                </td>
+                <td>{appointment.selectedAssistanceType}</td>
+                <td>{getFormattedDate(appointment.createdDate)}</td>
                 <td>
                   <button onClick={() => toggleDetails(appointment)}>
                     View
                   </button>
+                  &nbsp; &nbsp;
+                  {filter === "approved" && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setSelectedAppointment(appointment);
+                          setShowProceedingNotesForm(true);
+                          setShowRescheduleForm(false);
+                        }}
+                      >
+                        Done
+                      </button>
+                      &nbsp; &nbsp;
+                      <button
+                        onClick={() => {
+                          setSelectedAppointment(appointment);
+                          setShowProceedingNotesForm(false);
+                          setShowRescheduleForm(true);
+                        }}
+                      >
+                        Reschedule
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        <button disabled={currentPage === 1} onClick={handlePrevious}>
-          Previous
-        </button>
-        <button disabled={!hasMore} onClick={handleNext}>
-          Next
-        </button>
+        <Pagination>
+          <Pagination.First
+            onClick={handleFirst}
+            disabled={currentPage === 1}
+          />
+          <Pagination.Prev
+            onClick={handlePrevious}
+            disabled={currentPage === 1}
+          />
+          {[...Array(totalPages).keys()].map((_, index) => (
+            <Pagination.Item
+              key={index + 1}
+              active={index + 1 === currentPage}
+              onClick={() => {
+                setCurrentPage(index + 1);
+                setLastVisible(appointments[index]);
+              }}
+            >
+              {index + 1}
+            </Pagination.Item>
+          ))}
+          <Pagination.Next
+            onClick={handleNext}
+            disabled={currentPage === totalPages}
+          />
+          <Pagination.Last
+            onClick={handleLast}
+            disabled={currentPage === totalPages}
+          />
+        </Pagination>
 
-        {selectedAppointment && (
-          <div className="appointment-details">
-            <button className="close-button" onClick={handleCloseDetails}>
-              x
-            </button>
-            <br />
-            <h2>Appointment Details</h2>
+        {selectedAppointment &&
+          selectedAppointment.appointmentStatus !== "done" &&
+          !showProceedingNotesForm &&
+          !showRescheduleForm && (
+            <div className="client-eligibility">
+              <br />
+              <h2>Appointment Details</h2>
 
-            <table>
-              <caption>Basic Information</caption>
-              <tbody>
-                <tr>
-                  <th>Control Number</th>
-                  <td>{selectedAppointment.controlNumber}</td>
-                </tr>
-                <tr>
-                  <th>Date Request Created</th>
-                  <td>
-                    {getFormattedDate(selectedAppointment.createdDate)}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Appointment Status</th>
-                  <td>
-                    {capitalizeFirstLetter(
-                      selectedAppointment.appointmentStatus
-                    )}
-                  </td>
-                </tr>
+              <section className="mb-4">
+                <h3>
+                  <em>Basic Information</em>
+                </h3>
+                <p>
+                  <strong>Control Number:</strong> <br></br>{" "}
+                  {selectedAppointment.controlNumber}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Date Request Created:</strong> <br></br>
+                  {getFormattedDate(selectedAppointment.createdDate)}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Appointment Status:</strong> <br></br>
+                  {capitalizeFirstLetter(selectedAppointment.appointmentStatus)}
+                </p>
+                <br></br>
                 {selectedAppointment.appointmentStatus !== "pending" && (
                   <>
-                    <tr>
-                      <th>Appointment Date</th>
-                      <td>
-                        {getFormattedDate(selectedAppointment.appointmentDate, true)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th>Eligibility</th>
-                      <td>
-                        {capitalizeFirstLetter(
-                          selectedAppointment.clientEligibility?.eligibility ||
-                            "-"
-                        )}
-                      </td>
-                    </tr>
-                    {selectedAppointment.appointmentStatus === "cancelled" && (
-                      <tr>
-                        <th>Denial Reason</th>
-                        <td>
-                          {selectedAppointment.clientEligibility
-                            ?.denialReason || "-"}
-                        </td>
-                      </tr>
+                    <p>
+                      <strong>Appointment Date:</strong> <br></br>
+                      {getFormattedDate(
+                        selectedAppointment.appointmentDate,
+                        true
+                      )}
+                    </p>
+                    <br></br>
+                    <p>
+                      <strong>Eligibility:</strong> <br></br>
+                      {capitalizeFirstLetter(
+                        selectedAppointment.clientEligibility?.eligibility ||
+                          "-"
+                      )}
+                    </p>
+
+                    {selectedAppointment.appointmentStatus === "denied" && (
+                      <p>
+                        <strong>Denial Reason:</strong> <br></br>
+                        {selectedAppointment.clientEligibility?.denialReason ||
+                          "-"}
+                      </p>
                     )}
-                    <tr>
-                      <th>Notes</th>
-                      <td>
-                        {selectedAppointment.clientEligibility?.notes || "-"}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th>IBP Paralegal Staff</th>
-                      <td>
-                        {selectedAppointment.clientEligibility
-                          ?.ibpParalegalStaff || "-"}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th>Assisting Counsel</th>
-                      <td>
-                        {selectedAppointment.clientEligibility
-                          ?.assistingCounsel || "-"}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th>Reviewed By</th>
-                      <td>
-                        {reviewerDetails
-                          ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
-                          : "Not Available"}
-                      </td>
-                    </tr>
+                    <br></br>
+                    <p>
+                      <strong>Notes:</strong> <br></br>
+                      {selectedAppointment.clientEligibility?.notes || "-"}
+                    </p>
+                    <br></br>
+                    <p>
+                      <strong>IBP Paralegal Staff:</strong> <br></br>
+                      {selectedAppointment.clientEligibility
+                        ?.ibpParalegalStaff || "-"}
+                    </p>
+                    <br></br>
+                    <p>
+                      <strong>Assisting Counsel:</strong> <br></br>
+                      {selectedAppointment.clientEligibility
+                        ?.assistingCounsel || "-"}
+                    </p>
+                    <br></br>
+                    <p>
+                      <strong>Reviewed By:</strong> <br></br>
+                      {reviewerDetails
+                        ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
+                        : "Not Available"}
+                    </p>
+                    <br></br>
+                    <p>
+                      <strong>Appointment Experience Rating:</strong>
+                      <br></br>{" "}
+                      {selectedAppointment.appointmentDetails?.feedbackRating ||
+                        "-"}{" "}
+                      Star/s Rating
+                    </p>
                   </>
                 )}
-              </tbody>
-            </table>
+              </section>
 
-            <table>
-              <caption>Applicant Profile</caption>
-              <tbody>
-                <tr>
-                  <th>Buong Pangalan</th>
-                  <td>{selectedAppointment.fullName}</td>
-                </tr>
-                <tr>
-                  <th>Araw ng Kapanganakan</th>
-                  <td>
-                    {selectedAppointment.dob
-                      ? new Date(selectedAppointment.dob).toLocaleDateString("en-US", { year: 'numeric', month: 'long', day: 'numeric' })
-                      : "N/A"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Adres o Tinitirahan</th>
-                  <td>
-                    {selectedAppointment?.address || "Not Available"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Numero ng Telepono</th>
-                  <td>
-                    {selectedAppointment?.contactNumber || "Not Available"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Kasarian</th>
-                  <td>
-                    {selectedAppointment?.selectedGender || "Not Specified"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Pangalan ng Asawa</th>
-                  <td>
-                    {selectedAppointment.spouseName || "Not Available"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Trabaho ng Asawa</th>
-                  <td>
-                    {selectedAppointment.spouseOccupation || "Not Available"}
-                  </td>
-                </tr>
-                <th>Pangalan at edad ng mga anak</th>
-                <td>
+              <section className="mb-4">
+                <h3>
+                  <em>Applicant Profile</em>
+                </h3>
+                <p>
+                  <strong>Full Name:</strong> <br></br>
+                  {selectedAppointment.fullName}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Date of Birth:</strong> <br></br>
+                  {selectedAppointment.dob
+                    ? new Date(selectedAppointment.dob).toLocaleDateString(
+                        "en-US",
+                        { year: "numeric", month: "long", day: "numeric" }
+                      )
+                    : "N/A"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Address:</strong> <br></br>
+                  {selectedAppointment?.address || "Not Available"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Contact Number:</strong> <br></br>
+                  {selectedAppointment?.contactNumber || "Not Available"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Gender:</strong> <br></br>
+                  {selectedAppointment?.selectedGender || "Not Specified"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Spouse Name:</strong> <br></br>
+                  {selectedAppointment.spouseName || "Not Available"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Spouse Occupation:</strong> <br></br>
+                  {selectedAppointment.spouseOccupation || "Not Available"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Children Names and Ages:</strong> <br></br>
                   {selectedAppointment.childrenNamesAges || "Not Available"}
-                </td>
-              </tbody>
-            </table>
+                </p>
+                <br></br>
+              </section>
 
-            <table>
-              <caption>Employment Profile</caption>
-              <tbody>
-                <tr>
-                  <th>Hanapbuhay</th>
-                  <td>
-                    {selectedAppointment.occupation || "Not Available"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Klase ng Trabaho</th>
-                  <td>
-                    {selectedAppointment?.kindOfEmployment || "Not Specified"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Pangalan ng iyong amo</th>
-                  <td>
-                    {selectedAppointment?.employerName || "Not Available"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Adres o Tinitirahan ng amo</th>
-                  <td>
-                    {selectedAppointment.employerAddress || "Not Available"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Buwanang sahod ng buong pamilya</th>
-                  <td>
-                    {selectedAppointment.monthlyIncome || "Not Available"}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+              <section className="mb-4">
+                <h3>
+                  <em>Employment Profile</em>
+                </h3>
+                <p>
+                  <strong>Occupation:</strong> <br></br>
+                  {selectedAppointment.occupation || "Not Available"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Type of Employment:</strong> <br></br>
+                  {selectedAppointment?.kindOfEmployment || "Not Specified"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Employer Name:</strong>
+                  <br></br>{" "}
+                  {selectedAppointment?.employerName || "Not Available"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Employer Address:</strong> <br></br>
+                  {selectedAppointment.employerAddress || "Not Available"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Monthly Income:</strong> <br></br>
+                  {selectedAppointment.monthlyIncome || "Not Available"}
+                </p>
+                <br></br>
+              </section>
 
-            <table>
-              <caption>Nature of Legal Assistance Requested</caption>
-              <tbody>
-                <tr>
-                  <th>Klase ng tulong legal</th>
-                  <td>
-                    {selectedAppointment.selectedAssistanceType ||
-                      "Not Specified"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Ano ang iyong problema?</th>
-                  <td>
-                    {selectedAppointment.problems || "Not Available"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Bakit o papaano nagkaroon ng ganoong problema?</th>
-                  <td>
-                    {selectedAppointment.problemReason || "Not Available"}
-                  </td>
-                </tr>
-                <tr>
-                  <th>
-                    Ano ang mga maaaring solusyon na gusto mong ibigay ng
-                    Abogado sa iyo?
-                  </th>
-                  <td>
-                    {selectedAppointment.desiredSolutions || "Not Available"}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+              <section className="mb-4">
+                <h3>
+                  <em>Nature of Legal Assistance Requested</em>
+                </h3>
+                <p>
+                  <strong>Type of Legal Assistance:</strong> <br></br>
+                  {selectedAppointment.selectedAssistanceType ||
+                    "Not Specified"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Problem:</strong> <br></br>
+                  {selectedAppointment.problems || "Not Available"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Reason for Problem:</strong> <br></br>
+                  {selectedAppointment.problemReason || "Not Available"}
+                </p>
+                <br></br>
+                <p>
+                  <strong>Desired Solutions:</strong>
+                  <br></br>{" "}
+                  {selectedAppointment.desiredSolutions || "Not Available"}
+                </p>
+                <br></br>
+              </section>
 
-            <table>
-              <caption>Uploaded Images</caption>
-              <tbody>
-                <tr>
-                  <th>Barangay Certificate of Indigency</th>
-                  <td>
-                    {selectedAppointment?.barangayImageUrl ? (
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          openImageModal(
-                            selectedAppointment.barangayImageUrl
-                          );
-                        }}
-                      >
-                        <img
-                          src={selectedAppointment.barangayImageUrl}
-                          alt="Barangay Certificate of Indigency"
-                          style={{ width: "100px", cursor: "pointer" }}
-                        />
-                      </a>
-                    ) : (
-                      "Not Available"
-                    )}
-                  </td>
-                </tr>
-                <tr>
-                  <th>DSWD Certificate of Indigency</th>
-                  <td>
-                    {selectedAppointment?.dswdImageUrl ? (
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          openImageModal(selectedAppointment.dswdImageUrl);
-                        }}
-                      >
-                        <img
-                          src={selectedAppointment.dswdImageUrl}
-                          alt="DSWD Certificate of Indigency"
-                          style={{ width: "100px", cursor: "pointer" }}
-                        />
-                      </a>
-                    ) : (
-                      "Not Available"
-                    )}
-                  </td>
-                </tr>
-                <tr>
-                  <th>Disqualification Letter from PAO</th>
-                  <td>
-                    {selectedAppointment?.paoImageUrl ? (
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          openImageModal(selectedAppointment.paoImageUrl);
-                        }}
-                      >
-                        <img
-                          src={selectedAppointment.paoImageUrl}
-                          alt="Disqualification Letter from PAO"
-                          style={{ width: "100px", cursor: "pointer" }}
-                        />
-                      </a>
-                    ) : (
-                      "Not Available"
-                    )}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            {isModalOpen && (
-              <ImageModal
-                isOpen={isModalOpen}
-                url={currentImageUrl}
-                onClose={closeModal}
-              />
-            )}
-          </div>
-        )}
+              <section>
+                <h3>
+                  <em>Uploaded Images</em>
+                </h3>
+                <div className="mb-3">
+                  <p>
+                    <strong>Barangay Certificate of Indigency:</strong>
+                  </p>
+                  {selectedAppointment?.barangayImageUrl ? (
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openImageModal(selectedAppointment.barangayImageUrl);
+                      }}
+                    >
+                      <img
+                        src={selectedAppointment.barangayImageUrl}
+                        alt="Barangay Certificate of Indigency"
+                        className="img-thumbnail"
+                        style={{ width: "100px", cursor: "pointer" }}
+                      />
+                    </a>
+                  ) : (
+                    "Not Available"
+                  )}
+                </div>
+                <div className="mb-3">
+                  <p>
+                    <strong>DSWD Certificate of Indigency:</strong>
+                  </p>
+                  {selectedAppointment?.dswdImageUrl ? (
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openImageModal(selectedAppointment.dswdImageUrl);
+                      }}
+                    >
+                      <img
+                        src={selectedAppointment.dswdImageUrl}
+                        alt="DSWD Certificate of Indigency"
+                        className="img-thumbnail"
+                        style={{ width: "100px", cursor: "pointer" }}
+                      />
+                    </a>
+                  ) : (
+                    "Not Available"
+                  )}
+                </div>
+                <div className="mb-3">
+                  <p>
+                    <strong>Disqualification Letter from PAO:</strong>
+                  </p>
+                  {selectedAppointment?.paoImageUrl ? (
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openImageModal(selectedAppointment.paoImageUrl);
+                      }}
+                    >
+                      <img
+                        src={selectedAppointment.paoImageUrl}
+                        alt="Disqualification Letter from PAO"
+                        className="img-thumbnail"
+                        style={{ width: "100px", cursor: "pointer" }}
+                      />
+                    </a>
+                  ) : (
+                    "Not Available"
+                  )}
+                </div>
+              </section>
+
+              {isModalOpen && (
+                <ImageModal
+                  isOpen={isModalOpen}
+                  url={currentImageUrl}
+                  onClose={closeModal}
+                />
+              )}
+            </div>
+          )}
+
         <br />
         <br />
         {selectedAppointment &&
@@ -676,7 +721,6 @@ function Appointments() {
                   Yes, the client is Eligible
                 </label>
                 <br />
-                <br />
                 <label>
                   <input
                     type="radio"
@@ -695,15 +739,15 @@ function Appointments() {
                     selected={appointmentDate}
                     onChange={(date) => setAppointmentDate(date)}
                     showTimeSelect
-                    filterDate={filterDate} // Continue using existing date filter
-                    filterTime={filterTime} // Updated time filter to limit visibility to 1 PM to 5 PM
+                    filterDate={filterDate}
+                    filterTime={filterTime}
                     dateFormat="MMMM d, yyyy h:mm aa"
                     inline
-                    timeIntervals={15} // Interval for time selection
-                    minTime={new Date(new Date().setHours(13, 0, 0))} // Set minimum time to 1 PM
-                    maxTime={new Date(new Date().setHours(17, 0, 0))} // Set maximum time to 5 PM
-                    dayClassName={getDayClassName} // Optional: add class based on day conditions
-                    timeClassName={getTimeClassName} // Optional: add class based on time conditions
+                    timeIntervals={15}
+                    minTime={new Date(new Date().setHours(13, 0, 0))}
+                    maxTime={new Date(new Date().setHours(17, 0, 0))}
+                    dayClassName={getDayClassName}
+                    timeClassName={getTimeClassName}
                   />
                 )}
                 {clientEligibility.eligibility === "no" && (
@@ -746,7 +790,7 @@ function Appointments() {
                 <br />
                 <div>
                   <b>
-                    <p>Notes:</p>
+                    <label>Notes:</label>
                   </b>
                   <textarea
                     name="notes"
@@ -780,14 +824,92 @@ function Appointments() {
                     required
                   />
                 </div>
-                <button type="submit">Submit</button>
+                <button>Submit</button>
               </form>
             </div>
           )}
+
+        {selectedAppointment && showProceedingNotesForm && (
+          <div className="client-eligibility">
+            <h2>Proceeding Notes</h2>
+            <form onSubmit={handleSubmit}>
+              <div>
+                <b>
+                  <label>Proceeding Notes:</label>
+                </b>
+                <textarea
+                  name="proceedingNotes"
+                  rows="4"
+                  placeholder="Enter proceeding notes here..."
+                  value={proceedingNotes}
+                  onChange={handleNotesChange}
+                ></textarea>
+              </div>
+              <button>Submit</button>
+            </form>
+          </div>
+        )}
+
+        {selectedAppointment && showRescheduleForm && (
+          <div className="client-eligibility">
+            <h2>Reschedule Appointment</h2>
+            <p>
+              <strong>Current Appointment Date:</strong> <br></br>
+              {getFormattedDate(selectedAppointment.appointmentDate, true)}
+            </p>
+            <form onSubmit={handleRescheduleSubmit}>
+              <div>
+                <ReactDatePicker
+                  selected={rescheduleDate}
+                  onChange={(date) => setRescheduleDate(date)}
+                  showTimeSelect
+                  filterDate={filterDate}
+                  filterTime={filterTime}
+                  dateFormat="MMMM d, yyyy h:mm aa"
+                  inline
+                  timeIntervals={15}
+                  minTime={new Date(new Date().setHours(13, 0, 0))}
+                  maxTime={new Date(new Date().setHours(17, 0, 0))}
+                  dayClassName={getDayClassName}
+                  timeClassName={getTimeClassName}
+                />
+              </div>
+              <div>
+                <b>
+                  <label>Reason for Reschedule:</label>
+                </b>
+                <textarea
+                  name="rescheduleReason"
+                  rows="4"
+                  placeholder="Enter reason for reschedule here..."
+                  value={rescheduleReason}
+                  onChange={handleRescheduleChange}
+                ></textarea>
+              </div>
+              <button>Submit</button>
+            </form>
+          </div>
+        )}
+
         {showSnackbar && <div className="snackbar">{snackbarMessage}</div>}
       </div>
     </div>
   );
 }
+
+const ImageModal = ({ isOpen, url, onClose }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <img src={url} alt="Fullscreen Image" className="fullscreen-image" />
+        <button onClick={onClose} className="close-button">
+          &times;
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export default Appointments;

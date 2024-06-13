@@ -13,12 +13,8 @@ import {
 
 import { fs } from "./Firebase"; // Import fs from your Firebase configuration file
 
-const getAppointments = async (
-  statusFilter,
-  lastVisible,
-  pageSize = 7,
-  searchText = ""
-) => {
+
+const getAppointments = async (statusFilter, lastVisible, pageSize = 7, searchText = "") => {
   let queryRef = query(
     collection(fs, "appointments"),
     where("appointmentDetails.appointmentStatus", "==", statusFilter),
@@ -49,23 +45,34 @@ const getAppointments = async (
       doc.data().applicantProfile?.contactNumber?.includes(searchText)
   );
 
-  return filtered.map((doc) => {
-    const data = doc.data();
-    return {
-      id: doc.id,
-      ...data.applicantProfile,
-      ...data.employmentProfile,
-      ...data.legalAssistanceRequested,
-      ...data.uploadedImages,
-      createdDate: data.appointmentDetails?.createdDate,
-      appointmentStatus: data.appointmentDetails?.appointmentStatus,
-      controlNumber: data.appointmentDetails?.controlNumber,
-      appointmentDate: data.appointmentDetails?.appointmentDate,
-      clientEligibility: data.clientEligibility,
-      appointmentDetails: data.appointmentDetails, // Include appointmentDetails
-    };
-  });
+  const totalQuery = await getDocs(
+    query(
+      collection(fs, "appointments"),
+      where("appointmentDetails.appointmentStatus", "==", statusFilter)
+    )
+  );
+
+  return {
+    data: filtered.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data.applicantProfile,
+        ...data.employmentProfile,
+        ...data.legalAssistanceRequested,
+        ...data.uploadedImages,
+        createdDate: data.appointmentDetails?.createdDate,
+        appointmentStatus: data.appointmentDetails?.appointmentStatus,
+        controlNumber: data.appointmentDetails?.controlNumber,
+        appointmentDate: data.appointmentDetails?.appointmentDate,
+        clientEligibility: data.clientEligibility,
+        appointmentDetails: data.appointmentDetails, // Include appointmentDetails
+      };
+    }),
+    total: totalQuery.size
+  };
 };
+
 
 const updateAppointment = async (appointmentId, updatedData) => {
   const appointmentRef = doc(fs, "appointments", appointmentId);
@@ -189,5 +196,7 @@ const getUserById = async (userId) => {
     return null;
   }
 };
+
+
 
 export { getAppointments, updateAppointment, getUsers, updateUser, getUserById };
