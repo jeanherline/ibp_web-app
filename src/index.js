@@ -6,6 +6,7 @@ import App from './App';
 import './Config/Firebase';
 import reportWebVitals from './reportWebVitals';
 import { AuthProvider } from "./AuthContext"; // Import the AuthProvider
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 ReactDOM.render(
   <React.StrictMode>
