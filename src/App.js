@@ -5,7 +5,7 @@ import Dashboard from './Components/Dashboard/Dashboard';
 import Appointments from './Components/Appointments/Appointments'; 
 import ApptsCalendar from './Components/Appointments/ApptsCalendar';
 import Profile from './Components/Profile/Profile';
-import ListOfUsers from './Components/ListOfUsers/ListOfUsers';
+import Users from './Components/Users/Users';
 import QRCodeScanner from './Components/QRCode/QRCodeScanner';
 import AppointmentDetails from './Components/QRCode/AppointmentDetails';
 import Welcome from './Components/QRCode/Welcome';
@@ -20,9 +20,9 @@ function App() {
           <Route path="/appointments" element={<Appointments />} />
           <Route path="/apptsCalendar" element={<ApptsCalendar />} />
           <Route path="/profile" element={<Profile />} />
-          <Route path="/listOfUsers" element={<ListOfUsers />} />
           <Route path="/scanner" element={<QRCodeScanner />} />
           <Route path="/welcome" element={<Welcome />} />
+          <Route path="/users" element={<Users />} />
           <Route path="/appointment/:controlNumber" element={<AppointmentDetails />} /> {/* Fix route declaration */}
         </Routes>
     </Router>

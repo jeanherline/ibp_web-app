@@ -17,12 +17,12 @@ import { useAuth } from "../../AuthContext";
 function Appointments() {
   const [appointments, setAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [filter, setFilter] = useState("pending");
+  const [filter, setFilter] = useState("all");
   const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [lastVisible, setLastVisible] = useState(null);
-  const pageSize = 7;
+  const pageSize = 5;
   const [clientEligibility, setClientEligibility] = useState({
     eligibility: "",
     denialReason: "",
@@ -84,11 +84,6 @@ function Appointments() {
       fetchReviewerDetails(selectedAppointment.appointmentDetails.reviewedBy);
     }
   }, [selectedAppointment]);
-
-  const openImageModal = (url) => {
-    setCurrentImageUrl(url);
-    setIsModalOpen(true);
-  };
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -169,15 +164,17 @@ function Appointments() {
     setShowRescheduleForm(false);
   };
 
-  const handleCloseDetails = () => {
+  const handleCloseModal = () => {
     setSelectedAppointment(null);
-    setShowProceedingNotesForm(false);
-    setShowRescheduleForm(false);
   };
 
   const handleEligibilityChange = (e) => {
     setClientEligibility({ ...clientEligibility, eligibility: e.target.value });
     setAppointmentDate(null);
+  };
+
+  const openImageModal = (url) => {
+    window.open(url, "_blank");
   };
 
   const handleDenialReasonChange = (e) => {
@@ -328,30 +325,36 @@ function Appointments() {
           placeholder="Search..."
         />
         <select onChange={(e) => setFilter(e.target.value)} value={filter}>
+          <option value="all">All</option> {/* Updated from "" to "all" */}
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="denied">Denied</option>
           <option value="done">Done</option>
         </select>
+
         <table className="table table-striped table-bordered">
           <thead>
             <tr>
+              <th>#</th>
               <th>Control Number</th>
               <th>Full Name</th>
               <th>Contact Number</th>
               <th>Nature of Legal Assistance Requested</th>
               <th>Date Submitted</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            {appointments.map((appointment) => (
+            {appointments.map((appointment, index) => (
               <tr key={appointment.id}>
+                <td>{(currentPage - 1) * pageSize + index + 1}.</td>
                 <td>{appointment.controlNumber}</td>
                 <td>{appointment.fullName}</td>
                 <td>{appointment.contactNumber}</td>
                 <td>{appointment.selectedAssistanceType}</td>
                 <td>{getFormattedDate(appointment.createdDate)}</td>
+                <td>{capitalizeFirstLetter(appointment.appointmentStatus)}</td>
                 <td>
                   <button onClick={() => toggleDetails(appointment)}>
                     View
@@ -421,6 +424,15 @@ function Appointments() {
           !showProceedingNotesForm &&
           !showRescheduleForm && (
             <div className="client-eligibility">
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={handleCloseModal}
+                  className="close-button"
+                  style={{ position: "absolute", top: "15px", right: "15px" }}
+                >
+                  ×
+                </button>
+              </div>
               <br />
               <h2>Appointment Details</h2>
 
@@ -623,7 +635,7 @@ function Appointments() {
                   <p>
                     <strong>Barangay Certificate of Indigency:</strong>
                   </p>
-                  {selectedAppointment?.barangayImageUrl ? (
+                  {selectedAppointment.barangayImageUrl ? (
                     <a
                       href="#"
                       onClick={(e) => {
@@ -646,7 +658,7 @@ function Appointments() {
                   <p>
                     <strong>DSWD Certificate of Indigency:</strong>
                   </p>
-                  {selectedAppointment?.dswdImageUrl ? (
+                  {selectedAppointment.dswdImageUrl ? (
                     <a
                       href="#"
                       onClick={(e) => {
@@ -669,7 +681,7 @@ function Appointments() {
                   <p>
                     <strong>Disqualification Letter from PAO:</strong>
                   </p>
-                  {selectedAppointment?.paoImageUrl ? (
+                  {selectedAppointment.paoImageUrl ? (
                     <a
                       href="#"
                       onClick={(e) => {
@@ -831,6 +843,15 @@ function Appointments() {
 
         {selectedAppointment && showProceedingNotesForm && (
           <div className="client-eligibility">
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={handleCloseModal}
+                className="close-button"
+                style={{ position: "absolute", top: "15px", right: "15px" }}
+              >
+                ×
+              </button>
+            </div>
             <h2>Proceeding Notes</h2>
             <form onSubmit={handleSubmit}>
               <div>
@@ -852,6 +873,15 @@ function Appointments() {
 
         {selectedAppointment && showRescheduleForm && (
           <div className="client-eligibility">
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={handleCloseModal}
+                className="close-button"
+                style={{ position: "absolute", top: "15px", right: "15px" }}
+              >
+                ×
+              </button>
+            </div>
             <h2>Reschedule Appointment</h2>
             <p>
               <strong>Current Appointment Date:</strong> <br></br>
@@ -860,8 +890,8 @@ function Appointments() {
             <form onSubmit={handleRescheduleSubmit}>
               <div>
                 <ReactDatePicker
-                  selected={rescheduleDate}
-                  onChange={(date) => setRescheduleDate(date)}
+                  selected={appointmentDate}
+                  onChange={(date) => setAppointmentDate(date)}
                   showTimeSelect
                   filterDate={filterDate}
                   filterTime={filterTime}
@@ -890,7 +920,6 @@ function Appointments() {
             </form>
           </div>
         )}
-
         {showSnackbar && <div className="snackbar">{snackbarMessage}</div>}
       </div>
     </div>
