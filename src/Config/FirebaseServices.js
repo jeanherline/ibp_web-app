@@ -1,31 +1,58 @@
-import { 
-  collection, 
-  query, 
-  where, 
-  getDocs, 
-  limit, 
-  startAfter, 
-  orderBy, 
-  doc, 
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  limit,
+  startAfter,
+  startAt,
+  orderBy,
+  doc,
   updateDoc,
-  getDoc 
+  getDoc,
 } from "firebase/firestore"; // Import necessary functions directly from Firebase Firestore
 
 import { fs } from "./Firebase"; // Import fs from your Firebase configuration file
 
+const getAppointments = async (
+  statusFilter,
+  lastVisible,
+  pageSize = 7,
+  searchText = "",
+  assistanceFilter,
+  isPrevious = false
+) => {
+  let queryRef = collection(fs, "appointments");
 
-const getAppointments = async (statusFilter, lastVisible, pageSize = 7, searchText = "") => {
-  let queryRef = query(
-    collection(fs, "appointments"),
-    where("appointmentDetails.appointmentStatus", "==", statusFilter),
+  // Apply status filter if not "all"
+  if (statusFilter !== "all") {
+    queryRef = query(queryRef, where("appointmentDetails.appointmentStatus", "==", statusFilter));
+  }
+
+  queryRef = query(
+    queryRef,
     orderBy("appointmentDetails.controlNumber"), // Order by controlNumber
     limit(pageSize)
   );
 
   if (lastVisible) {
+    if (isPrevious) {
+      queryRef = query(
+        queryRef,
+        startAt(lastVisible?.appointmentDetails?.controlNumber || "")
+      );
+    } else {
+      queryRef = query(
+        queryRef,
+        startAfter(lastVisible?.appointmentDetails?.controlNumber || "")
+      );
+    }
+  }
+
+  if (assistanceFilter) {
     queryRef = query(
       queryRef,
-      startAfter(lastVisible?.appointmentDetails?.controlNumber || "") // Use the controlNumber for pagination
+      where("legalAssistanceRequested.selectedAssistanceType", "==", assistanceFilter)
     );
   }
 
@@ -42,13 +69,15 @@ const getAppointments = async (statusFilter, lastVisible, pageSize = 7, searchTe
         .data()
         .applicantProfile?.address?.toLowerCase()
         .includes(searchText.toLowerCase()) ||
-      doc.data().applicantProfile?.contactNumber?.includes(searchText)
+      doc.data().applicantProfile?.contactNumber?.includes(searchText) ||
+      doc.data().appointmentDetails?.controlNumber?.includes(searchText) ||
+      doc.data().legalAssistanceRequested?.selectedAssistanceType?.includes(searchText)
   );
 
   const totalQuery = await getDocs(
     query(
       collection(fs, "appointments"),
-      where("appointmentDetails.appointmentStatus", "==", statusFilter)
+      statusFilter !== "all" ? where("appointmentDetails.appointmentStatus", "==", statusFilter) : {}
     )
   );
 
@@ -69,11 +98,11 @@ const getAppointments = async (statusFilter, lastVisible, pageSize = 7, searchTe
         appointmentDetails: data.appointmentDetails, // Include appointmentDetails
       };
     }),
-    total: totalQuery.size
+    total: totalQuery.size,
+    firstDoc: querySnapshot.docs[0],
+    lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1],
   };
 };
-
-
 const updateAppointment = async (appointmentId, updatedData) => {
   const appointmentRef = doc(fs, "appointments", appointmentId);
   await updateDoc(appointmentRef, updatedData);
@@ -121,70 +150,77 @@ export const getCalendar = async () => {
   return bookedSlots;
 };
 
-const getUsers = async (
-  statusFilter,
-  lastVisible,
-  pageSize = 7,
-  searchText = "",
-  memberTypeFilter
-) => {
+ const getUsers = async (statusFilter, filterType, searchText, lastVisible, pageSize, isPrevious = false) => {
   try {
-    let queryRef = query(
-      collection(fs, "users"),
-      where("user_status", "==", statusFilter),
-      orderBy("created_time"),
-      limit(pageSize)
-    );
+    let queryRef = collection(fs, "users");
 
-    if (searchText) {
-      // Implement search functionality here, for example using name fields
-      // This is just a placeholder implementation
-      queryRef = query(queryRef, where("name", "==", searchText));
+    if (statusFilter === "all") {
+      // No filter needed for all
+    } else if (statusFilter) {
+      queryRef = query(queryRef, where("user_status", "==", statusFilter));
     }
 
-    if (memberTypeFilter !== "all") {
-      queryRef = query(queryRef, where("member_type", "==", memberTypeFilter));
+    if (filterType) {
+      queryRef = query(queryRef, where("member_type", "==", filterType));
+    }
+
+    if (searchText) {
+      queryRef = query(queryRef, where("display_name", ">=", searchText), where("display_name", "<=", searchText + "\uf8ff"));
     }
 
     if (lastVisible) {
-      queryRef = query(queryRef, startAfter(lastVisible));
+      queryRef = isPrevious
+        ? query(queryRef, limit(pageSize), startAfter(lastVisible))
+        : query(queryRef, limit(pageSize), startAfter(lastVisible));
+    } else {
+      queryRef = query(queryRef, limit(pageSize));
     }
 
-    console.log("Executing query:", queryRef); // Debug log
-
     const querySnapshot = await getDocs(queryRef);
+    const users = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const lastVisibleDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
 
-    const users = querySnapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        city: data.city,
-        createdTime: data.created_time,
-        displayName: data.display_name,
-        email: data.email,
-        lastName: data.last_name,
-        memberType: data.member_type,
-        middleName: data.middle_name,
-        userStatus: data.user_status,
-      };
-    });
-
-    console.log("Fetched users data:", users); // Debug log
-
-    return {
-      users,
-      lastVisible: querySnapshot.docs[querySnapshot.docs.length - 1] || null,
-      hasMore: querySnapshot.docs.length === pageSize,
-    };
+    return { users, lastVisibleDoc };
   } catch (error) {
     console.error("Failed to fetch users:", error);
     throw error;
   }
 };
 
-const updateUser = async (id, updatedData) => {
-  const usersRef = doc(fs, "users", id);
-  await updateDoc(usersRef, updatedData);
+const getUsersCount = async (statusFilter, filterType, searchText) => {
+  try {
+    let queryRef = collection(fs, "users");
+
+    if (statusFilter === "all") {
+      // No filter needed for all
+    } else if (statusFilter) {
+      queryRef = query(queryRef, where("user_status", "==", statusFilter));
+    }
+
+    if (filterType) {
+      queryRef = query(queryRef, where("member_type", "==", filterType));
+    }
+
+    if (searchText) {
+      queryRef = query(queryRef, where("display_name", ">=", searchText), where("display_name", "<=", searchText + "\uf8ff"));
+    }
+
+    const querySnapshot = await getDocs(queryRef);
+    return querySnapshot.size;
+  } catch (error) {
+    console.error("Failed to fetch users count:", error);
+    throw error;
+  }
+};
+
+ const updateUser = async (id, userData) => {
+  try {
+    const userRef = doc(fs, "users", id);
+    await updateDoc(userRef, userData);
+  } catch (error) {
+    console.error("Failed to update user:", error);
+    throw error;
+  }
 };
 
 const getUserById = async (userId) => {
@@ -197,6 +233,4 @@ const getUserById = async (userId) => {
   }
 };
 
-
-
-export { getAppointments, updateAppointment, getUsers, updateUser, getUserById };
+export { getAppointments, updateAppointment, getUsers, updateUser, getUserById, getUsersCount};

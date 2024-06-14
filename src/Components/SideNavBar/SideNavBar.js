@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Tooltip } from "react-tooltip";
 import { useNavigate, NavLink, useLocation } from "react-router-dom";
 import { auth, doc, fs, signOut } from "../../Config/Firebase";
-import { getDoc } from "firebase/firestore";
+import { getDoc, onSnapshot } from "firebase/firestore";
 import "react-tooltip/dist/react-tooltip.css"; // Make sure to import the CSS for react-tooltip
 import "./SideNavBar.css";
 import { Link } from "react-router-dom";
@@ -13,25 +13,32 @@ function SideNavBar() {
   const location = useLocation();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       if (user) {
-        try {
-          const userDocRef = doc(fs, "users", user.uid);
-          const userDoc = await getDoc(userDocRef);
+        const userDocRef = doc(fs, "users", user.uid);
+        const unsubscribeUserDoc = onSnapshot(userDocRef, (userDoc) => {
           if (userDoc.exists()) {
             setUserData(userDoc.data());
           } else {
             console.log("User document does not exist");
           }
-        } catch (error) {
+          setLoading(false);
+        }, (error) => {
           console.error("Error fetching user data:", error);
-        }
+          setLoading(false);
+        });
+
+        return () => {
+          unsubscribeUserDoc(); // Clean up the user document listener
+        };
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    // Cleanup subscription on unmount
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth(); // Clean up the auth state listener
+    };
   }, []);
 
   const capitalizeFirstLetter = (str) => {
@@ -129,7 +136,7 @@ function SideNavBar() {
             {userData && userData.member_type === 'admin' && (
               <li>
                 <NavLink
-                  to="/listOfUsers"
+                  to="/users"
                   className={({ isActive }) => (isActive ? "active" : "")}
                 >
                   Users
