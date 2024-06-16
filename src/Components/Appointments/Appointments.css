@@ -1,3 +1,4 @@
+
 .dashboard-container {
   display: flex;
 }
@@ -363,7 +364,7 @@ button:disabled {
 }
 
 .appointment-calendar {
-  margin-top: 80px;
+  margin-top: 30px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);

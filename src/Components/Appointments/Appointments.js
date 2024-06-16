@@ -43,6 +43,9 @@ function Appointments() {
   const [proceedingNotes, setProceedingNotes] = useState("");
   const [showProceedingNotesForm, setShowProceedingNotesForm] = useState(false);
   const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [natureOfLegalAssistanceFilter, setNatureOfLegalAssistanceFilter] =
+    useState("all");
+  const [totalFilteredItems, setTotalFilteredItems] = useState(0);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -50,13 +53,15 @@ function Appointments() {
         filter,
         lastVisible,
         pageSize,
-        searchText
+        searchText,
+        natureOfLegalAssistanceFilter
       );
       setAppointments(data);
       setTotalPages(Math.ceil(total / pageSize));
+      setTotalFilteredItems(total);
     };
     fetchAppointments();
-  }, [filter, lastVisible, searchText]);
+  }, [filter, lastVisible, searchText, natureOfLegalAssistanceFilter]);
 
   useEffect(() => {
     const fetchBookedSlots = async () => {
@@ -314,31 +319,61 @@ function Appointments() {
     return isSlotBooked(dateTime) ? "booked-time" : "";
   };
 
+  const resetFilters = () => {
+    setFilter("all");
+    setSearchText("");
+    setNatureOfLegalAssistanceFilter("all");
+    setLastVisible(null);
+    setCurrentPage(1);
+  };
+
   return (
     <div className="dashboard-container">
       <SideNavBar />
       <div className="main-content">
+        <br />
+        <h3>Appointments</h3>
+        <br />
         <input
           type="text"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           placeholder="Search..."
         />
+        &nbsp;&nbsp;
         <select onChange={(e) => setFilter(e.target.value)} value={filter}>
-          <option value="all">All</option> {/* Updated from "" to "all" */}
+          <option value="all" disabled>Status</option> {/* Updated from "" to "all" */}
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="denied">Denied</option>
           <option value="done">Done</option>
         </select>
-
+        &nbsp;&nbsp;
+        <select
+          onChange={(e) => setNatureOfLegalAssistanceFilter(e.target.value)}
+          value={natureOfLegalAssistanceFilter}
+        >
+          <option value="all" disabled>Nature of Legal Assistance</option>
+          <option value="Payong Legal (Legal Advice)">
+            Payong Legal (Legal Advice)
+          </option>
+          <option value="Legal na Representasyon (Legal Representation)">
+            Legal na Representasyon (Legal Representation)
+          </option>
+          <option value="Pag gawa ng Legal na Dokumento (Drafting of Legal Document)">
+            Pag gawa ng Legal na Dokumento (Drafting of Legal Document)
+          </option>
+        </select>
+        &nbsp;&nbsp;
+        <button onClick={resetFilters}>Reset Filters</button>
+        <br />
+        <p>Total Filtered Items: {totalFilteredItems}</p>
         <table className="table table-striped table-bordered">
           <thead>
             <tr>
               <th>#</th>
               <th>Control Number</th>
               <th>Full Name</th>
-              <th>Contact Number</th>
               <th>Nature of Legal Assistance Requested</th>
               <th>Date Submitted</th>
               <th>Status</th>
@@ -351,7 +386,6 @@ function Appointments() {
                 <td>{(currentPage - 1) * pageSize + index + 1}.</td>
                 <td>{appointment.controlNumber}</td>
                 <td>{appointment.fullName}</td>
-                <td>{appointment.contactNumber}</td>
                 <td>{appointment.selectedAssistanceType}</td>
                 <td>{getFormattedDate(appointment.createdDate)}</td>
                 <td>{capitalizeFirstLetter(appointment.appointmentStatus)}</td>
@@ -418,7 +452,6 @@ function Appointments() {
             disabled={currentPage === totalPages}
           />
         </Pagination>
-
         {selectedAppointment &&
           selectedAppointment.appointmentStatus !== "done" &&
           !showProceedingNotesForm &&
@@ -508,9 +541,9 @@ function Appointments() {
                     <p>
                       <strong>Appointment Experience Rating:</strong>
                       <br></br>{" "}
-                      {selectedAppointment.appointmentDetails?.feedbackRating ||
+                      {selectedAppointment.appointmentDetails?.ratings ||
                         "-"}{" "}
-                      Star/s Rating
+                      Star/s Ratings
                     </p>
                   </>
                 )}
@@ -711,7 +744,6 @@ function Appointments() {
               )}
             </div>
           )}
-
         <br />
         <br />
         {selectedAppointment &&
@@ -840,7 +872,6 @@ function Appointments() {
               </form>
             </div>
           )}
-
         {selectedAppointment && showProceedingNotesForm && (
           <div className="client-eligibility">
             <div style={{ position: "relative" }}>
@@ -870,7 +901,6 @@ function Appointments() {
             </form>
           </div>
         )}
-
         {selectedAppointment && showRescheduleForm && (
           <div className="client-eligibility">
             <div style={{ position: "relative" }}>

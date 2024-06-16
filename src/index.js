@@ -7,7 +7,7 @@ import './Config/Firebase';
 import reportWebVitals from './reportWebVitals';
 import { AuthProvider } from "./AuthContext"; // Import the AuthProvider
 import 'bootstrap/dist/css/bootstrap.min.css';
-
+  <link rel="icon" href="%PUBLIC_URL%/ibp_logo.png" />
 ReactDOM.render(
   <React.StrictMode>
     <AuthProvider>

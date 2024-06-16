@@ -17,23 +17,38 @@ function ApptsCalendar() {
     const fetchAppointmentsAndSlots = async () => {
       try {
         const apptData = await getAppointments(statusFilter, null, 50, "");
-        const slotsData = await getCalendar();  // Assuming getCalendar fetches the booked slots
+        const slotsData = await getCalendar(); // Assuming getCalendar fetches the booked slots
 
-        const formattedAppointments = apptData.data.map((appt) => ({
-          start: new Date(appt.appointmentDate.seconds * 1000),
-          end: new Date(appt.appointmentDate.seconds * 1000),
-          title: `${appt.fullName} - ${appt.contactNumber}`,
-          allDay: false,
-          ...appt // Include all appointment data
-        }));
+        const formatTime = (date) => {
+          let hours = date.getHours();
+          const minutes = date.getMinutes().toString().padStart(2, "0");
+          const ampm = hours >= 12 ? "PM" : "AM";
+          hours = hours % 12;
+          hours = hours ? hours : 12; // the hour '0' should be '12'
+          return `${hours}:${minutes} ${ampm}`;
+        };
 
-        const formattedBookedSlots = slotsData.map(slot => ({
-          start: new Date(slot.appointmentDate.seconds * 1000),
-          end: new Date(slot.appointmentDate.seconds * 1000),
-          title: `${slot.fullName} - ${slot.contactNumber}`,
-          allDay: false,
-          ...slot // Include all slot data
-        }));
+        const formattedAppointments = apptData.data.map((appt) => {
+          const appointmentDate = new Date(appt.appointmentDate.seconds * 1000);
+          return {
+            start: appointmentDate,
+            end: appointmentDate,
+            title: `${formatTime(appointmentDate)} - ${appt.fullName}`,
+            allDay: false,
+            ...appt, // Include all appointment data
+          };
+        });
+
+        const formattedBookedSlots = slotsData.map((slot) => {
+          const appointmentDate = new Date(slot.appointmentDate.seconds * 1000);
+          return {
+            start: appointmentDate,
+            end: appointmentDate,
+            title: `${formatTime(appointmentDate)} - ${slot.fullName}`,
+            allDay: false,
+            ...slot, // Include all slot data
+          };
+        });
 
         setAppointments([...formattedAppointments, ...formattedBookedSlots]);
       } catch (error) {
@@ -42,7 +57,7 @@ function ApptsCalendar() {
     };
 
     fetchAppointmentsAndSlots();
-  }, [statusFilter]);  // Ensure effect runs on statusFilter changes
+  }, [statusFilter]); // Ensure effect runs on statusFilter changes
 
   const handleSelectEvent = (event) => {
     setSelectedAppointment(event);
@@ -76,6 +91,8 @@ function ApptsCalendar() {
     <div className="dashboard-container">
       <SideNavBar />
       <div className="main-content">
+      <br />
+      <h3>Appts. Calendar</h3>
         <div className="appointment-calendar">
           <Calendar
             localizer={localizer}
@@ -84,12 +101,43 @@ function ApptsCalendar() {
             endAccessor="end"
             style={{ height: 500 }}
             onSelectEvent={handleSelectEvent}
+            components={{
+              event: ({ event }) => (
+                <span>
+                  <strong>{event.title}</strong>
+                </span>
+              ),
+              month: {
+                dateHeader: ({ date, label }) => (
+                  <div>
+                    <span>{label}</span>
+                    {appointments.filter((appt) =>
+                      moment(appt.start).isSame(date, "day")
+                    ).length > 1 && (
+                      <span style={{ color: "red", marginLeft: "5px" }}>
+                        +
+                        {appointments.filter((appt) =>
+                          moment(appt.start).isSame(date, "day")
+                        ).length - 1}{" "}
+                        more
+                      </span>
+                    )}
+                  </div>
+                ),
+              },
+            }}
           />
         </div>
         {selectedAppointment && (
           <div className="client-eligibility">
-            <div style={{ position: 'relative' }}>
-              <button onClick={handleCloseModal} className="close-button" style={{ position: 'absolute', top: '15px', right: '15px' }}>×</button>
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={handleCloseModal}
+                className="close-button"
+                style={{ position: "absolute", top: "15px", right: "15px" }}
+              >
+                ×
+              </button>
             </div>
             <br />
             <h2>Appointment Details</h2>
@@ -99,32 +147,32 @@ function ApptsCalendar() {
                 <em>Basic Information</em>
               </h3>
               <p>
-                <strong>Control Number:</strong> <br></br>{" "}
+                <strong>Control Number:</strong> <br />
                 {selectedAppointment.controlNumber}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Date Request Created:</strong> <br></br>
+                <strong>Date Request Created:</strong> <br />
                 {getFormattedDate(selectedAppointment.createdDate)}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Appointment Status:</strong> <br></br>
+                <strong>Appointment Status:</strong> <br />
                 {capitalizeFirstLetter(selectedAppointment.appointmentStatus)}
               </p>
-              <br></br>
+              <br />
               {selectedAppointment.appointmentStatus !== "pending" && (
                 <>
                   <p>
-                    <strong>Appointment Date:</strong> <br></br>
+                    <strong>Appointment Date:</strong> <br />
                     {getFormattedDate(
                       selectedAppointment.appointmentDate,
                       true
                     )}
                   </p>
-                  <br></br>
+                  <br />
                   <p>
-                    <strong>Eligibility:</strong> <br></br>
+                    <strong>Eligibility:</strong> <br />
                     {capitalizeFirstLetter(
                       selectedAppointment.clientEligibility?.eligibility || "-"
                     )}
@@ -132,42 +180,42 @@ function ApptsCalendar() {
 
                   {selectedAppointment.appointmentStatus === "cancelled" && (
                     <p>
-                      <strong>Denial Reason:</strong> <br></br>
+                      <strong>Denial Reason:</strong> <br />
                       {selectedAppointment.clientEligibility?.denialReason ||
                         "-"}
                     </p>
                   )}
-                  <br></br>
+                  <br />
                   <p>
-                    <strong>Notes:</strong> <br></br>
+                    <strong>Notes:</strong> <br />
                     {selectedAppointment.clientEligibility?.notes || "-"}
                   </p>
-                  <br></br>
+                  <br />
                   <p>
-                    <strong>IBP Paralegal Staff:</strong> <br></br>
+                    <strong>IBP Paralegal Staff:</strong> <br />
                     {selectedAppointment.clientEligibility?.ibpParalegalStaff ||
                       "-"}
                   </p>
-                  <br></br>
+                  <br />
                   <p>
-                    <strong>Assisting Counsel:</strong> <br></br>
+                    <strong>Assisting Counsel:</strong> <br />
                     {selectedAppointment.clientEligibility?.assistingCounsel ||
                       "-"}
                   </p>
-                  <br></br>
+                  <br />
                   <p>
-                    <strong>Reviewed By:</strong> <br></br>
+                    <strong>Reviewed By:</strong> <br />
                     {selectedAppointment.reviewer
                       ? `${selectedAppointment.reviewer.display_name} ${selectedAppointment.reviewer.middle_name} ${selectedAppointment.reviewer.last_name}`
                       : "Not Available"}
                   </p>
-                  <br></br>
+                  <br />
                   <p>
                     <strong>Appointment Experience Rating:</strong>
-                    <br></br>{" "}
-                    {selectedAppointment.appointmentDetails?.feedbackRating ||
+                    <br />{" "}
+                    {selectedAppointment.appointmentDetails?.ratings ||
                       "-"}{" "}
-                    Star/s Rating
+                    Star/s Ratings
                   </p>
                 </>
               )}
@@ -178,12 +226,12 @@ function ApptsCalendar() {
                 <em>Applicant Profile</em>
               </h3>
               <p>
-                <strong>Full Name:</strong> <br></br>
+                <strong>Full Name:</strong> <br />
                 {selectedAppointment.fullName}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Date of Birth:</strong> <br></br>
+                <strong>Date of Birth:</strong> <br />
                 {selectedAppointment.dob
                   ? new Date(selectedAppointment.dob).toLocaleDateString(
                       "en-US",
@@ -191,37 +239,37 @@ function ApptsCalendar() {
                     )
                   : "N/A"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Address:</strong> <br></br>
+                <strong>Address:</strong> <br />
                 {selectedAppointment.address || "Not Available"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Contact Number:</strong> <br></br>
+                <strong>Contact Number:</strong> <br />
                 {selectedAppointment.contactNumber || "Not Available"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Gender:</strong> <br></br>
+                <strong>Gender:</strong> <br />
                 {selectedAppointment.selectedGender || "Not Specified"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Spouse Name:</strong> <br></br>
+                <strong>Spouse Name:</strong> <br />
                 {selectedAppointment.spouseName || "Not Available"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Spouse Occupation:</strong> <br></br>
+                <strong>Spouse Occupation:</strong> <br />
                 {selectedAppointment.spouseOccupation || "Not Available"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Children Names and Ages:</strong> <br></br>
+                <strong>Children Names and Ages:</strong> <br />
                 {selectedAppointment.childrenNamesAges || "Not Available"}
               </p>
-              <br></br>
+              <br />
             </section>
 
             <section className="mb-4">
@@ -229,30 +277,30 @@ function ApptsCalendar() {
                 <em>Employment Profile</em>
               </h3>
               <p>
-                <strong>Occupation:</strong> <br></br>
+                <strong>Occupation:</strong> <br />
                 {selectedAppointment.occupation || "Not Available"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Type of Employment:</strong> <br></br>
+                <strong>Type of Employment:</strong> <br />
                 {selectedAppointment.kindOfEmployment || "Not Specified"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Employer Name:</strong>
-                <br></br> {selectedAppointment.employerName || "Not Available"}
+                <strong>Employer Name:</strong> <br />
+                {selectedAppointment.employerName || "Not Available"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Employer Address:</strong> <br></br>
+                <strong>Employer Address:</strong> <br />
                 {selectedAppointment.employerAddress || "Not Available"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Monthly Income:</strong> <br></br>
+                <strong>Monthly Income:</strong> <br />
                 {selectedAppointment.monthlyIncome || "Not Available"}
               </p>
-              <br></br>
+              <br />
             </section>
 
             <section className="mb-4">
@@ -260,26 +308,25 @@ function ApptsCalendar() {
                 <em>Nature of Legal Assistance Requested</em>
               </h3>
               <p>
-                <strong>Type of Legal Assistance:</strong> <br></br>
+                <strong>Type of Legal Assistance:</strong> <br />
                 {selectedAppointment.selectedAssistanceType || "Not Specified"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Problem:</strong> <br></br>
+                <strong>Problem:</strong> <br />
                 {selectedAppointment.problems || "Not Available"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Reason for Problem:</strong> <br></br>
+                <strong>Reason for Problem:</strong> <br />
                 {selectedAppointment.problemReason || "Not Available"}
               </p>
-              <br></br>
+              <br />
               <p>
-                <strong>Desired Solutions:</strong>
-                <br></br>{" "}
+                <strong>Desired Solutions:</strong> <br />{" "}
                 {selectedAppointment.desiredSolutions || "Not Available"}
               </p>
-              <br></br>
+              <br />
             </section>
 
             <section>

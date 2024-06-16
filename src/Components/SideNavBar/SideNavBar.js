@@ -16,17 +16,21 @@ function SideNavBar() {
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       if (user) {
         const userDocRef = doc(fs, "users", user.uid);
-        const unsubscribeUserDoc = onSnapshot(userDocRef, (userDoc) => {
-          if (userDoc.exists()) {
-            setUserData(userDoc.data());
-          } else {
-            console.log("User document does not exist");
+        const unsubscribeUserDoc = onSnapshot(
+          userDocRef,
+          (userDoc) => {
+            if (userDoc.exists()) {
+              setUserData(userDoc.data());
+            } else {
+              console.log("User document does not exist");
+            }
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Error fetching user data:", error);
+            setLoading(false);
           }
-          setLoading(false);
-        }, (error) => {
-          console.error("Error fetching user data:", error);
-          setLoading(false);
-        });
+        );
 
         return () => {
           unsubscribeUserDoc(); // Clean up the user document listener
@@ -133,15 +137,22 @@ function SideNavBar() {
                 Appointments
               </NavLink>
             </li>
-            {userData && userData.member_type === 'admin' && (
-              <li>
+            {userData && userData.member_type === "admin" && (
+              <><li>
                 <NavLink
                   to="/users"
                   className={({ isActive }) => (isActive ? "active" : "")}
                 >
                   Users
                 </NavLink>
-              </li>
+              </li><li>
+                  <NavLink
+                    to="/ratings"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Ratings
+                  </NavLink>
+                </li></>
             )}
           </ul>
         </nav>
