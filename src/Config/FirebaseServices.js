@@ -19,7 +19,7 @@ const getAppointments = async (
   lastVisible,
   pageSize = 7,
   searchText = "",
-  assistanceFilter,
+  assistanceFilter = "all",
   isPrevious = false
 ) => {
   let queryRef = collection(fs, "appointments");
@@ -29,31 +29,21 @@ const getAppointments = async (
     queryRef = query(queryRef, where("appointmentDetails.appointmentStatus", "==", statusFilter));
   }
 
-  queryRef = query(
-    queryRef,
-    orderBy("appointmentDetails.controlNumber"), // Order by controlNumber
-    limit(pageSize)
-  );
-
-  if (lastVisible) {
-    if (isPrevious) {
-      queryRef = query(
-        queryRef,
-        startAt(lastVisible?.appointmentDetails?.controlNumber || "")
-      );
-    } else {
-      queryRef = query(
-        queryRef,
-        startAfter(lastVisible?.appointmentDetails?.controlNumber || "")
-      );
-    }
+  // Apply assistance filter if not "all"
+  if (assistanceFilter !== "all") {
+    queryRef = query(queryRef, where("legalAssistanceRequested.selectedAssistanceType", "==", assistanceFilter));
   }
 
-  if (assistanceFilter) {
-    queryRef = query(
-      queryRef,
-      where("legalAssistanceRequested.selectedAssistanceType", "==", assistanceFilter)
-    );
+  // Order by controlNumber and limit results for pagination
+  queryRef = query(queryRef, orderBy("appointmentDetails.controlNumber"), limit(pageSize));
+
+  // Handle pagination
+  if (lastVisible) {
+    if (isPrevious) {
+      queryRef = query(queryRef, startAt(lastVisible?.appointmentDetails?.controlNumber || ""));
+    } else {
+      queryRef = query(queryRef, startAfter(lastVisible?.appointmentDetails?.controlNumber || ""));
+    }
   }
 
   const querySnapshot = await getDocs(queryRef);
@@ -71,7 +61,7 @@ const getAppointments = async (
         .includes(searchText.toLowerCase()) ||
       doc.data().applicantProfile?.contactNumber?.includes(searchText) ||
       doc.data().appointmentDetails?.controlNumber?.includes(searchText) ||
-      doc.data().legalAssistanceRequested?.selectedAssistanceType?.includes(searchText)
+      doc.data().legalAssistanceRequested?.selectedAssistanceType?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const totalQuery = await getDocs(
@@ -150,13 +140,11 @@ export const getCalendar = async () => {
   return bookedSlots;
 };
 
- const getUsers = async (statusFilter, filterType, searchText, lastVisible, pageSize, isPrevious = false) => {
+const getUsers = async (statusFilter, filterType, cityFilter, searchText, lastVisible, pageSize, pageNumber = 1) => {
   try {
     let queryRef = collection(fs, "users");
 
-    if (statusFilter === "all") {
-      // No filter needed for all
-    } else if (statusFilter) {
+    if (statusFilter !== "all") {
       queryRef = query(queryRef, where("user_status", "==", statusFilter));
     }
 
@@ -164,14 +152,16 @@ export const getCalendar = async () => {
       queryRef = query(queryRef, where("member_type", "==", filterType));
     }
 
+    if (cityFilter !== "all") {
+      queryRef = query(queryRef, where("city", "==", cityFilter));
+    }
+
     if (searchText) {
       queryRef = query(queryRef, where("display_name", ">=", searchText), where("display_name", "<=", searchText + "\uf8ff"));
     }
 
     if (lastVisible) {
-      queryRef = isPrevious
-        ? query(queryRef, limit(pageSize), startAfter(lastVisible))
-        : query(queryRef, limit(pageSize), startAfter(lastVisible));
+      queryRef = query(queryRef, limit(pageSize), startAfter(lastVisible));
     } else {
       queryRef = query(queryRef, limit(pageSize));
     }
@@ -187,18 +177,20 @@ export const getCalendar = async () => {
   }
 };
 
-const getUsersCount = async (statusFilter, filterType, searchText) => {
+const getUsersCount = async (statusFilter, filterType, cityFilter, searchText) => {
   try {
     let queryRef = collection(fs, "users");
 
-    if (statusFilter === "all") {
-      // No filter needed for all
-    } else if (statusFilter) {
+    if (statusFilter !== "all") {
       queryRef = query(queryRef, where("user_status", "==", statusFilter));
     }
 
     if (filterType) {
       queryRef = query(queryRef, where("member_type", "==", filterType));
+    }
+
+    if (cityFilter !== "all") {
+      queryRef = query(queryRef, where("city", "==", cityFilter));
     }
 
     if (searchText) {
@@ -213,7 +205,7 @@ const getUsersCount = async (statusFilter, filterType, searchText) => {
   }
 };
 
- const updateUser = async (id, userData) => {
+const updateUser = async (id, userData) => {
   try {
     const userRef = doc(fs, "users", id);
     await updateDoc(userRef, userData);

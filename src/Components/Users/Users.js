@@ -3,8 +3,13 @@ import SideNavBar from "../SideNavBar/SideNavBar";
 import "../Dashboard/Dashboard.css";
 import "./Users.css";
 import Pagination from "react-bootstrap/Pagination";
-import { getUsers, getUsersCount, updateUser } from "../../Config/FirebaseServices";
-import { useAuth } from "../../AuthContext";
+import {
+  getUsers,
+  getUsersCount,
+  updateUser,
+} from "../../Config/FirebaseServices";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faEdit, faArchive } from '@fortawesome/free-solid-svg-icons';
 
 function Users() {
   const [users, setUsers] = useState([]);
@@ -16,106 +21,69 @@ function Users() {
   const [totalPages, setTotalPages] = useState(1);
   const [lastVisible, setLastVisible] = useState(null);
   const pageSize = 7;
-  const { currentUser } = useAuth();
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [cityFilter, setCityFilter] = useState("all");
+  const [totalFilteredItems, setTotalFilteredItems] = useState(0);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const totalUsers = await getUsersCount(filterStatus, filterType, searchText);
-        const newTotalPages = Math.ceil(totalUsers / pageSize);
-        const { users, lastVisibleDoc } = await getUsers(
-          filterStatus,
-          filterType,
-          searchText,
-          null,
-          pageSize
-        );
-        setUsers(users);
-        setTotalPages(newTotalPages);
-        setLastVisible(lastVisibleDoc);
-        setCurrentPage(1);
-      } catch (error) {
-        console.error("Failed to fetch users:", error);
-      }
-    };
-    fetchUsers();
-  }, [filterStatus, filterType, searchText]);
-  
+    fetchUsers(1); // Fetch users when component mounts or filters change
+  }, [filterStatus, filterType, cityFilter, searchText]);
+
+  const fetchUsers = async (page) => {
+    try {
+      const totalUsers = await getUsersCount(
+        filterStatus,
+        filterType,
+        cityFilter,
+        searchText
+      );
+      const newTotalPages = Math.ceil(totalUsers / pageSize);
+      const { users, lastVisibleDoc } = await getUsers(
+        filterStatus,
+        filterType,
+        cityFilter,
+        searchText,
+        page === 1 ? null : lastVisible,
+        pageSize
+      );
+      setUsers(users);
+      setTotalPages(newTotalPages);
+      setLastVisible(lastVisibleDoc);
+      setCurrentPage(page);
+      setTotalFilteredItems(totalUsers);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    }
+  };
 
   const capitalizeFirstLetter = (string) => {
     return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (currentPage < totalPages) {
-      try {
-        const { users, lastVisibleDoc } = await getUsers(
-          filterStatus,
-          filterType,
-          searchText,
-          lastVisible,
-          pageSize
-        );
-        setUsers(users);
-        setLastVisible(lastVisibleDoc);
-        setCurrentPage(currentPage + 1);
-      } catch (error) {
-        console.error("Failed to fetch next page of users:", error);
-      }
+      fetchUsers(currentPage + 1);
     }
   };
-  
-  const handlePrevious = async () => {
+
+  const handlePrevious = () => {
     if (currentPage > 1) {
-      try {
-        const { users, lastVisibleDoc } = await getUsers(
-          filterStatus,
-          filterType,
-          searchText,
-          lastVisible,
-          pageSize,
-          true
-        );
-        setUsers(users);
-        setLastVisible(lastVisibleDoc);
-        setCurrentPage(currentPage - 1);
-      } catch (error) {
-        console.error("Failed to fetch previous page of users:", error);
-      }
+      fetchUsers(currentPage - 1);
     }
   };
-  
 
-  const handleFirst = async () => {
-    const { users, lastVisibleDoc } = await getUsers(
-      filterStatus,
-      filterType,
-      searchText,
-      null,
-      pageSize
-    );
-    setUsers(users);
-    setLastVisible(lastVisibleDoc);
-    setCurrentPage(1);
+  const handleFirst = () => {
+    fetchUsers(1);
   };
 
-  const handleLast = async () => {
-    const totalUsers = await getUsersCount(filterStatus, filterType, searchText);
-    const newTotalPages = Math.ceil(totalUsers / pageSize);
-    const { users, lastVisibleDoc } = await getUsers(
-      filterStatus,
-      filterType,
-      searchText,
-      null,
-      pageSize,
-      newTotalPages
-    );
-    setUsers(users);
-    setLastVisible(lastVisibleDoc);
-    setCurrentPage(newTotalPages);
+  const handleLast = () => {
+    fetchUsers(totalPages);
+  };
+
+  const handlePageClick = (page) => {
+    fetchUsers(page);
   };
 
   const toggleDetails = (user) => {
@@ -130,23 +98,17 @@ function Users() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await updateUser(selectedUser.uid, selectedUser);
-    setSelectedUser(null);
-    setIsModalOpen(false);
-    const totalUsers = await getUsersCount(filterStatus, filterType, searchText);
-    const newTotalPages = Math.ceil(totalUsers / pageSize);
-    const { users, lastVisibleDoc } = await getUsers(
-      filterStatus,
-      filterType,
-      searchText,
-      null,
-      pageSize
-    );
-    setUsers(users);
-    setTotalPages(newTotalPages);
-    setSnackbarMessage("User details have been successfully updated.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
+    try {
+      await updateUser(selectedUser.uid, selectedUser);
+      setSelectedUser(null);
+      setIsModalOpen(false);
+      fetchUsers(currentPage);
+      setSnackbarMessage("User details have been successfully updated.");
+      setShowSnackbar(true);
+      setTimeout(() => setShowSnackbar(false), 3000);
+    } catch (error) {
+      console.error("Failed to update user:", error);
+    }
   };
 
   const handleChange = (e) => {
@@ -157,31 +119,77 @@ function Users() {
   const handleFilterChange = (setter) => (e) => {
     setter(e.target.value);
     setLastVisible(null);
-    setCurrentPage(1);
+    fetchUsers(1);
+  };
+
+  const resetFilters = () => {
+    setFilterStatus("all");
+    setFilterType("");
+    setCityFilter("all");
+    setSearchText("");
+    setLastVisible(null);
+    fetchUsers(1);
   };
 
   return (
     <div className="dashboard-container">
       <SideNavBar />
       <div className="main-content">
-      <input
-  type="text"
-  value={searchText}
-  onChange={handleFilterChange(setSearchText)}
-  placeholder="Search..."
-/>
-<select onChange={handleFilterChange(setFilterType)} value={filterType}>
-  <option value="">All</option>
-  <option value="admin">Admin</option>
-  <option value="lawyer">Lawyer</option>
-  <option value="frontdesk">Frontdesk</option>
-  <option value="client">Client</option>
-</select>
-<select onChange={handleFilterChange(setFilterStatus)} value={filterStatus}>
-  <option value="all">All</option>
-  <option value="active">Active</option>
-  <option value="inactive">Inactive</option>
-</select>
+        <br />
+        <h3>Users</h3>
+        <br />
+        <input
+          type="text"
+          value={searchText}
+          onChange={handleFilterChange(setSearchText)}
+          placeholder="Search..."
+        />
+        &nbsp;&nbsp;
+        <select onChange={handleFilterChange(setFilterType)} value={filterType}>
+          <option value="" disabled>Roles</option>
+          <option value="admin">Admin</option>
+          <option value="lawyer">Lawyer</option>
+          <option value="frontdesk">Frontdesk</option>
+          <option value="client">Client</option>
+        </select>
+        &nbsp;&nbsp;
+        <select onChange={handleFilterChange(setCityFilter)} value={cityFilter}>
+          <option value="all" disabled>Cities</option>
+          <option value="Angat">Angat</option>
+          <option value="Balagtas">Balagtas</option>
+          <option value="Baliuag">Baliuag</option>
+          <option value="Bocaue">Bocaue</option>
+          <option value="Bulakan">Bulakan</option>
+          <option value="Bustos">Bustos</option>
+          <option value="Calumpit">Calumpit</option>
+          <option value="Doña Remedios Trinidad">Doña Remedios Trinidad</option>
+          <option value="Guiguinto">Guiguinto</option>
+          <option value="Hagonoy">Hagonoy</option>
+          <option value="Marilao">Marilao</option>
+          <option value="Norzagaray">Norzagaray</option>
+          <option value="Obando">Obando</option>
+          <option value="Pandi">Pandi</option>
+          <option value="Paombong">Paombong</option>
+          <option value="Plaridel">Plaridel</option>
+          <option value="Pulilan">Pulilan</option>
+          <option value="San Ildefonso">San Ildefonso</option>
+          <option value="San Miguel">San Miguel</option>
+          <option value="San Rafael">San Rafael</option>
+          <option value="Santa Maria">Santa Maria</option>
+        </select>
+        &nbsp;&nbsp;
+        <select
+          onChange={handleFilterChange(setFilterStatus)}
+          value={filterStatus}
+        >
+          <option value="all" disabled>Active / Inactive</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+        &nbsp;&nbsp;
+        <button onClick={resetFilters}>Reset Filters</button>
+        <br />
+        <p>Total Filtered Items: {totalFilteredItems}</p>
         <table className="table table-striped table-bordered">
           <thead>
             <tr>
@@ -208,29 +216,50 @@ function Users() {
                 <td>{capitalizeFirstLetter(user.member_type)}</td>
                 <td>{capitalizeFirstLetter(user.user_status)}</td>
                 <td>
-                  <button onClick={() => toggleDetails(user)}>View</button>
+                  <button onClick={() => toggleDetails(user)}>
+                    <FontAwesomeIcon icon={faEye} /> 
+                  </button>
+                  &nbsp; &nbsp;
+                  <button onClick={() => toggleDetails(user)}>
+                    <FontAwesomeIcon icon={faEdit} /> 
+                  </button>
+                  &nbsp; &nbsp;
+                  <button onClick={() => toggleDetails(user)}>
+                    <FontAwesomeIcon icon={faArchive} />
+                  </button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         <Pagination>
-          <Pagination.First onClick={handleFirst} disabled={currentPage === 1} />
-          <Pagination.Prev onClick={handlePrevious} disabled={currentPage === 1} />
+          <Pagination.First
+            onClick={handleFirst}
+            disabled={currentPage === 1}
+          />
+          <Pagination.Prev
+            onClick={handlePrevious}
+            disabled={currentPage === 1}
+          />
           {[...Array(totalPages).keys()].map((_, index) => (
             <Pagination.Item
               key={index + 1}
               active={index + 1 === currentPage}
-              onClick={() => setCurrentPage(index + 1)}
+              onClick={() => handlePageClick(index + 1)}
             >
               {index + 1}
             </Pagination.Item>
           ))}
-          <Pagination.Next onClick={handleNext} disabled={currentPage === totalPages} />
-          <Pagination.Last onClick={handleLast} disabled={currentPage === totalPages} />
+          <Pagination.Next
+            onClick={handleNext}
+            disabled={currentPage === totalPages}
+          />
+          <Pagination.Last
+            onClick={handleLast}
+            disabled={currentPage === totalPages}
+          />
         </Pagination>
-
-        {selectedUser && (
+        {selectedUser && isModalOpen && (
           <div className="client-eligibility">
             <div style={{ position: "relative" }}>
               <button
