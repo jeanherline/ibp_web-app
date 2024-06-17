@@ -13,6 +13,13 @@ import {
 } from "../../Config/FirebaseServices";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "../../AuthContext";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { auth } from "../../Config/Firebase";
+import {
+  faEye,
+  faCheck,
+  faCalendarAlt,
+} from "@fortawesome/free-solid-svg-icons";
 
 function Appointments() {
   const [appointments, setAppointments] = useState([]);
@@ -22,7 +29,7 @@ function Appointments() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [lastVisible, setLastVisible] = useState(null);
-  const pageSize = 5;
+  const pageSize = 10;
   const [clientEligibility, setClientEligibility] = useState({
     eligibility: "",
     denialReason: "",
@@ -46,6 +53,16 @@ function Appointments() {
   const [natureOfLegalAssistanceFilter, setNatureOfLegalAssistanceFilter] =
     useState("all");
   const [totalFilteredItems, setTotalFilteredItems] = useState(0);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        window.location.href = "/";
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchAppointments = async () => {
@@ -342,7 +359,10 @@ function Appointments() {
         />
         &nbsp;&nbsp;
         <select onChange={(e) => setFilter(e.target.value)} value={filter}>
-          <option value="all" disabled>Status</option> {/* Updated from "" to "all" */}
+          <option value="all" disabled>
+            Status
+          </option>{" "}
+          {/* Updated from "" to "all" */}
           <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="denied">Denied</option>
@@ -353,7 +373,9 @@ function Appointments() {
           onChange={(e) => setNatureOfLegalAssistanceFilter(e.target.value)}
           value={natureOfLegalAssistanceFilter}
         >
-          <option value="all" disabled>Nature of Legal Assistance</option>
+          <option value="all" disabled>
+            Nature of Legal Assistance
+          </option>
           <option value="Payong Legal (Legal Advice)">
             Payong Legal (Legal Advice)
           </option>
@@ -390,8 +412,17 @@ function Appointments() {
                 <td>{getFormattedDate(appointment.createdDate)}</td>
                 <td>{capitalizeFirstLetter(appointment.appointmentStatus)}</td>
                 <td>
-                  <button onClick={() => toggleDetails(appointment)}>
-                    View
+                  <button
+                    onClick={() => toggleDetails(appointment)}
+                    style={{
+                      backgroundColor: "#4267B2",
+                      color: "white",
+                      border: "none",
+                      padding: "5px 10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faEye} />
                   </button>
                   &nbsp; &nbsp;
                   {filter === "approved" && (
@@ -402,8 +433,15 @@ function Appointments() {
                           setShowProceedingNotesForm(true);
                           setShowRescheduleForm(false);
                         }}
+                        style={{
+                          backgroundColor: "#1DB954",
+                          color: "white",
+                          border: "none",
+                          padding: "5px 10px",
+                          cursor: "pointer",
+                        }}
                       >
-                        Done
+                        <FontAwesomeIcon icon={faCheck} />
                       </button>
                       &nbsp; &nbsp;
                       <button
@@ -412,8 +450,15 @@ function Appointments() {
                           setShowProceedingNotesForm(false);
                           setShowRescheduleForm(true);
                         }}
+                        style={{
+                          backgroundColor: "#ff8b61",
+                          color: "white",
+                          border: "none",
+                          padding: "5px 10px",
+                          cursor: "pointer",
+                        }}
                       >
-                        Reschedule
+                        <FontAwesomeIcon icon={faCalendarAlt} />
                       </button>
                     </>
                   )}
@@ -470,205 +515,436 @@ function Appointments() {
               <h2>Appointment Details</h2>
 
               <section className="mb-4">
-                <h3>
-                  <em>Basic Information</em>
-                </h3>
-                <p>
-                  <strong>Control Number:</strong> <br></br>{" "}
-                  {selectedAppointment.controlNumber}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Date Request Created:</strong> <br></br>
-                  {getFormattedDate(selectedAppointment.createdDate)}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Appointment Status:</strong> <br></br>
-                  {capitalizeFirstLetter(selectedAppointment.appointmentStatus)}
-                </p>
-                <br></br>
+                <h2>
+                  <em
+                    style={{
+                      color: "#a34bc9",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Basic Information
+                  </em>
+                </h2>
+                <p></p>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Control Number:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td> {selectedAppointment.controlNumber}</td>
+                  </tr>
+                </table>
+                <p></p>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Date Request Created:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {" "}
+                      {getFormattedDate(selectedAppointment.createdDate)}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Appointment Status:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {" "}
+                      {capitalizeFirstLetter(
+                        selectedAppointment.appointmentStatus
+                      )}
+                    </td>
+                  </tr>
+                </table>
                 {selectedAppointment.appointmentStatus !== "pending" && (
                   <>
-                    <p>
-                      <strong>Appointment Date:</strong> <br></br>
-                      {getFormattedDate(
-                        selectedAppointment.appointmentDate,
-                        true
-                      )}
-                    </p>
-                    <br></br>
-                    <p>
-                      <strong>Eligibility:</strong> <br></br>
-                      {capitalizeFirstLetter(
-                        selectedAppointment.clientEligibility?.eligibility ||
-                          "-"
-                      )}
-                    </p>
-
+                    <table>
+                      <th>
+                        <p>
+                          <strong>Appointment Date:</strong>{" "}
+                        </p>
+                      </th>
+                      <tr>
+                        <td>
+                          {getFormattedDate(
+                            selectedAppointment.appointmentDate,
+                            true
+                          )}
+                        </td>
+                      </tr>
+                    </table>
+                    <table>
+                      <th>
+                        <p>
+                          <strong>Eligibility:</strong>{" "}
+                        </p>
+                      </th>
+                      <tr>
+                        <td>
+                          {capitalizeFirstLetter(
+                            selectedAppointment.clientEligibility
+                              ?.eligibility || "-"
+                          )}
+                        </td>
+                      </tr>
+                    </table>
                     {selectedAppointment.appointmentStatus === "denied" && (
-                      <p>
-                        <strong>Denial Reason:</strong> <br></br>
-                        {selectedAppointment.clientEligibility?.denialReason ||
-                          "-"}
-                      </p>
+                      <table>
+                        <th>
+                          <p>
+                            <strong>Denial Reason:</strong>{" "}
+                          </p>
+                        </th>
+                        <tr>
+                          <td>
+                            {selectedAppointment.clientEligibility
+                              ?.denialReason || "-"}
+                          </td>
+                        </tr>
+                      </table>
                     )}
-                    <br></br>
-                    <p>
-                      <strong>Notes:</strong> <br></br>
-                      {selectedAppointment.clientEligibility?.notes || "-"}
-                    </p>
-                    <br></br>
-                    <p>
-                      <strong>IBP Paralegal Staff:</strong> <br></br>
-                      {selectedAppointment.clientEligibility
-                        ?.ibpParalegalStaff || "-"}
-                    </p>
-                    <br></br>
-                    <p>
-                      <strong>Assisting Counsel:</strong> <br></br>
-                      {selectedAppointment.clientEligibility
-                        ?.assistingCounsel || "-"}
-                    </p>
-                    <br></br>
-                    <p>
-                      <strong>Reviewed By:</strong> <br></br>
-                      {reviewerDetails
-                        ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
-                        : "Not Available"}
-                    </p>
-                    <br></br>
-                    <p>
-                      <strong>Appointment Experience Rating:</strong>
-                      <br></br>{" "}
-                      {selectedAppointment.appointmentDetails?.ratings ||
-                        "-"}{" "}
-                      Star/s Ratings
-                    </p>
+                    <table>
+                      <th>
+                        <p>
+                          <strong>Notes:</strong>{" "}
+                        </p>
+                      </th>
+                      <tr>
+                        <td>
+                          {selectedAppointment.clientEligibility?.notes || "-"}
+                        </td>
+                      </tr>
+                    </table>
+                    <table>
+                      <th>
+                        <p>
+                          <strong>IBP Paralegal Staff:</strong>{" "}
+                        </p>
+                      </th>
+                      <tr>
+                        <td>
+                          {selectedAppointment.clientEligibility
+                            ?.ibpParalegalStaff || "-"}
+                        </td>
+                      </tr>
+                    </table>
+                    <table>
+                      <th>
+                        <p>
+                          <strong>Assisting Counsel:</strong>{" "}
+                        </p>
+                      </th>
+                      <tr>
+                        <td>
+                          {selectedAppointment.clientEligibility
+                            ?.assistingCounsel || "-"}
+                        </td>
+                      </tr>
+                    </table>
+                    <table>
+                      <th>
+                        <p>
+                          <strong>Reviewed By:</strong>{" "}
+                        </p>
+                      </th>
+                      <tr>
+                        <td>
+                          {reviewerDetails
+                            ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
+                            : "Not Available"}
+                        </td>
+                      </tr>
+                    </table>
+                    <table>
+                      <th>
+                        <p>
+                          <strong>Appointment Experience Rating:</strong>{" "}
+                        </p>
+                      </th>
+                      <tr>
+                        <td>
+                          {" "}
+                          {selectedAppointment.appointmentDetails?.ratings ||
+                            "-"}{" "}
+                          Star/s Ratings
+                        </td>
+                      </tr>
+                    </table>
                   </>
                 )}
               </section>
 
               <section className="mb-4">
-                <h3>
-                  <em>Applicant Profile</em>
-                </h3>
-                <p>
-                  <strong>Full Name:</strong> <br></br>
-                  {selectedAppointment.fullName}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Date of Birth:</strong> <br></br>
-                  {selectedAppointment.dob
-                    ? new Date(selectedAppointment.dob).toLocaleDateString(
-                        "en-US",
-                        { year: "numeric", month: "long", day: "numeric" }
-                      )
-                    : "N/A"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Address:</strong> <br></br>
-                  {selectedAppointment?.address || "Not Available"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Contact Number:</strong> <br></br>
-                  {selectedAppointment?.contactNumber || "Not Available"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Gender:</strong> <br></br>
-                  {selectedAppointment?.selectedGender || "Not Specified"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Spouse Name:</strong> <br></br>
-                  {selectedAppointment.spouseName || "Not Available"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Spouse Occupation:</strong> <br></br>
-                  {selectedAppointment.spouseOccupation || "Not Available"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Children Names and Ages:</strong> <br></br>
-                  {selectedAppointment.childrenNamesAges || "Not Available"}
-                </p>
-                <br></br>
+                <h2>
+                  <em
+                    style={{
+                      color: "#a34bc9",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Applicant Profile
+                  </em>
+                </h2>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Full Name:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>{selectedAppointment.fullName}</td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Date of Birth:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {selectedAppointment.dob
+                        ? new Date(selectedAppointment.dob).toLocaleDateString(
+                            "en-US",
+                            { year: "numeric", month: "long", day: "numeric" }
+                          )
+                        : "N/A"}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Address:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>{selectedAppointment?.address || "Not Available"}</td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Contact Number:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {selectedAppointment?.contactNumber || "Not Available"}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Gender:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {selectedAppointment?.selectedGender || "Not Specified"}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Spouse Name:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>{selectedAppointment.spouseName || "Not Available"}</td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Spouse Occupation:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {selectedAppointment.spouseOccupation || "Not Available"}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Children Names and Ages:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {selectedAppointment.childrenNamesAges || "Not Available"}
+                    </td>
+                  </tr>
+                </table>
               </section>
 
               <section className="mb-4">
-                <h3>
-                  <em>Employment Profile</em>
-                </h3>
-                <p>
-                  <strong>Occupation:</strong> <br></br>
-                  {selectedAppointment.occupation || "Not Available"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Type of Employment:</strong> <br></br>
-                  {selectedAppointment?.kindOfEmployment || "Not Specified"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Employer Name:</strong>
-                  <br></br>{" "}
-                  {selectedAppointment?.employerName || "Not Available"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Employer Address:</strong> <br></br>
-                  {selectedAppointment.employerAddress || "Not Available"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Monthly Income:</strong> <br></br>
-                  {selectedAppointment.monthlyIncome || "Not Available"}
-                </p>
-                <br></br>
+                <h2>
+                  <em
+                    style={{
+                      color: "#a34bc9",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Employment Profile
+                  </em>
+                </h2>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Occupation:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>{selectedAppointment.occupation || "Not Available"}</td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Type of Employment:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {selectedAppointment?.kindOfEmployment || "Not Specified"}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Employer Name:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {selectedAppointment?.employerName || "Not Available"}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Employer Address:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {selectedAppointment.employerAddress || "Not Available"}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Monthly Income:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {selectedAppointment.monthlyIncome || "Not Available"}
+                    </td>
+                  </tr>
+                </table>
               </section>
 
               <section className="mb-4">
-                <h3>
-                  <em>Nature of Legal Assistance Requested</em>
-                </h3>
-                <p>
-                  <strong>Type of Legal Assistance:</strong> <br></br>
-                  {selectedAppointment.selectedAssistanceType ||
+                <h2>
+                  <em
+                    style={{
+                      color: "#a34bc9",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Nature of Legal Assistance Requested
+                  </em>
+                </h2>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Type of Legal Assistance:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                    {selectedAppointment.selectedAssistanceType ||
                     "Not Specified"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Problem:</strong> <br></br>
-                  {selectedAppointment.problems || "Not Available"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Reason for Problem:</strong> <br></br>
-                  {selectedAppointment.problemReason || "Not Available"}
-                </p>
-                <br></br>
-                <p>
-                  <strong>Desired Solutions:</strong>
-                  <br></br>{" "}
-                  {selectedAppointment.desiredSolutions || "Not Available"}
-                </p>
-                <br></br>
-              </section>
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Problem:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                    {selectedAppointment.problems || "Not Available"}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Reason for Problem:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                    {selectedAppointment.problemReason || "Not Available"}
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Desired Solutions:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                    {selectedAppointment.desiredSolutions || "Not Available"}
 
+                    </td>
+                  </tr>
+                </table>
+              </section>
               <section>
-                <h3>
-                  <em>Uploaded Images</em>
-                </h3>
-                <div className="mb-3">
-                  <p>
-                    <strong>Barangay Certificate of Indigency:</strong>
-                  </p>
-                  {selectedAppointment.barangayImageUrl ? (
+                <h2>
+                  <em
+                    style={{
+                      color: "#a34bc9",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Uploaded Images
+                  </em>
+                </h2>
+
+                <table>
+                  <th>
+                    <p>
+                      <strong>Barangay Certificate of Indigency:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                    {selectedAppointment.barangayImageUrl ? (
                     <a
                       href="#"
                       onClick={(e) => {
@@ -686,12 +962,18 @@ function Appointments() {
                   ) : (
                     "Not Available"
                   )}
-                </div>
-                <div className="mb-3">
-                  <p>
-                    <strong>DSWD Certificate of Indigency:</strong>
-                  </p>
-                  {selectedAppointment.dswdImageUrl ? (
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>DSWD Certificate of Indigency:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                    {selectedAppointment.dswdImageUrl ? (
                     <a
                       href="#"
                       onClick={(e) => {
@@ -709,12 +991,18 @@ function Appointments() {
                   ) : (
                     "Not Available"
                   )}
-                </div>
-                <div className="mb-3">
-                  <p>
-                    <strong>Disqualification Letter from PAO:</strong>
-                  </p>
-                  {selectedAppointment.paoImageUrl ? (
+                    </td>
+                  </tr>
+                </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Disqualification Letter from PAO:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                    {selectedAppointment.paoImageUrl ? (
                     <a
                       href="#"
                       onClick={(e) => {
@@ -732,9 +1020,10 @@ function Appointments() {
                   ) : (
                     "Not Available"
                   )}
-                </div>
+                    </td>
+                  </tr>
+                </table>
               </section>
-
               {isModalOpen && (
                 <ImageModal
                   isOpen={isModalOpen}

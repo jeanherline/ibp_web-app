@@ -121,38 +121,74 @@ function SideNavBar() {
                 Dashboard
               </NavLink>
             </li>
-            <li>
-              <NavLink
-                to="/apptsCalendar"
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                Appts. Calendar
-              </NavLink>
-            </li>
-            <li>
-              <NavLink
-                to="/appointments"
-                className={({ isActive }) => (isActive ? "active" : "")}
-              >
-                Appointments
-              </NavLink>
-            </li>
+            {userData && userData.member_type === "lawyer" && (
+              <>
+                <li>
+                  <NavLink
+                    to="/apptsCalendar"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Appts. Calendar
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/appointments"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Appointments
+                  </NavLink>
+                </li>
+              </>
+            )}
+
             {userData && userData.member_type === "admin" && (
-              <><li>
-                <NavLink
-                  to="/users"
-                  className={({ isActive }) => (isActive ? "active" : "")}
-                >
-                  Users
-                </NavLink>
-              </li><li>
+              <>
+                  <li>
+                  <NavLink
+                    to="/apptsCalendar"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Appts. Calendar
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/appointments"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Appointments
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/users"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Users
+                  </NavLink>
+                </li>
+                <li>
                   <NavLink
                     to="/ratings"
                     className={({ isActive }) => (isActive ? "active" : "")}
                   >
                     Ratings
                   </NavLink>
-                </li></>
+                </li>
+              </>
+            )}
+            {userData && userData.member_type === "frontdesk" && (
+              <>
+                <li>
+                  <NavLink
+                    to="/frontdesk"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Appointments
+                  </NavLink>
+                </li>
+              </>
             )}
           </ul>
         </nav>

@@ -3,12 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from 'firebase/auth';
 import QrScanner from 'react-qr-scanner';
 import './QRCodeScanner.css';
+import { auth } from "../../Config/Firebase";
 
 function QRCodeScanner() {
   const [error, setError] = useState(null);
   const [cameraError, setCameraError] = useState(false);
   const navigate = useNavigate();
   const auth = getAuth();
+  
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        window.location.href = "/";
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
