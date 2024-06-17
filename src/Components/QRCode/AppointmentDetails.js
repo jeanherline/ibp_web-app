@@ -2,12 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
 import './AppointmentDetails.css';
-import { fs } from '../../Config/Firebase'; // Adjust the import path to your Firebase configuration file
+import { auth, fs } from '../../Config/Firebase'; // Adjust the import path to your Firebase configuration file
 
 function AppointmentDetails() {
   const { controlNumber } = useParams(); // Extract controlNumber from URL
   const [appointmentDetails, setAppointmentDetails] = useState(null);
   const [error, setError] = useState(null);
+  
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        window.location.href = "/";
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchAppointmentDetails = async () => {

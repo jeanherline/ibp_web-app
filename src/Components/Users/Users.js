@@ -8,8 +8,9 @@ import {
   getUsersCount,
   updateUser,
 } from "../../Config/FirebaseServices";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEdit, faArchive } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEye, faEdit, faArchive } from "@fortawesome/free-solid-svg-icons";
+import { auth } from "../../Config/Firebase";
 
 function Users() {
   const [users, setUsers] = useState([]);
@@ -20,12 +21,22 @@ function Users() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [lastVisible, setLastVisible] = useState(null);
-  const pageSize = 7;
+  const pageSize = 10;
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [cityFilter, setCityFilter] = useState("all");
   const [totalFilteredItems, setTotalFilteredItems] = useState(0);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        window.location.href = "/";
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     fetchUsers(1); // Fetch users when component mounts or filters change
@@ -146,7 +157,9 @@ function Users() {
         />
         &nbsp;&nbsp;
         <select onChange={handleFilterChange(setFilterType)} value={filterType}>
-          <option value="" disabled>Roles</option>
+          <option value="" disabled>
+            Roles
+          </option>
           <option value="admin">Admin</option>
           <option value="lawyer">Lawyer</option>
           <option value="frontdesk">Frontdesk</option>
@@ -154,7 +167,9 @@ function Users() {
         </select>
         &nbsp;&nbsp;
         <select onChange={handleFilterChange(setCityFilter)} value={cityFilter}>
-          <option value="all" disabled>Cities</option>
+          <option value="all" disabled>
+            Cities
+          </option>
           <option value="Angat">Angat</option>
           <option value="Balagtas">Balagtas</option>
           <option value="Baliuag">Baliuag</option>
@@ -182,7 +197,9 @@ function Users() {
           onChange={handleFilterChange(setFilterStatus)}
           value={filterStatus}
         >
-          <option value="all" disabled>Active / Inactive</option>
+          <option value="all" disabled>
+            Active / Inactive
+          </option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
@@ -216,15 +233,42 @@ function Users() {
                 <td>{capitalizeFirstLetter(user.member_type)}</td>
                 <td>{capitalizeFirstLetter(user.user_status)}</td>
                 <td>
-                  <button onClick={() => toggleDetails(user)}>
-                    <FontAwesomeIcon icon={faEye} /> 
+                  <button
+                    onClick={() => toggleDetails(user)}
+                    style={{
+                      backgroundColor: "#4267B2",
+                      color: "white",
+                      border: "none",
+                      padding: "5px 10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faEye} />
                   </button>
                   &nbsp; &nbsp;
-                  <button onClick={() => toggleDetails(user)}>
-                    <FontAwesomeIcon icon={faEdit} /> 
+                  <button
+                    onClick={() => toggleDetails(user)}
+                    style={{
+                      backgroundColor: "#1DB954",
+                      color: "white",
+                      border: "none",
+                      padding: "5px 10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faEdit} />
                   </button>
                   &nbsp; &nbsp;
-                  <button onClick={() => toggleDetails(user)}>
+                  <button
+                    onClick={() => toggleDetails(user)}
+                    style={{
+                      backgroundColor: "ff8b61",
+                      color: "white",
+                      border: "none",
+                      padding: "5px 10px",
+                      cursor: "pointer",
+                    }}
+                  >
                     <FontAwesomeIcon icon={faArchive} />
                   </button>
                 </td>
@@ -259,90 +303,6 @@ function Users() {
             disabled={currentPage === totalPages}
           />
         </Pagination>
-        {selectedUser && isModalOpen && (
-          <div className="client-eligibility">
-            <div style={{ position: "relative" }}>
-              <button
-                onClick={handleCloseModal}
-                className="close-button"
-                style={{ position: "absolute", top: "15px", right: "15px" }}
-              >
-                ×
-              </button>
-            </div>
-            <h2>User Details</h2>
-            <form onSubmit={handleSubmit}>
-              <div>
-                <b>
-                  <label>Full Name:</label>
-                </b>
-                <input
-                  type="text"
-                  name="display_name"
-                  value={selectedUser.display_name}
-                  onChange={handleChange}
-                  required
-                />
-                <input
-                  type="text"
-                  name="middle_name"
-                  value={selectedUser.middle_name}
-                  onChange={handleChange}
-                />
-                <input
-                  type="text"
-                  name="last_name"
-                  value={selectedUser.last_name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div>
-                <b>
-                  <label>Email:</label>
-                </b>
-                <input
-                  type="email"
-                  name="email"
-                  value={selectedUser.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div>
-                <b>
-                  <label>Member Type:</label>
-                </b>
-                <select
-                  name="member_type"
-                  value={selectedUser.member_type}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="admin">Admin</option>
-                  <option value="lawyer">Lawyer</option>
-                  <option value="frontdesk">Frontdesk</option>
-                  <option value="client">Client</option>
-                </select>
-              </div>
-              <div>
-                <b>
-                  <label>Status:</label>
-                </b>
-                <select
-                  name="user_status"
-                  value={selectedUser.user_status}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-              <button>Submit</button>
-            </form>
-          </div>
-        )}
         {showSnackbar && <div className="snackbar">{snackbarMessage}</div>}
       </div>
     </div>

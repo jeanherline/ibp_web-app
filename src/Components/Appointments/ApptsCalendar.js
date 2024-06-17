@@ -5,7 +5,7 @@ import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { getAppointments, getCalendar } from "../../Config/FirebaseServices"; // Assuming getCalendar is correctly named
 import "./Appointments.css";
-
+import { auth } from "../../Config/Firebase";
 const localizer = momentLocalizer(moment);
 
 function ApptsCalendar() {
@@ -13,6 +13,16 @@ function ApptsCalendar() {
   const [selectedAppointment, setSelectedAppointment] = useState(null); // State to store the selected appointment details
   const [statusFilter] = useState("approved" || "done"); // Adjust the filter as necessary
 
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (!user) {
+        window.location.href = "/";
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+  
   useEffect(() => {
     const fetchAppointmentsAndSlots = async () => {
       try {

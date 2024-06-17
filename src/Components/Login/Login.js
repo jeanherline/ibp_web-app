@@ -4,7 +4,6 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import '../../Config/Firebase'; // Ensure Firebase is initialized
 import './Login.css';
-
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +30,7 @@ function Login() {
           if (userData.member_type === 'lawyer' || userData.member_type === 'admin') {
             navigate('/dashboard');
           } else if (userData.member_type === 'frontdesk') {
-            navigate('/welcome');
+            navigate('/frontdesk');
           } else {
             setError('Unauthorized user type');
           }
