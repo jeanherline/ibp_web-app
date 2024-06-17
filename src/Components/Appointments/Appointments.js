@@ -536,6 +536,19 @@ function Appointments() {
                     <td> {selectedAppointment.controlNumber}</td>
                   </tr>
                 </table>
+                <table>
+                  <th>
+                    <p>
+                      <strong>Appointment Type:</strong>{" "}
+                    </p>
+                  </th>
+                  <tr>
+                    <td>
+                      {" "}
+                      {selectedAppointment.appointmentDetails?.apptType || "-"}
+                    </td>
+                  </tr>
+                </table>
                 <p></p>
                 <table>
                   <th>
@@ -881,8 +894,8 @@ function Appointments() {
                   </th>
                   <tr>
                     <td>
-                    {selectedAppointment.selectedAssistanceType ||
-                    "Not Specified"}
+                      {selectedAppointment.selectedAssistanceType ||
+                        "Not Specified"}
                     </td>
                   </tr>
                 </table>
@@ -893,9 +906,7 @@ function Appointments() {
                     </p>
                   </th>
                   <tr>
-                    <td>
-                    {selectedAppointment.problems || "Not Available"}
-                    </td>
+                    <td>{selectedAppointment.problems || "Not Available"}</td>
                   </tr>
                 </table>
                 <table>
@@ -906,7 +917,7 @@ function Appointments() {
                   </th>
                   <tr>
                     <td>
-                    {selectedAppointment.problemReason || "Not Available"}
+                      {selectedAppointment.problemReason || "Not Available"}
                     </td>
                   </tr>
                 </table>
@@ -918,8 +929,7 @@ function Appointments() {
                   </th>
                   <tr>
                     <td>
-                    {selectedAppointment.desiredSolutions || "Not Available"}
-
+                      {selectedAppointment.desiredSolutions || "Not Available"}
                     </td>
                   </tr>
                 </table>
@@ -944,24 +954,26 @@ function Appointments() {
                   </th>
                   <tr>
                     <td>
-                    {selectedAppointment.barangayImageUrl ? (
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openImageModal(selectedAppointment.barangayImageUrl);
-                      }}
-                    >
-                      <img
-                        src={selectedAppointment.barangayImageUrl}
-                        alt="Barangay Certificate of Indigency"
-                        className="img-thumbnail"
-                        style={{ width: "100px", cursor: "pointer" }}
-                      />
-                    </a>
-                  ) : (
-                    "Not Available"
-                  )}
+                      {selectedAppointment.barangayImageUrl ? (
+                        <a
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            openImageModal(
+                              selectedAppointment.barangayImageUrl
+                            );
+                          }}
+                        >
+                          <img
+                            src={selectedAppointment.barangayImageUrl}
+                            alt="Barangay Certificate of Indigency"
+                            className="img-thumbnail"
+                            style={{ width: "100px", cursor: "pointer" }}
+                          />
+                        </a>
+                      ) : (
+                        "Not Available"
+                      )}
                     </td>
                   </tr>
                 </table>
@@ -973,24 +985,24 @@ function Appointments() {
                   </th>
                   <tr>
                     <td>
-                    {selectedAppointment.dswdImageUrl ? (
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openImageModal(selectedAppointment.dswdImageUrl);
-                      }}
-                    >
-                      <img
-                        src={selectedAppointment.dswdImageUrl}
-                        alt="DSWD Certificate of Indigency"
-                        className="img-thumbnail"
-                        style={{ width: "100px", cursor: "pointer" }}
-                      />
-                    </a>
-                  ) : (
-                    "Not Available"
-                  )}
+                      {selectedAppointment.dswdImageUrl ? (
+                        <a
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            openImageModal(selectedAppointment.dswdImageUrl);
+                          }}
+                        >
+                          <img
+                            src={selectedAppointment.dswdImageUrl}
+                            alt="DSWD Certificate of Indigency"
+                            className="img-thumbnail"
+                            style={{ width: "100px", cursor: "pointer" }}
+                          />
+                        </a>
+                      ) : (
+                        "Not Available"
+                      )}
                     </td>
                   </tr>
                 </table>
@@ -1002,24 +1014,24 @@ function Appointments() {
                   </th>
                   <tr>
                     <td>
-                    {selectedAppointment.paoImageUrl ? (
-                    <a
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openImageModal(selectedAppointment.paoImageUrl);
-                      }}
-                    >
-                      <img
-                        src={selectedAppointment.paoImageUrl}
-                        alt="Disqualification Letter from PAO"
-                        className="img-thumbnail"
-                        style={{ width: "100px", cursor: "pointer" }}
-                      />
-                    </a>
-                  ) : (
-                    "Not Available"
-                  )}
+                      {selectedAppointment.paoImageUrl ? (
+                        <a
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            openImageModal(selectedAppointment.paoImageUrl);
+                          }}
+                        >
+                          <img
+                            src={selectedAppointment.paoImageUrl}
+                            alt="Disqualification Letter from PAO"
+                            className="img-thumbnail"
+                            style={{ width: "100px", cursor: "pointer" }}
+                          />
+                        </a>
+                      ) : (
+                        "Not Available"
+                      )}
                     </td>
                   </tr>
                 </table>
