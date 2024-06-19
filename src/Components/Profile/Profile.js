@@ -1,10 +1,15 @@
 import React, { useState, useEffect } from "react";
 import SideNavBar from "../SideNavBar/SideNavBar";
-import { getUserById, updateUser, uploadImage } from "../../Config/FirebaseServices";
+import {
+  getUserById,
+  updateUser,
+  uploadImage,
+} from "../../Config/FirebaseServices";
 import { useAuth } from "../../AuthContext";
 import "./Profile.css";
 
-const defaultImageUrl = "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
+const defaultImageUrl =
+  "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
 
 function Profile() {
   const { currentUser } = useAuth();
@@ -54,17 +59,31 @@ function Profile() {
 
     let updatedData = { ...userData };
 
+    // Remove any invalid keys from updatedData
+    Object.keys(updatedData).forEach((key) => {
+      if (updatedData[key] === "") {
+        delete updatedData[key];
+      }
+    });
+
     if (profileImage) {
-      const imageUrl = await uploadImage(profileImage, `profile_images/${currentUser.uid}`);
+      const imageUrl = await uploadImage(
+        profileImage,
+        `profile_images/${currentUser.uid}`
+      );
       updatedData.photo_url = imageUrl;
     }
 
-    await updateUser(currentUser.uid, updatedData);
-
-    setIsSubmitting(false);
-    setSnackbarMessage("Profile has been successfully updated.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
+    try {
+      await updateUser(currentUser.uid, updatedData);
+      setSnackbarMessage("Profile has been successfully updated.");
+    } catch (error) {
+      setSnackbarMessage("Failed to update profile. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+      setShowSnackbar(true);
+      setTimeout(() => setShowSnackbar(false), 3000);
+    }
   };
 
   if (!currentUser) {
@@ -75,7 +94,7 @@ function Profile() {
     <div className="dashboard-container">
       <SideNavBar />
       <div className="main-content">
-        <br/>
+        <br />
         <h3>Edit Profile</h3>
         <form onSubmit={handleSubmit} className="edit-profile-form">
           <div className="profile-section">
@@ -164,17 +183,45 @@ function Profile() {
               </div>
               <div className="form-group">
                 <label htmlFor="city">City</label>
-                <input
-                  type="text"
+                <select
                   id="city"
                   name="city"
                   value={userData.city}
                   onChange={handleChange}
                   required
-                />
+                >
+                  <option value="">Select City</option>
+                  <option value="Angat">Angat</option>
+                  <option value="Balagtas">Balagtas</option>
+                  <option value="Baliuag">Baliuag</option>
+                  <option value="Bocaue">Bocaue</option>
+                  <option value="Bulakan">Bulakan</option>
+                  <option value="Bustos">Bustos</option>
+                  <option value="Calumpit">Calumpit</option>
+                  <option value="Doña Remedios Trinidad">
+                    Doña Remedios Trinidad
+                  </option>
+                  <option value="Guiguinto">Guiguinto</option>
+                  <option value="Hagonoy">Hagonoy</option>
+                  <option value="Marilao">Marilao</option>
+                  <option value="Norzagaray">Norzagaray</option>
+                  <option value="Obando">Obando</option>
+                  <option value="Pandi">Pandi</option>
+                  <option value="Paombong">Paombong</option>
+                  <option value="Plaridel">Plaridel</option>
+                  <option value="Pulilan">Pulilan</option>
+                  <option value="San Ildefonso">San Ildefonso</option>
+                  <option value="San Miguel">San Miguel</option>
+                  <option value="San Rafael">San Rafael</option>
+                  <option value="Santa Maria">Santa Maria</option>
+                </select>
               </div>
               <div className="form-group submit-group">
-                <button type="submit" className="submit-button" disabled={isSubmitting}>
+                <button
+                  type="submit"
+                  className="submit-button"
+                  disabled={isSubmitting}
+                >
                   {isSubmitting ? "Updating..." : "Update Profile"}
                 </button>
               </div>
