@@ -27,13 +27,7 @@ function Login() {
       if (userSnap.exists()) {
         const userData = userSnap.data();
         if (userData.user_status === 'active') {
-          if (userData.member_type === 'lawyer' || userData.member_type === 'admin') {
             navigate('/dashboard');
-          } else if (userData.member_type === 'frontdesk') {
-            navigate('/frontdesk');
-          } else {
-            setError('Unauthorized user type');
-          }
         } else {
           setError('User account is not active');
         }

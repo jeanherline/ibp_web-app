@@ -4,27 +4,21 @@ import "../Dashboard/Dashboard.css";
 import "./Ratings.css";
 import Pagination from "react-bootstrap/Pagination";
 import {
-  getUsers,
-  getUsersCount,
-  updateUser,
+  getRatingsUsers,
+  getRatingsUsersCount,
+  getRatingsAppointmentsRatings,
+  getRatingsAppRatings,
 } from "../../Config/FirebaseServices";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEdit, faArchive } from "@fortawesome/free-solid-svg-icons";
 import { auth } from "../../Config/Firebase";
 
 function Ratings() {
   const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterType, setFilterType] = useState("");
   const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [lastVisible, setLastVisible] = useState(null);
   const pageSize = 10;
-  const [showSnackbar, setShowSnackbar] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [cityFilter, setCityFilter] = useState("all");
   const [totalFilteredItems, setTotalFilteredItems] = useState(0);
 
@@ -40,26 +34,34 @@ function Ratings() {
 
   useEffect(() => {
     fetchUsers(1); // Fetch users when component mounts or filters change
-  }, [filterStatus, filterType, cityFilter, searchText]);
+  }, [filterStatus, cityFilter, searchText]);
 
   const fetchUsers = async (page) => {
     try {
-      const totalUsers = await getUsersCount(
-        filterStatus,
-        filterType,
-        cityFilter,
-        searchText
-      );
+      const totalUsers = await getRatingsUsersCount(filterStatus, cityFilter, searchText);
       const newTotalPages = Math.ceil(totalUsers / pageSize);
-      const { users, lastVisibleDoc } = await getUsers(
+      const { users, lastVisibleDoc } = await getRatingsUsers(
         filterStatus,
-        filterType,
         cityFilter,
         searchText,
         page === 1 ? null : lastVisible,
         pageSize
       );
-      setUsers(users);
+
+      // Fetch appropriate ratings based on filterStatus
+      const usersWithRatings = await Promise.all(users.map(async (user) => {
+        let rating = "N/A";
+        if (filterStatus === "appointments") {
+          const aptRatings = await getRatingsAppointmentsRatings(user.uid);
+          rating = aptRatings.length > 0 ? (aptRatings.reduce((a, b) => a + b, 0) / aptRatings.length).toFixed(2) : "N/A";
+        } else if (filterStatus === "application") {
+          const appRatings = await getRatingsAppRatings(user.uid);
+          rating = appRatings.length > 0 ? (appRatings.reduce((a, b) => a + b, 0) / appRatings.length).toFixed(2) : "N/A";
+        }
+        return { ...user, ratingType: filterStatus === "appointments" ? "Appointment" : "Application", rating };
+      }));
+
+      setUsers(usersWithRatings);
       setTotalPages(newTotalPages);
       setLastVisible(lastVisibleDoc);
       setCurrentPage(page);
@@ -67,10 +69,6 @@ function Ratings() {
     } catch (error) {
       console.error("Failed to fetch users:", error);
     }
-  };
-
-  const capitalizeFirstLetter = (string) => {
-    return string.charAt(0).toUpperCase() + string.slice(1);
   };
 
   const handleNext = () => {
@@ -97,11 +95,6 @@ function Ratings() {
     fetchUsers(page);
   };
 
-  const toggleDetails = (user) => {
-    setSelectedUser(selectedUser?.uid === user.uid ? null : user);
-    setIsModalOpen(true);
-  };
-
   const handleFilterChange = (setter) => (e) => {
     setter(e.target.value);
     setLastVisible(null);
@@ -110,7 +103,6 @@ function Ratings() {
 
   const resetFilters = () => {
     setFilterStatus("all");
-    setFilterType("");
     setCityFilter("all");
     setSearchText("");
     setLastVisible(null);
@@ -131,52 +123,13 @@ function Ratings() {
           placeholder="Search..."
         />
         &nbsp;&nbsp;
-        <select onChange={handleFilterChange(setFilterType)} value={filterType}>
-          <option value="" disabled>
-            Roles
-          </option>
-          <option value="admin">Admin</option>
-          <option value="lawyer">Lawyer</option>
-          <option value="frontdesk">Frontdesk</option>
-          <option value="client">Client</option>
-        </select>
-        &nbsp;&nbsp;
-        <select onChange={handleFilterChange(setCityFilter)} value={cityFilter}>
-          <option value="all" disabled>
-            Cities
-          </option>
-          <option value="Angat">Angat</option>
-          <option value="Balagtas">Balagtas</option>
-          <option value="Baliuag">Baliuag</option>
-          <option value="Bocaue">Bocaue</option>
-          <option value="Bulakan">Bulakan</option>
-          <option value="Bustos">Bustos</option>
-          <option value="Calumpit">Calumpit</option>
-          <option value="Doña Remedios Trinidad">Doña Remedios Trinidad</option>
-          <option value="Guiguinto">Guiguinto</option>
-          <option value="Hagonoy">Hagonoy</option>
-          <option value="Marilao">Marilao</option>
-          <option value="Norzagaray">Norzagaray</option>
-          <option value="Obando">Obando</option>
-          <option value="Pandi">Pandi</option>
-          <option value="Paombong">Paombong</option>
-          <option value="Plaridel">Plaridel</option>
-          <option value="Pulilan">Pulilan</option>
-          <option value="San Ildefonso">San Ildefonso</option>
-          <option value="San Miguel">San Miguel</option>
-          <option value="San Rafael">San Rafael</option>
-          <option value="Santa Maria">Santa Maria</option>
-        </select>
-        &nbsp;&nbsp;
         <select
           onChange={handleFilterChange(setFilterStatus)}
           value={filterStatus}
         >
-          <option value="all" disabled>
-            Active / Inactive
-          </option>
-          <option value="active">Active</option>
-          <option value="inactive">Inactive</option>
+          <option value="all">All</option>
+          <option value="application">Application</option>
+          <option value="appointments">Appointments</option>
         </select>
         &nbsp;&nbsp;
         <button onClick={resetFilters}>Reset Filters</button>
@@ -191,75 +144,28 @@ function Ratings() {
               <th>Last Name</th>
               <th>Email</th>
               <th>City</th>
-              <th>Member Type</th>
-              <th>Status</th>
-              <th>Action</th>
+              <th>Rating Type</th>
+              <th>User Rating</th>
             </tr>
           </thead>
           <tbody>
             {users.map((user, index) => (
               <tr key={user.uid}>
-                <td>{(currentPage - 1) * pageSize + index + 1}.</td>
+                <td>{index + 1 + (currentPage - 1) * pageSize}</td>
                 <td>{user.display_name}</td>
                 <td>{user.middle_name}</td>
                 <td>{user.last_name}</td>
                 <td>{user.email}</td>
-                <td>{user.city || "N/A"}</td>
-                <td>{capitalizeFirstLetter(user.member_type)}</td>
-                <td>{capitalizeFirstLetter(user.user_status)}</td>
-                <td>
-                  <button
-                    onClick={() => toggleDetails(user)}
-                    style={{
-                      backgroundColor: "#4267B2",
-                      color: "white",
-                      border: "none",
-                      padding: "5px 10px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faEye} />
-                  </button>
-                  &nbsp; &nbsp;
-                  <button
-                    onClick={() => toggleDetails(user)}
-                    style={{
-                      backgroundColor: "#1DB954",
-                      color: "white",
-                      border: "none",
-                      padding: "5px 10px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faEdit} />
-                  </button>
-                  &nbsp; &nbsp;
-                  <button
-                    onClick={() => toggleDetails(user)}
-                    style={{
-                      backgroundColor: "ff8b61",
-                      color: "white",
-                      border: "none",
-                      padding: "5px 10px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faArchive} />
-                  </button>
-                </td>
+                <td>{user.city}</td>
+                <td>{user.ratingType}</td>
+                <td>{user.rating}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <Pagination>
-          <Pagination.First
-            onClick={handleFirst}
-            disabled={currentPage === 1}
-          />
-          <Pagination.Prev
-            onClick={handlePrevious}
-            disabled={currentPage === 1}
-          />
+          <Pagination.First onClick={handleFirst} disabled={currentPage === 1} />
+          <Pagination.Prev onClick={handlePrevious} disabled={currentPage === 1} />
           {[...Array(totalPages).keys()].map((_, index) => (
             <Pagination.Item
               key={index + 1}
@@ -269,16 +175,9 @@ function Ratings() {
               {index + 1}
             </Pagination.Item>
           ))}
-          <Pagination.Next
-            onClick={handleNext}
-            disabled={currentPage === totalPages}
-          />
-          <Pagination.Last
-            onClick={handleLast}
-            disabled={currentPage === totalPages}
-          />
+          <Pagination.Next onClick={handleNext} disabled={currentPage === totalPages} />
+          <Pagination.Last onClick={handleLast} disabled={currentPage === totalPages} />
         </Pagination>
-        {showSnackbar && <div className="snackbar">{snackbarMessage}</div>}
       </div>
     </div>
   );

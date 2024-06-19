@@ -4,6 +4,8 @@ import Login from './Components/Login/Login';
 import Dashboard from './Components/Dashboard/Dashboard';
 import Appointments from './Components/Appointments/Appointments'; 
 import ApptsFrontDesk from './Components/Appointments/ApptsFrontDesk'; 
+import ApptsLawyer from './Components/Appointments/ApptsLawyer'; 
+import CalendarLawyer from './Components/Appointments/CalendarLawyer'; 
 import ApptsCalendar from './Components/Appointments/ApptsCalendar';
 import Profile from './Components/Profile/Profile';
 import Users from './Components/Users/Users';
@@ -28,6 +30,8 @@ function App() {
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/users" element={<Users />} />
           <Route path="/frontdesk" element={<ApptsFrontDesk />} />
+          <Route path="/calendarLawyer" element={<CalendarLawyer />} />
+          <Route path="/lawyer" element={<ApptsLawyer />} />
           <Route path="/ratings" element={<Ratings />} />
           <Route path="/appointment/:controlNumber" element={<AppointmentDetails />} /> {/* Fix route declaration */}
         </Routes>
