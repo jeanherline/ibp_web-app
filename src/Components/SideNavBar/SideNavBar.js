@@ -63,9 +63,13 @@ function SideNavBar() {
           <div className="member-type">
             Kumusta,{" "}
             {userData.member_type === "lawyer"
-              ? `Atty. ${capitalizeFirstLetter(userData.display_name)}`
+              ? `Volunteer Lawyer ${capitalizeFirstLetter(userData.display_name)}`
               : userData.member_type === "admin"
               ? `Admin ${capitalizeFirstLetter(userData.display_name)}`
+              : userData.member_type === "frontdesk"
+              ? `Front Desk ${capitalizeFirstLetter(userData.display_name)}`
+              : userData.member_type === "head"
+              ? `Head Lawyer ${capitalizeFirstLetter(userData.display_name)}`
               : capitalizeFirstLetter(userData.display_name)}
           </div>
         ) : (
@@ -125,7 +129,7 @@ function SideNavBar() {
               <>
                 <li>
                   <NavLink
-                    to="/apptsCalendar"
+                    to="/calendarLawyer"
                     className={({ isActive }) => (isActive ? "active" : "")}
                   >
                     Appts. Calendar
@@ -133,7 +137,7 @@ function SideNavBar() {
                 </li>
                 <li>
                   <NavLink
-                    to="/appointments"
+                    to="/lawyer"
                     className={({ isActive }) => (isActive ? "active" : "")}
                   >
                     Appointments
@@ -144,7 +148,7 @@ function SideNavBar() {
 
             {userData && userData.member_type === "admin" && (
               <>
-                  <li>
+                <li>
                   <NavLink
                     to="/apptsCalendar"
                     className={({ isActive }) => (isActive ? "active" : "")}
@@ -174,6 +178,26 @@ function SideNavBar() {
                     className={({ isActive }) => (isActive ? "active" : "")}
                   >
                     Ratings
+                  </NavLink>
+                </li>
+              </>
+            )}
+            {userData && userData.member_type === "head" && (
+              <>
+                <li>
+                  <NavLink
+                    to="/apptsCalendar"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Appts. Calendar
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/appointments"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Appointments
                   </NavLink>
                 </li>
               </>

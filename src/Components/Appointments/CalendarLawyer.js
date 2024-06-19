@@ -3,14 +3,17 @@ import SideNavBar from "../SideNavBar/SideNavBar";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { aptsCalendar, getCalendar, getUserById } from "../../Config/FirebaseServices"; // Assuming getCalendar is correctly named
+import {
+  aptsLawyerCalendar,
+  getLawyerCalendar,
+} from "../../Config/FirebaseServices"; // Assuming getLawyerCalendar is correctly named
 import "./Appointments.css";
-import { auth } from "../../Config/Firebase";
+import { auth, doc, fs, getDoc } from "../../Config/Firebase";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
 
 const localizer = momentLocalizer(moment);
 
-function ApptsCalendar() {
+function CalendarLawyer() {
   const [appointments, setAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null); // State to store the selected appointment details
   const [reviewerDetails, setReviewerDetails] = useState(null);
@@ -18,6 +21,26 @@ function ApptsCalendar() {
   const [assignedLawyerDetails, setAssignedLawyerDetails] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState("");
+
+  const fetchReviewerDetails = async (reviewerId) => {
+    const reviewerRef = doc(fs, "users", reviewerId);
+    const reviewerDoc = await getDoc(reviewerRef);
+    if (reviewerDoc.exists()) {
+      setReviewerDetails(reviewerDoc.data());
+    } else {
+      console.log("No such document!");
+    }
+  };
+
+  const fetchAssignedLawyerDetails = async (lawyerId) => {
+    const lawyerRef = doc(fs, "users", lawyerId);
+    const lawyerDoc = await getDoc(lawyerRef);
+    if (lawyerDoc.exists()) {
+      setAssignedLawyerDetails(lawyerDoc.data());
+    } else {
+      console.log("No such document!");
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -28,22 +51,46 @@ function ApptsCalendar() {
 
     return () => unsubscribe();
   }, []);
-  
+
+  useEffect(() => {
+    if (selectedAppointment?.appointmentDetails?.reviewedBy) {
+      fetchReviewerDetails(selectedAppointment.appointmentDetails.reviewedBy);
+    }
+  }, [selectedAppointment]);
+
+  useEffect(() => {
+    if (selectedAppointment?.appointmentDetails?.assignedLawyer) {
+      fetchAssignedLawyerDetails(selectedAppointment.appointmentDetails.assignedLawyer);
+    }
+  }, [selectedAppointment]);
+
   useEffect(() => {
     const fetchAppointmentsAndSlots = async () => {
       try {
-        const apptData = await aptsCalendar(statusFilters, null, 50, "");
-        const slotsData = await getCalendar();
-  
+        const user = auth.currentUser;
+        if (!user) {
+          window.location.href = "/";
+          return;
+        }
+
+        const apptData = await aptsLawyerCalendar(
+          statusFilters,
+          null,
+          50,
+          "",
+          user.uid
+        );
+        const slotsData = await getLawyerCalendar(user.uid);
+
         const formatTime = (date) => {
           let hours = date.getHours();
           const minutes = date.getMinutes().toString().padStart(2, "0");
           const ampm = hours >= 12 ? "PM" : "AM";
           hours = hours % 12;
-          hours = hours ? hours : 12;
+          hours = hours ? 12 : 12;
           return `${hours}:${minutes} ${ampm}`;
         };
-  
+
         const formattedAppointments = apptData.data.map((appt) => {
           const appointmentDate = new Date(appt.appointmentDate.seconds * 1000);
           return {
@@ -55,7 +102,7 @@ function ApptsCalendar() {
             ...appt,
           };
         });
-  
+
         const formattedBookedSlots = slotsData.map((slot) => {
           const appointmentDate = new Date(slot.appointmentDate.seconds * 1000);
           return {
@@ -67,39 +114,15 @@ function ApptsCalendar() {
             ...slot,
           };
         });
-  
+
         setAppointments([...formattedAppointments, ...formattedBookedSlots]);
       } catch (error) {
         console.error("Error fetching appointments and slots:", error);
       }
     };
-  
+
     fetchAppointmentsAndSlots();
   }, [statusFilters]);
-
-  useEffect(() => {
-    const fetchReviewerDetails = async (reviewedBy) => {
-      if (reviewedBy) {
-        const userData = await getUserById(reviewedBy);
-        setReviewerDetails(userData);
-      }
-    };
-
-    const fetchAssignedLawyerDetails = async (assignedLawyerId) => {
-      if (assignedLawyerId) {
-        const userData = await getUserById(assignedLawyerId);
-        setAssignedLawyerDetails(userData);
-      }
-    };
-
-    if (selectedAppointment?.appointmentDetails?.reviewedBy) {
-      fetchReviewerDetails(selectedAppointment.appointmentDetails.reviewedBy);
-    }
-
-    if (selectedAppointment?.appointmentDetails?.assignedLawyer) {
-      fetchAssignedLawyerDetails(selectedAppointment.appointmentDetails.assignedLawyer);
-    }
-  }, [selectedAppointment]);
 
   const handlePrint = () => {
     if (!selectedAppointment) {
@@ -198,12 +221,12 @@ function ApptsCalendar() {
   };
 
   const capitalizeFirstLetter = (string) => {
-    if (string && typeof string === 'string') {
+    if (string && typeof string === "string") {
       return string.charAt(0).toUpperCase() + string.slice(1);
     }
     return string; // Return the string as is if it's undefined or not a string
   };
-  
+
   const getFormattedDate = (timestamp, includeTime = false) => {
     if (!timestamp) return "N/A";
     const date = new Date(timestamp.seconds * 1000);
@@ -339,7 +362,8 @@ function ApptsCalendar() {
                       </td>
                     </tr>
                     <>
-                      {selectedAppointment.appointmentStatus === "scheduled" && (
+                      {selectedAppointment.appointmentStatus ===
+                        "scheduled" && (
                         <>
                           <tr>
                             <th>Appointment Date:</th>
@@ -369,21 +393,36 @@ function ApptsCalendar() {
                             </td>
                           </tr>
                           <tr>
+                            <th>Eligibility:</th>
+                            <td>
+                              {capitalizeFirstLetter(
+                                selectedAppointment.clientEligibility
+                                  ?.eligibility || "N/A"
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
                             <th>Reviewed By:</th>
                             <td>
                               {reviewerDetails
-                                ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
+                                ? `${reviewerDetails.display_name} ${
+                                    reviewerDetails.middle_name || ""
+                                  } ${reviewerDetails.last_name}`
                                 : "Not Available"}
                             </td>
                           </tr>
+
                           <tr>
                             <th>Assigned Lawyer:</th>
                             <td>
                               {assignedLawyerDetails
-                                ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
+                                ? `${assignedLawyerDetails.display_name} ${
+                                    assignedLawyerDetails.middle_name || ""
+                                  } ${assignedLawyerDetails.last_name}`
                                 : "Not Available"}
                             </td>
                           </tr>
+
                           <tr>
                             <th>Eligibility Notes:</th>
                             <td>
@@ -421,6 +460,35 @@ function ApptsCalendar() {
                       )}
                       {selectedAppointment.appointmentStatus === "done" && (
                         <>
+                        <tr>
+                            <th>Reviewed By:</th>
+                            <td>
+                              {reviewerDetails
+                                ? `${reviewerDetails.display_name} ${
+                                    reviewerDetails.middle_name || ""
+                                  } ${reviewerDetails.last_name}`
+                                : "Not Available"}
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <th>Assigned Lawyer:</th>
+                            <td>
+                              {assignedLawyerDetails
+                                ? `${assignedLawyerDetails.display_name} ${
+                                    assignedLawyerDetails.middle_name || ""
+                                  } ${assignedLawyerDetails.last_name}`
+                                : "Not Available"}
+                            </td>
+                          </tr>
+
+                          <tr>
+                            <th>Eligibility Notes:</th>
+                            <td>
+                              {selectedAppointment.clientEligibility?.notes ||
+                                "N/A"}
+                            </td>
+                          </tr>
                           <tr>
                             <th>Remarks (Record of Consultation):</th>
                             <td>
@@ -440,29 +508,6 @@ function ApptsCalendar() {
                             <td>
                               {selectedAppointment.clientEligibility
                                 ?.assistingCounsel || "N/A"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Reviewed By:</th>
-                            <td>
-                              {reviewerDetails
-                                ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
-                                : "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Assigned Lawyer:</th>
-                            <td>
-                              {assignedLawyerDetails
-                                ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
-                                : "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Eligibility Notes:</th>
-                            <td>
-                              {selectedAppointment.clientEligibility?.notes ||
-                                "N/A"}
                             </td>
                           </tr>
                         </>
@@ -523,22 +568,19 @@ function ApptsCalendar() {
                       <th>Date of Birth:</th>
                       <td>
                         {selectedAppointment.dob
-                          ? new Date(selectedAppointment.dob).toLocaleDateString(
-                              "en-US",
-                              {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              }
-                            )
+                          ? new Date(
+                              selectedAppointment.dob
+                            ).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })
                           : "N/A"}
                       </td>
                     </tr>
                     <tr>
                       <th>Address:</th>
-                      <td>
-                        {selectedAppointment?.address || "Not Available"}
-                      </td>
+                      <td>{selectedAppointment?.address || "Not Available"}</td>
                     </tr>
                     <tr>
                       <th>Contact Number:</th>
@@ -561,13 +603,15 @@ function ApptsCalendar() {
                     <tr>
                       <th>Spouse Occupation:</th>
                       <td>
-                        {selectedAppointment.spouseOccupation || "Not Available"}
+                        {selectedAppointment.spouseOccupation ||
+                          "Not Available"}
                       </td>
                     </tr>
                     <tr>
                       <th>Children Names and Ages:</th>
                       <td>
-                        {selectedAppointment.childrenNamesAges || "Not Available"}
+                        {selectedAppointment.childrenNamesAges ||
+                          "Not Available"}
                       </td>
                     </tr>
                   </tbody>
@@ -591,7 +635,8 @@ function ApptsCalendar() {
                     <tr>
                       <th>Type of Employment:</th>
                       <td>
-                        {selectedAppointment?.kindOfEmployment || "Not Specified"}
+                        {selectedAppointment?.kindOfEmployment ||
+                          "Not Specified"}
                       </td>
                     </tr>
                     <tr>
@@ -644,7 +689,8 @@ function ApptsCalendar() {
                     <tr>
                       <th>Desired Solutions:</th>
                       <td>
-                        {selectedAppointment.desiredSolutions || "Not Available"}
+                        {selectedAppointment.desiredSolutions ||
+                          "Not Available"}
                       </td>
                     </tr>
                   </tbody>
@@ -667,7 +713,9 @@ function ApptsCalendar() {
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              openImageModal(selectedAppointment.barangayImageUrl);
+                              openImageModal(
+                                selectedAppointment.barangayImageUrl
+                              );
                             }}
                           >
                             <img
@@ -769,4 +817,4 @@ const ImageModal = ({ isOpen, url, onClose }) => {
   );
 };
 
-export default ApptsCalendar;
+export default CalendarLawyer;
