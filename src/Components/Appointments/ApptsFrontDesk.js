@@ -834,6 +834,14 @@ function Appointments() {
                         )}
                         {selectedAppointment.appointmentStatus === "denied" && (
                           <>
+                          <tr>
+                            <th>Reviewed By:</th>
+                            <td>
+                              {reviewerDetails
+                                ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
+                                : "Not Available"}
+                            </td>
+                          </tr>
                             <tr>
                               <th>Denial Reason:</th>
                               <td>
@@ -846,6 +854,13 @@ function Appointments() {
                               <td>
                                 {selectedAppointment.clientEligibility?.notes ||
                                   "N/A"}
+                              </td>
+                            </tr>
+                            <tr>
+                              <th>Denial Reason:</th>
+                              <td>
+                                {selectedAppointment.clientEligibility
+                                  ?.denialReason || "N/A"}
                               </td>
                             </tr>
                           </>
