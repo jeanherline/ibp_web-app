@@ -1,18 +1,127 @@
-/* Appointments.css */
 .dashboard-container {
-    display: flex;
-  }
-  
-  .main-content {
-    flex-grow: 1;
-    padding: 20px;
-  }
-  
-  .profile {
-    margin-top: 80px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-  }
-  
+  display: flex;
+}
+
+.main-content {
+  flex: 1;
+  padding: 20px;
+}
+
+.edit-profile-form {
+  background: #fff;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.profile-image {
+  text-align: center;
+}
+
+.image-wrapper {
+  position: relative;
+}
+
+.image-label {
+  display: block;
+  cursor: pointer;
+}
+
+.image-placeholder {
+  display: inline-block;
+  background: #ddd;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  line-height: 130px;
+  text-align: center;
+  color: #fff;
+  font-weight: bold;
+}
+
+.profile-pic {
+  width: 130px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+  margin: 0 auto;
+}
+
+.image-input {
+  display: none;
+}
+
+.profile-details {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-group {
+  margin-bottom: .3rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+  background: #f9f9f9;
+}
+
+.submit-group {
+  grid-column: span 2;
+  display: flex;
+  justify-content: center;
+}
+
+.submit-button {
+  background-color: #580049 !important;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 1.1rem;
+}
+
+.submit-button:hover {
+  background: #932b62 !important;
+}
+
+.submit-button:disabled {
+  background-color: #ccc !important;
+}
+
+.snackbar {
+  background-color: #333;
+  color: white;
+  padding: 16px;
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  z-index: 1000;
+}

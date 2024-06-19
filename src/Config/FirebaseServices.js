@@ -16,6 +16,17 @@ import {
 } from "firebase/firestore"; // Import necessary functions directly from Firebase Firestore
 import { fs } from "./Firebase"; // Import fs from your Firebase configuration file
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+export const uploadImage = async (file, path) => {
+  const storage = getStorage();
+  const storageRef = ref(storage, path);
+
+  await uploadBytes(storageRef, file);
+  const downloadURL = await getDownloadURL(storageRef);
+
+  return downloadURL;
+};
 
 const getAppointments = async (
   statusFilter,
