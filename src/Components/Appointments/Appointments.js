@@ -699,6 +699,8 @@ function Appointments() {
               <th>Full Name</th>
               <th>Nature of Legal Assistance Requested</th>
               <th>Date Submitted</th>
+              <th>Appointment Date</th>
+              <th>Appointment Type</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
@@ -712,6 +714,8 @@ function Appointments() {
                   <td>{appointment.fullName}</td>
                   <td>{appointment.selectedAssistanceType}</td>
                   <td>{getFormattedDate(appointment.createdDate)}</td>
+                  <td>{getFormattedDate(appointment.appointmentDate)}</td>
+                  <td>{appointment.appointmentDetails?.apptType}</td>
                   <td>
                     {capitalizeFirstLetter(appointment.appointmentStatus)}
                   </td>
@@ -941,33 +945,38 @@ function Appointments() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      <tr className="no-print">
-                        <th>QR Code:</th>
-                        <td>
-                          {selectedAppointment.appointmentDetails ? (
-                            <a
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                openImageModal(
-                                  selectedAppointment.appointmentDetails.qrCode
-                                );
-                              }}
-                            >
-                              <img
-                                src={
-                                  selectedAppointment.appointmentDetails.qrCode
-                                }
-                                alt="QR Code"
-                                className="img-thumbnail qr-code-image"
-                                style={{ width: "100px", cursor: "pointer" }}
-                              />
-                            </a>
-                          ) : (
-                            "Not Available"
-                          )}
-                        </td>
-                      </tr>
+                      {selectedAppointment.appointmentDetails?.apptType ===
+                        "Online" && (
+                        <tr className="no-print">
+                          <th>QR Code:</th>
+                          <td>
+                            {selectedAppointment.appointmentDetails ? (
+                              <a
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  openImageModal(
+                                    selectedAppointment.appointmentDetails
+                                      .qrCode
+                                  );
+                                }}
+                              >
+                                <img
+                                  src={
+                                    selectedAppointment.appointmentDetails
+                                      .qrCode
+                                  }
+                                  alt="QR Code"
+                                  className="img-thumbnail qr-code-image"
+                                  style={{ width: "100px", cursor: "pointer" }}
+                                />
+                              </a>
+                            ) : (
+                              "Not Available"
+                            )}
+                          </td>
+                        </tr>
+                      )}
 
                       <tr>
                         <th>Control Number:</th>
@@ -1007,7 +1016,7 @@ function Appointments() {
                                 )}
                               </td>
                             </tr>
-                    <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1088,7 +1097,7 @@ function Appointments() {
                                 )}
                               </td>
                             </tr>
-                    <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1138,7 +1147,7 @@ function Appointments() {
                                 )}
                               </td>
                             </tr>
-                    <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1191,97 +1200,108 @@ function Appointments() {
                         </td>
                       </tr>
                       <tr>
-                        <th>Address:</th>
-                        <td>
-                          {selectedAppointment?.address || "Not Available"}
-                        </td>
-                      </tr>
-                      <tr>
                         <th>Contact Number:</th>
                         <td>
                           {selectedAppointment?.contactNumber ||
                             "Not Available"}
                         </td>
                       </tr>
-                      <tr>
-                        <th>Gender:</th>
-                        <td>
-                          {selectedAppointment?.selectedGender ||
-                            "Not Specified"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Spouse Name:</th>
-                        <td>
-                          {selectedAppointment.spouseName || "Not Available"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Spouse Occupation:</th>
-                        <td>
-                          {selectedAppointment.spouseOccupation ||
-                            "Not Available"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Children Names and Ages:</th>
-                        <td>
-                          {selectedAppointment.childrenNamesAges ||
-                            "Not Available"}
-                        </td>
-                      </tr>
+                      {selectedAppointment.appointmentDetails?.apptType ===
+                        "Online" && (
+                        <>
+                          <tr>
+                            <th>Address:</th>
+                            <td>
+                              {selectedAppointment?.address || "Not Available"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <th>Gender:</th>
+                            <td>
+                              {selectedAppointment?.selectedGender ||
+                                "Not Specified"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <th>Spouse Name:</th>
+                            <td>
+                              {selectedAppointment.spouseName ||
+                                "Not Available"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <th>Spouse Occupation:</th>
+                            <td>
+                              {selectedAppointment.spouseOccupation ||
+                                "Not Available"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <th>Children Names and Ages:</th>
+                            <td>
+                              {selectedAppointment.childrenNamesAges ||
+                                "Not Available"}
+                            </td>
+                          </tr>
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </section>
 
-                <section className="mb-4 print-section">
-                  <h2>
-                    <em
-                      style={{
-                        color: "#a34bc9",
-                        fontSize: "16px",
-                      }}
-                    >
-                      Employment Profile
-                    </em>
-                  </h2>
-                  <table className="table table-striped table-bordered">
-                    <tbody>
-                      <tr>
-                        <th>Occupation:</th>
-                        <td>
-                          {selectedAppointment.occupation || "Not Available"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Type of Employment:</th>
-                        <td>
-                          {selectedAppointment?.kindOfEmployment ||
-                            "Not Specified"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Employer Name:</th>
-                        <td>
-                          {selectedAppointment?.employerName || "Not Available"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Employer Address:</th>
-                        <td>
-                          {selectedAppointment.employerAddress ||
-                            "Not Available"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Monthly Income:</th>
-                        <td>
-                          {selectedAppointment.monthlyIncome || "Not Available"}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </section>
+                {selectedAppointment.appointmentDetails?.apptType ===
+                  "Online" && (
+                  <section className="mb-4 print-section">
+                    <h2>
+                      <em
+                        style={{
+                          color: "#a34bc9",
+                          fontSize: "16px",
+                        }}
+                      >
+                        Employment Profile
+                      </em>
+                    </h2>
+                    <table className="table table-striped table-bordered">
+                      <tbody>
+                        <tr>
+                          <th>Occupation:</th>
+                          <td>
+                            {selectedAppointment.occupation || "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Type of Employment:</th>
+                          <td>
+                            {selectedAppointment?.kindOfEmployment ||
+                              "Not Specified"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Employer Name:</th>
+                          <td>
+                            {selectedAppointment?.employerName ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Employer Address:</th>
+                          <td>
+                            {selectedAppointment.employerAddress ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Monthly Income:</th>
+                          <td>
+                            {selectedAppointment.monthlyIncome ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </section>
+                )}
 
                 <section className="mb-4 print-section">
                   <h2>
@@ -1303,25 +1323,31 @@ function Appointments() {
                             "Not Specified"}
                         </td>
                       </tr>
-                      <tr>
-                        <th>Problem:</th>
-                        <td>
-                          {selectedAppointment.problems || "Not Available"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Reason for Problem:</th>
-                        <td>
-                          {selectedAppointment.problemReason || "Not Available"}
-                        </td>
-                      </tr>
-                      <tr>
-                        <th>Desired Solutions:</th>
-                        <td>
-                          {selectedAppointment.desiredSolutions ||
-                            "Not Available"}
-                        </td>
-                      </tr>
+                      {selectedAppointment.appointmentDetails?.apptType ===
+                        "Online" && (
+                        <>
+                          <tr>
+                            <th>Problem:</th>
+                            <td>
+                              {selectedAppointment.problems || "Not Available"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <th>Reason for Problem:</th>
+                            <td>
+                              {selectedAppointment.problemReason ||
+                                "Not Available"}
+                            </td>
+                          </tr>
+                          <tr>
+                            <th>Desired Solutions:</th>
+                            <td>
+                              {selectedAppointment.desiredSolutions ||
+                                "Not Available"}
+                            </td>
+                          </tr>
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </section>
@@ -1334,6 +1360,64 @@ function Appointments() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
+                      {selectedAppointment.appointmentDetails?.apptType ===
+                        "Walk-in" && (
+                        <>
+                          <tr>
+                            <th>Application Form 1</th>
+                            <td>
+                              {selectedAppointment.form1 ? (
+                                <a
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    openImageModal(selectedAppointment.form1);
+                                  }}
+                                >
+                                  <img
+                                    src={selectedAppointment.form1}
+                                    alt="Application Form 1"
+                                    className="img-thumbnail"
+                                    style={{
+                                      width: "100px",
+                                      cursor: "pointer",
+                                    }}
+                                  />
+                                </a>
+                              ) : (
+                                "Not Available"
+                              )}
+                            </td>
+                          </tr>
+                          <tr>
+                            <th>Application Form 2</th>
+                            <td>
+                              {selectedAppointment.form2 ? (
+                                <a
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    openImageModal(selectedAppointment.form2);
+                                  }}
+                                >
+                                  <img
+                                    src={selectedAppointment.form2}
+                                    alt="Application Form 2"
+                                    className="img-thumbnail"
+                                    style={{
+                                      width: "100px",
+                                      cursor: "pointer",
+                                    }}
+                                  />
+                                </a>
+                              ) : (
+                                "Not Available"
+                              )}
+                            </td>
+                          </tr>
+                        </>
+                      )}
+
                       <tr>
                         <th>Barangay Certificate of Indigency:</th>
                         <td>
@@ -1607,8 +1691,8 @@ function Appointments() {
             <p>
               <strong>Assigned Lawyer:</strong> <br></br>
               {assignedLawyerDetails
-                                  ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
-                                  : "Not Available"}
+                ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
+                : "Not Available"}
             </p>
             <form onSubmit={handleRescheduleSubmit}>
               <div>

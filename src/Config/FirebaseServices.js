@@ -15,12 +15,12 @@ import {
   serverTimestamp,
   onSnapshot,
 } from "firebase/firestore"; // Import necessary functions directly from Firebase Firestore
-import { fs, storage } from "./Firebase"; // Import fs from your Firebase configuration file
+import { fs, storage, signOut } from "./Firebase"; // Import fs from your Firebase configuration file
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import QRCode from "qrcode.react";
-import { toPng } from "html-to-image";
-import ReactDOMServer from "react-dom/server"; 
+import { toPng } from 'html-to-image';
+import { QRCodeCanvas } from 'qrcode.react';
+import ReactDOMServer from 'react-dom/server';
 
 export const uploadImage = async (file, path) => {
   try {
@@ -524,8 +524,15 @@ export const generateControlNumber = () => {
 // Function to generate QR code and upload to Firebase Storage
 export const generateQrCodeImageUrl = async (controlNumber) => {
   try {
-    const qrCodeSvg = ReactDOMServer.renderToString(
-      <QRCode
+    // Create a container to render the QR code
+    const container = document.createElement('div');
+    container.style.width = '200px';
+    container.style.height = '200px';
+    container.style.backgroundColor = '#ffffff';
+    
+    // Render the QR code to the container
+    ReactDOMServer.renderToStaticMarkup(
+      <QRCodeCanvas
         value={controlNumber}
         size={200}
         bgColor="#ffffff"
@@ -533,9 +540,14 @@ export const generateQrCodeImageUrl = async (controlNumber) => {
         level="L"
       />
     );
-    const blob = new Blob([qrCodeSvg], { type: 'image/svg+xml' });
     
-    const fileName = `qr_code_${controlNumber}.svg`;
+    // Convert the QR code to PNG
+    const pngDataUrl = await toPng(container);
+    const response = await fetch(pngDataUrl);
+    const blob = await response.blob();
+
+    // Upload the PNG to Firebase Storage
+    const fileName = `qr_code_${controlNumber}.png`;
     const storageRef = ref(storage, fileName);
     await uploadBytes(storageRef, blob);
     const downloadUrl = await getDownloadURL(storageRef);
@@ -881,6 +893,9 @@ const addUser = async (userData) => {
       created_time: serverTimestamp(),
       uid: uid,
     });
+
+    // Sign out the user after creation
+    await signOut(auth);
   } catch (error) {
     console.error("Error creating user:", error);
     // Handle errors here

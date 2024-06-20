@@ -170,7 +170,7 @@ function Dashboard() {
             </div>
             <div className="stat-card">
               <h2>Approved Appointments</h2>
-              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "approved").length}</p>
+              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "scheduled").length}</p>
             </div>
             <div className="stat-card">
               <h2>Successful Appointments</h2>

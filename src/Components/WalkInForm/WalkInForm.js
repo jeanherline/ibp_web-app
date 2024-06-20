@@ -16,28 +16,34 @@ import "./WalkInForm.css";
 const defaultImageUrl =
   "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
 
+const initialUserData = {
+  display_name: "",
+  middle_name: "",
+  last_name: "",
+  selectedAssistanceType: "",
+  dob: "",
+  phone: "",
+  gender: "",
+  city: "",
+};
+
+const initialScannedDocuments = {
+  applicationFormPage1: null,
+  applicationFormPage2: null,
+  certificateBarangay: null,
+  certificateDSWD: null,
+  disqualificationLetterPAO: null,
+};
+
 function WalkInForm() {
   const { currentUser } = useAuth();
-  const [userData, setUserData] = useState({
-    display_name: "",
-    middle_name: "",
-    last_name: "",
-    selectedAssistanceType: "",
-    dob: "",
-    phone: "",
-    gender: "",
-    city: "",
-  });
+  const [userData, setUserData] = useState(initialUserData);
   const [profileImage, setProfileImage] = useState(null);
   const [imageUrl, setImageUrl] = useState(defaultImageUrl);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [scannedDocuments, setScannedDocuments] = useState({
-    applicationFormPage1: null,
-    applicationFormPage2: null,
-    certificateBarangay: null,
-    certificateDSWD: null,
-    disqualificationLetterPAO: null,
-  });
+  const [scannedDocuments, setScannedDocuments] = useState(
+    initialScannedDocuments
+  );
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
@@ -73,7 +79,10 @@ function WalkInForm() {
   };
 
   const handleTakePhoto = (dataUri) => {
-    setScannedDocuments((prev) => ({ ...prev, [currentDocumentType]: dataUri }));
+    setScannedDocuments((prev) => ({
+      ...prev,
+      [currentDocumentType]: dataUri,
+    }));
     setSnackbarMessage(
       `Successfully captured ${currentDocumentType
         .replace(/([A-Z])/g, " $1")
@@ -89,19 +98,22 @@ function WalkInForm() {
     setShowCamera(true);
   };
 
+  const dataURItoBlob = (dataURI) => {
+    const byteString = atob(dataURI.split(",")[1]);
+    const mimeString = dataURI.split(",")[0].split(":")[1].split(";")[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
   
     try {
-      // Upload profile image if available
-      let photo_url;
-      if (profileImage) {
-        photo_url = await uploadImage(profileImage, `profile_images/${currentUser.uid}`);
-        setUserData((prev) => ({ ...prev, photo_url }));
-      }
-  
-      // Upload scanned documents
       const uploadDocument = async (file, path) => {
         if (file) {
           return await uploadImage(file, path);
@@ -109,13 +121,26 @@ function WalkInForm() {
         return null;
       };
   
-      const form1Url = await uploadDocument(scannedDocuments.applicationFormPage1, `documents/${currentUser.uid}/applicationFormPage1`);
-      const form2Url = await uploadDocument(scannedDocuments.applicationFormPage2, `documents/${currentUser.uid}/applicationFormPage2`);
-      const barangayImageUrl = await uploadDocument(scannedDocuments.certificateBarangay, `documents/${currentUser.uid}/certificateBarangay`);
-      const dswdImageUrl = await uploadDocument(scannedDocuments.certificateDSWD, `documents/${currentUser.uid}/certificateDSWD`);
-      const paoImageUrl = await uploadDocument(scannedDocuments.disqualificationLetterPAO, `documents/${currentUser.uid}/disqualificationLetterPAO`);
-  
-      await updateUser(currentUser.uid, userData);
+      const form1Url = await uploadDocument(
+        dataURItoBlob(scannedDocuments.applicationFormPage1),
+        `documents/${currentUser.uid}/applicationFormPage1`
+      );
+      const form2Url = await uploadDocument(
+        dataURItoBlob(scannedDocuments.applicationFormPage2),
+        `documents/${currentUser.uid}/applicationFormPage2`
+      );
+      const barangayImageUrl = await uploadDocument(
+        dataURItoBlob(scannedDocuments.certificateBarangay),
+        `documents/${currentUser.uid}/certificateBarangay`
+      );
+      const dswdImageUrl = await uploadDocument(
+        dataURItoBlob(scannedDocuments.certificateDSWD),
+        `documents/${currentUser.uid}/certificateDSWD`
+      );
+      const paoImageUrl = await uploadDocument(
+        dataURItoBlob(scannedDocuments.disqualificationLetterPAO),
+        `documents/${currentUser.uid}/disqualificationLetterPAO`
+      );
   
       const controlNumber = generateControlNumber();
       const qrCodeUrl = await generateQrCodeImageUrl(controlNumber);
@@ -142,9 +167,9 @@ function WalkInForm() {
         uploadedImages: {
           form1: form1Url,
           form2: form2Url,
-          barangayImageUrl: barangayImageUrl,
-          dswdImageUrl: dswdImageUrl,
-          paoImageUrl: paoImageUrl,
+          barangayImageUrl,
+          dswdImageUrl,
+          paoImageUrl,
         },
       };
   
@@ -153,6 +178,10 @@ function WalkInForm() {
       await createAppointment(appointmentData);
   
       setSnackbarMessage("Walk-In form has been successfully submitted.");
+      setUserData(initialUserData);
+      setProfileImage(null);
+      setImageUrl(defaultImageUrl);
+      setScannedDocuments(initialScannedDocuments);
     } catch (error) {
       console.error("Error submitting form: ", error.message);
       setSnackbarMessage(`Failed to submit form. Error: ${error.message}`);
@@ -163,6 +192,7 @@ function WalkInForm() {
     }
   };
   
+
   if (!currentUser) {
     return <div>Loading...</div>;
   }
@@ -177,6 +207,7 @@ function WalkInForm() {
         <form onSubmit={handleSubmit} className="walkin-form">
           <div className="profile-section">
             <div className="profile-details">
+              {/* Form Inputs */}
               <div className="form-group">
                 <label htmlFor="display_name">First Name</label>
                 <input
@@ -184,7 +215,6 @@ function WalkInForm() {
                   id="display_name"
                   name="display_name"
                   placeholder="First Name"
-                  value={userData.display_name}
                   onChange={handleChange}
                   required
                 />
@@ -196,7 +226,6 @@ function WalkInForm() {
                   id="middle_name"
                   name="middle_name"
                   placeholder="Middle Name"
-                  value={userData.middle_name}
                   onChange={handleChange}
                 />
               </div>
@@ -207,7 +236,6 @@ function WalkInForm() {
                   id="last_name"
                   name="last_name"
                   placeholder="Last Name"
-                  value={userData.last_name}
                   onChange={handleChange}
                   required
                 />
@@ -219,11 +247,12 @@ function WalkInForm() {
                 <select
                   id="selectedAssistanceType"
                   name="selectedAssistanceType"
-                  value={userData.selectedAssistanceType}
                   onChange={handleChange}
                   required
                 >
-                  <option value="">Nature of Legal Assistance</option>
+                  <option value="" disabled>
+                    Nature of Legal Assistance
+                  </option>
                   <option value="Payong Legal (Legal Advice)">
                     Payong Legal (Legal Advice)
                   </option>
@@ -241,7 +270,6 @@ function WalkInForm() {
                   type="date"
                   id="dob"
                   name="dob"
-                  value={userData.dob}
                   onChange={handleChange}
                   required
                 />
@@ -253,7 +281,6 @@ function WalkInForm() {
                   id="phone"
                   name="phone"
                   placeholder="Phone Number"
-                  value={userData.phone}
                   onChange={handleChange}
                   required
                 />
@@ -263,7 +290,6 @@ function WalkInForm() {
                 <select
                   id="gender"
                   name="gender"
-                  value={userData.gender}
                   onChange={handleChange}
                   required
                 >
@@ -278,7 +304,6 @@ function WalkInForm() {
                 <select
                   id="city"
                   name="city"
-                  value={userData.city}
                   onChange={handleChange}
                   required
                 >
@@ -326,18 +351,14 @@ function WalkInForm() {
                 <button
                   type="button"
                   className="scan-button"
-                  onClick={() =>
-                    handleDocumentScan("certificateBarangay")
-                  }
+                  onClick={() => handleDocumentScan("certificateBarangay")}
                 >
                   Capture Certificate of Indigency from Barangay
                 </button>
                 <button
                   type="button"
                   className="scan-button"
-                  onClick={() =>
-                    handleDocumentScan("certificateDSWD")
-                  }
+                  onClick={() => handleDocumentScan("certificateDSWD")}
                 >
                   Capture Certificate of Indigency from DSWD
                 </button>
@@ -418,11 +439,20 @@ function WalkInForm() {
         {showCamera && (
           <div className="camera-container">
             <div className="camera-header">
-              <h4>Capture {currentDocumentType.replace(/([A-Z])/g, ' $1').trim()}</h4>
-              <button onClick={() => setShowCamera(false)} className="close-camera-button">Close</button>
+              <h4>
+                Capture {currentDocumentType.replace(/([A-Z])/g, " $1").trim()}
+              </h4>
+              <button
+                onClick={() => setShowCamera(false)}
+                className="close-camera-button"
+              >
+                Close
+              </button>
             </div>
             <Camera
-              onTakePhoto={(dataUri) => { handleTakePhoto(dataUri); }}
+              onTakePhoto={(dataUri) => {
+                handleTakePhoto(dataUri);
+              }}
               idealFacingMode={FACING_MODES.ENVIRONMENT}
               imageType={IMAGE_TYPES.JPG}
               isImageMirror={false}
