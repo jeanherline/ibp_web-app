@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
-import { fs, auth } from '../../Config/Firebase';
+import React, { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { fs, auth, query, where } from "../../Config/Firebase";
 import SideNavBar from "../SideNavBar/SideNavBar";
 import "./Dashboard.css";
 import { Bar } from "react-chartjs-2";
@@ -30,10 +30,25 @@ function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       const usersSnapshot = await getDocs(collection(fs, "users"));
-      const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const usersList = usersSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-      const appointmentsSnapshot = await getDocs(collection(fs, "appointments"));
-      const appointmentsList = appointmentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const currentUserId = auth.currentUser?.uid;
+
+      let appointmentsQuery = collection(fs, "appointments");
+      if (auth.currentUser?.member_type === "lawyer") {
+        appointmentsQuery = query(
+          appointmentsQuery,
+          where("appointmentDetails.assignedLawyer", "==", currentUserId)
+        );
+      }
+      const appointmentsSnapshot = await getDocs(appointmentsQuery);
+      const appointmentsList = appointmentsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
       setUsers(usersList);
       setAppointments(appointmentsList);
@@ -54,13 +69,15 @@ function Dashboard() {
 
   // Calculate average ratings for each city
   const calculateAverageRatingPerCity = (data, city, ratingField) => {
-    const cityData = data.filter(item => item.city === city && item[ratingField] !== undefined);
+    const cityData = data.filter(
+      (item) => item.city === city && item[ratingField] !== undefined
+    );
     const total = cityData.reduce((sum, item) => sum + item[ratingField], 0);
     const count = cityData.length;
     return count ? (total / count).toFixed(2) : 0;
   };
 
-  const cities = [...new Set(users.map(user => user.city))];
+  const cities = [...new Set(users.map((user) => user.city))];
 
   const avgAppRatingPerCity = cities.reduce((acc, city) => {
     acc[city] = calculateAverageRatingPerCity(users, city, "appRating");
@@ -68,11 +85,18 @@ function Dashboard() {
   }, {});
 
   const avgAptRatingPerCity = cities.reduce((acc, city) => {
-    const cityAppointments = appointments.filter(app => {
-      const user = users.find(user => user.id === app.applicantProfile?.uid);
-      return user && user.city === city && app.appointmentDetails?.aptRating !== undefined;
+    const cityAppointments = appointments.filter((app) => {
+      const user = users.find((user) => user.id === app.applicantProfile?.uid);
+      return (
+        user &&
+        user.city === city &&
+        app.appointmentDetails?.aptRating !== undefined
+      );
     });
-    const total = cityAppointments.reduce((sum, app) => sum + app.appointmentDetails.aptRating, 0);
+    const total = cityAppointments.reduce(
+      (sum, app) => sum + app.appointmentDetails.aptRating,
+      0
+    );
     const count = cityAppointments.length;
     acc[city] = count ? (total / count).toFixed(2) : 0;
     return acc;
@@ -85,7 +109,7 @@ function Dashboard() {
       {
         label: "Total Number of Users",
         data: cities.map(
-          city => users.filter(user => user.city === city).length
+          (city) => users.filter((user) => user.city === city).length
         ),
         backgroundColor: "rgba(75, 192, 192, 0.6)",
       },
@@ -98,7 +122,9 @@ function Dashboard() {
       {
         label: "Total Number of Satisfied App Users",
         data: cities.map(
-          city => users.filter(user => user.city === city && user.appRating >= 4).length
+          (city) =>
+            users.filter((user) => user.city === city && user.appRating >= 4)
+              .length
         ),
         backgroundColor: "rgba(255, 99, 132, 0.6)",
       },
@@ -111,9 +137,13 @@ function Dashboard() {
       {
         label: "Total Number of Satisfied Users in Appointment Booking",
         data: cities.map(
-          city => appointments.filter(
-            app => app.appointmentDetails?.aptRating >= 4 && users.find(user => user.id === app.applicantProfile?.uid)?.city === city
-          ).length
+          (city) =>
+            appointments.filter(
+              (app) =>
+                app.appointmentDetails?.aptRating >= 4 &&
+                users.find((user) => user.id === app.applicantProfile?.uid)
+                  ?.city === city
+            ).length
         ),
         backgroundColor: "rgba(75, 192, 192, 0.6)",
       },
@@ -131,23 +161,28 @@ function Dashboard() {
       },
       tooltip: {
         callbacks: {
-          label: function(context) {
-            let label = context.dataset.label || '';
+          label: function (context) {
+            let label = context.dataset.label || "";
             const city = context.label;
             if (label) {
-              label += ': ';
+              label += ": ";
             }
-            if (context.dataset.label === "Total Number of Satisfied App Users") {
+            if (
+              context.dataset.label === "Total Number of Satisfied App Users"
+            ) {
               label += `${context.raw} (Avg Rating: ${avgAppRatingPerCity[city]})`;
-            } else if (context.dataset.label === "Total Number of Satisfied Users in Appointment Booking") {
+            } else if (
+              context.dataset.label ===
+              "Total Number of Satisfied Users in Appointment Booking"
+            ) {
               label += `${context.raw} (Avg Rating: ${avgAptRatingPerCity[city]})`;
             } else {
               label += context.raw;
             }
             return label;
-          }
-        }
-      }
+          },
+        },
+      },
     },
   };
 
@@ -166,28 +201,120 @@ function Dashboard() {
             </div>
             <div className="stat-card">
               <h2>Pending Appointments</h2>
-              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "pending").length}</p>
+              <p>
+                {
+                  appointments.filter(
+                    (app) =>
+                      app.appointmentDetails?.appointmentStatus === "pending"
+                  ).length
+                }
+              </p>
             </div>
             <div className="stat-card">
               <h2>Approved Appointments</h2>
-              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "scheduled").length}</p>
+              <p>
+                {
+                  appointments.filter(
+                    (app) =>
+                      app.appointmentDetails?.appointmentStatus === "scheduled"
+                  ).length
+                }
+              </p>
             </div>
             <div className="stat-card">
               <h2>Successful Appointments</h2>
-              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "done").length}</p>
+              <p>
+                {
+                  appointments.filter(
+                    (app) =>
+                      app.appointmentDetails?.appointmentStatus === "done"
+                  ).length
+                }
+              </p>
             </div>
             <div className="stat-card">
               <h2>Denied Appointments</h2>
-              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "denied").length}</p>
+              <p>
+                {
+                  appointments.filter(
+                    (app) =>
+                      app.appointmentDetails?.appointmentStatus === "denied"
+                  ).length
+                }
+              </p>
             </div>
-            <div className="stat-card">
-              <h2>Active App Users</h2>
-              <p>{users.filter(user => user.user_status === "active").length}</p>
-            </div>
-            <div className="stat-card">
-              <h2>Inactive App Users</h2>
-              <p>{users.filter(user => user.user_status === "inactive").length}</p>
-            </div>
+            {auth.currentUser?.member_type === "lawyer" && (
+              <>
+                <div className="stat-card">
+                  <h2>Your Total Appointments</h2>
+                  <p>
+                    {
+                      appointments.filter(
+                        (app) =>
+                          app.appointmentDetails?.assignedLawyer ===
+                          auth.currentUser?.uid
+                      ).length
+                    }
+                  </p>
+                </div>
+                <div className="stat-card">
+                  <h2>Your Pending Appointments</h2>
+                  <p>
+                    {
+                      appointments.filter(
+                        (app) =>
+                          app.appointmentDetails?.appointmentStatus ===
+                            "pending" &&
+                          app.appointmentDetails?.assignedLawyer ===
+                            auth.currentUser?.uid
+                      ).length
+                    }
+                  </p>
+                </div>
+                <div className="stat-card">
+                  <h2>Your Approved Appointments</h2>
+                  <p>
+                    {
+                      appointments.filter(
+                        (app) =>
+                          app.appointmentDetails?.appointmentStatus ===
+                            "scheduled" &&
+                          app.appointmentDetails?.assignedLawyer ===
+                            auth.currentUser?.uid
+                      ).length
+                    }
+                  </p>
+                </div>
+                <div className="stat-card">
+                  <h2>Your Successful Appointments</h2>
+                  <p>
+                    {
+                      appointments.filter(
+                        (app) =>
+                          app.appointmentDetails?.appointmentStatus ===
+                            "done" &&
+                          app.appointmentDetails?.assignedLawyer ===
+                            auth.currentUser?.uid
+                      ).length
+                    }
+                  </p>
+                </div>
+                <div className="stat-card">
+                  <h2>Your Denied Appointments</h2>
+                  <p>
+                    {
+                      appointments.filter(
+                        (app) =>
+                          app.appointmentDetails?.appointmentStatus ===
+                            "denied" &&
+                          app.appointmentDetails?.assignedLawyer ===
+                            auth.currentUser?.uid
+                      ).length
+                    }
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </center>
         <div className="chart-container">
@@ -196,7 +323,10 @@ function Dashboard() {
             data={usersPerCityData}
             options={{
               ...chartOptions,
-              title: { ...chartOptions.title, text: "Total Number of Users per City in Bulacan" },
+              title: {
+                ...chartOptions.title,
+                text: "Total Number of Users per City in Bulacan",
+              },
             }}
           />
         </div>
@@ -206,7 +336,10 @@ function Dashboard() {
             data={satisfiedAppUsersPerCityData}
             options={{
               ...chartOptions,
-              title: { ...chartOptions.title, text: "Average Ratings of App Users per City" },
+              title: {
+                ...chartOptions.title,
+                text: "Average Ratings of App Users per City",
+              },
             }}
           />
         </div>
@@ -216,7 +349,10 @@ function Dashboard() {
             data={satisfiedUsersInBookingPerCityData}
             options={{
               ...chartOptions,
-              title: { ...chartOptions.title, text: "Average Ratings of App Users in Appointment Booking per City" },
+              title: {
+                ...chartOptions.title,
+                text: "Average Ratings of App Users in Appointment Booking per City",
+              },
             }}
           />
         </div>
