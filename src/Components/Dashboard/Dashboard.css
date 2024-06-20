@@ -36,3 +36,24 @@
   font-size: 24px;
   color: #555;
 }
+
+.next-appointment-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  text-align: center;
+  width: 300px;
+}
+
+.next-appointment-card h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #1e7de2;
+}
+
+.next-appointment-card p {
+  margin: 0;
+  padding: 0 10px;
+  font-size: 24px;
+}

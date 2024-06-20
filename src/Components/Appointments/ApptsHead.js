@@ -736,9 +736,8 @@ function AppsHead() {
               <th>Control Number</th>
               <th>Full Name</th>
               <th>Nature of Legal Assistance Requested</th>
-              <th>Date Submitted</th>
-              <th>Appointment Date</th>
-              <th>Appointment Type</th>
+              <th>Scheduled Date</th>
+              <th>Type</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
@@ -751,8 +750,8 @@ function AppsHead() {
                   <td>{appointment.controlNumber}</td>
                   <td>{appointment.fullName}</td>
                   <td>{appointment.selectedAssistanceType}</td>
-                   <td>{getFormattedDate(appointment.createdDate)}</td>
-                  <td>{getFormattedDate(appointment.appointmentDate)}</td>
+                  <td>{getFormattedDate(appointment.appointmentDate, true)}</td>
+                  <td>{getFormattedDate(appointment.appointmentDate, true)}</td>
                   <td>{appointment.appointmentDetails?.apptType }</td>
                   <td>
                     {capitalizeFirstLetter(appointment.appointmentStatus)}
@@ -1017,6 +1016,15 @@ function AppsHead() {
                         )}
                         {selectedAppointment.appointmentStatus === "done" && (
                           <>
+                          <tr>
+                              <th>Appointment Date:</th>
+                              <td>
+                                {getFormattedDate(
+                                  selectedAppointment.appointmentDate,
+                                  true
+                                )}
+                              </td>
+                            </tr>
                             <tr>
                               <th>Eligibility:</th>
                               <td>
@@ -1532,12 +1540,13 @@ function AppsHead() {
                   <b>
                     <label>Notes:</label>
                   </b>
-                  <textarea
+                                    <textarea
                     name="notes"
                     rows="4"
                     placeholder="Enter any relevant notes here..."
                     value={clientEligibility.notes}
                     onChange={handleChange}
+                    required
                   ></textarea>
                 </div>
                 <button>Submit</button>
