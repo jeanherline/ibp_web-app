@@ -15,18 +15,23 @@ import {
   serverTimestamp,
   onSnapshot,
 } from "firebase/firestore"; // Import necessary functions directly from Firebase Firestore
-import { fs } from "./Firebase"; // Import fs from your Firebase configuration file
+import { fs, storage } from "./Firebase"; // Import fs from your Firebase configuration file
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import QRCode from "qrcode.react";
+import { toPng } from "html-to-image";
+import ReactDOMServer from "react-dom/server"; 
 
 export const uploadImage = async (file, path) => {
-  const storage = getStorage();
-  const storageRef = ref(storage, path);
-
-  await uploadBytes(storageRef, file);
-  const downloadURL = await getDownloadURL(storageRef);
-
-  return downloadURL;
+  try {
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading image: ", error.message);
+    throw error;
+  }
 };
 
 const getAppointments = async (
@@ -488,6 +493,55 @@ const getLawyerAppointments = async (
     };
   } catch (error) {
     console.error("Failed to fetch appointments:", error);
+    throw error;
+  }
+};
+
+export const createAppointment = async (appointmentData) => {
+  try {
+    const appointmentRef = doc(collection(fs, "appointments"));
+    await setDoc(appointmentRef, appointmentData);
+    return appointmentRef.id;
+  } catch (error) {
+    console.error("Error creating appointment: ", error.message);
+    throw error;
+  }
+};
+
+export const generateControlNumber = () => {
+  const now = new Date();
+  return `${now.getFullYear().toString().padStart(4, "0")}${(now.getMonth() + 1)
+    .toString()
+    .padStart(2, "0")}${now.getDate().toString().padStart(2, "0")}${now
+    .getHours()
+    .toString()
+    .padStart(2, "0")}${now.getMinutes().toString().padStart(2, "0")}${now
+    .getSeconds()
+    .toString()
+    .padStart(2, "0")}`;
+};
+
+// Function to generate QR code and upload to Firebase Storage
+export const generateQrCodeImageUrl = async (controlNumber) => {
+  try {
+    const qrCodeSvg = ReactDOMServer.renderToString(
+      <QRCode
+        value={controlNumber}
+        size={200}
+        bgColor="#ffffff"
+        fgColor="#000000"
+        level="L"
+      />
+    );
+    const blob = new Blob([qrCodeSvg], { type: 'image/svg+xml' });
+    
+    const fileName = `qr_code_${controlNumber}.svg`;
+    const storageRef = ref(storage, fileName);
+    await uploadBytes(storageRef, blob);
+    const downloadUrl = await getDownloadURL(storageRef);
+    return downloadUrl;
+  } catch (error) {
+    console.error("Error generating QR code: ", error.message);
     throw error;
   }
 };

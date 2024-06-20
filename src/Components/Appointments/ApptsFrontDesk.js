@@ -24,7 +24,7 @@ import {
 import { Tooltip, OverlayTrigger } from "react-bootstrap";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
 
-function Appointments() {
+function ApptsFrontDesk() {
   const [appointments, setAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -872,7 +872,7 @@ function Appointments() {
                                 )}
                               </td>
                             </tr>
-                 <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -918,7 +918,7 @@ function Appointments() {
                         )}
                         {selectedAppointment.appointmentStatus === "denied" && (
                           <>
-                         <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -953,7 +953,7 @@ function Appointments() {
                                 )}
                               </td>
                             </tr>
-                 <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1003,7 +1003,7 @@ function Appointments() {
                                 )}
                               </td>
                             </tr>
-                 <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1564,4 +1564,4 @@ const ImageModal = ({ isOpen, url, onClose }) => {
   );
 };
 
-export default Appointments;
+export default ApptsFrontDesk;

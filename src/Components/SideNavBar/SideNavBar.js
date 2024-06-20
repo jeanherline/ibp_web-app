@@ -172,14 +172,6 @@ function SideNavBar() {
                     Users
                   </NavLink>
                 </li>
-                <li>
-                  <NavLink
-                    to="/ratings"
-                    className={({ isActive }) => (isActive ? "active" : "")}
-                  >
-                    Ratings
-                  </NavLink>
-                </li>
               </>
             )}
             {userData && userData.member_type === "head" && (
@@ -219,6 +211,14 @@ function SideNavBar() {
                     className={({ isActive }) => (isActive ? "active" : "")}
                   >
                     Appointments
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/walkin"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Walk In Form
                   </NavLink>
                 </li>
               </>
