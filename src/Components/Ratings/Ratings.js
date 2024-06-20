@@ -3,12 +3,7 @@ import SideNavBar from "../SideNavBar/SideNavBar";
 import "../Dashboard/Dashboard.css";
 import "./Ratings.css";
 import Pagination from "react-bootstrap/Pagination";
-import {
-  getRatingsUsers,
-  getRatingsUsersCount,
-  getRatingsAppointmentsRatings,
-  getRatingsAppRatings,
-} from "../../Config/FirebaseServices";
+import { getUsers, getUsersCount } from "../../Config/FirebaseServices";
 import { auth } from "../../Config/Firebase";
 
 function Ratings() {
@@ -33,80 +28,65 @@ function Ratings() {
   }, []);
 
   useEffect(() => {
-    fetchUsers(1); // Fetch users when component mounts or filters change
-  }, [filterStatus, cityFilter, searchText]);
+    fetchUsers();
+  }, [filterStatus, searchText, currentPage, cityFilter]);
 
-  const fetchUsers = async (page) => {
+  const fetchUsers = async () => {
     try {
-      const totalUsers = await getRatingsUsersCount(filterStatus, cityFilter, searchText);
-      const newTotalPages = Math.ceil(totalUsers / pageSize);
-      const { users, lastVisibleDoc } = await getRatingsUsers(
+      const { users, lastVisibleDoc } = await getUsers(
         filterStatus,
+        "",
         cityFilter,
         searchText,
-        page === 1 ? null : lastVisible,
-        pageSize
+        lastVisible,
+        pageSize,
+        currentPage
+      );
+      const totalUsersCount = await getUsersCount(
+        filterStatus,
+        "",
+        cityFilter,
+        searchText
       );
 
-      // Fetch appropriate ratings based on filterStatus
-      const usersWithRatings = await Promise.all(users.map(async (user) => {
-        let rating = "N/A";
-        if (filterStatus === "appointments") {
-          const aptRatings = await getRatingsAppointmentsRatings(user.uid);
-          rating = aptRatings.length > 0 ? (aptRatings.reduce((a, b) => a + b, 0) / aptRatings.length).toFixed(2) : "N/A";
-        } else if (filterStatus === "application") {
-          const appRatings = await getRatingsAppRatings(user.uid);
-          rating = appRatings.length > 0 ? (appRatings.reduce((a, b) => a + b, 0) / appRatings.length).toFixed(2) : "N/A";
-        }
-        return { ...user, ratingType: filterStatus === "appointments" ? "Appointment" : "Application", rating };
-      }));
-
-      setUsers(usersWithRatings);
-      setTotalPages(newTotalPages);
+      setUsers(users);
       setLastVisible(lastVisibleDoc);
-      setCurrentPage(page);
-      setTotalFilteredItems(totalUsers);
+      setTotalFilteredItems(totalUsersCount);
+      setTotalPages(Math.ceil(totalUsersCount / pageSize));
     } catch (error) {
       console.error("Failed to fetch users:", error);
     }
   };
 
-  const handleNext = () => {
-    if (currentPage < totalPages) {
-      fetchUsers(currentPage + 1);
-    }
+  const handleFilterChange = (setter) => (event) => {
+    setter(event.target.value);
+    setCurrentPage(1); // Reset to the first page whenever filters change
   };
 
-  const handlePrevious = () => {
-    if (currentPage > 1) {
-      fetchUsers(currentPage - 1);
-    }
+  const handlePageClick = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
   const handleFirst = () => {
-    fetchUsers(1);
+    setCurrentPage(1);
+  };
+
+  const handlePrevious = () => {
+    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+  };
+
+  const handleNext = () => {
+    setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
   };
 
   const handleLast = () => {
-    fetchUsers(totalPages);
-  };
-
-  const handlePageClick = (page) => {
-    fetchUsers(page);
-  };
-
-  const handleFilterChange = (setter) => (e) => {
-    setter(e.target.value);
-    setLastVisible(null);
-    fetchUsers(1);
+    setCurrentPage(totalPages);
   };
 
   const resetFilters = () => {
     setFilterStatus("all");
-    setCityFilter("all");
     setSearchText("");
-    setLastVisible(null);
-    fetchUsers(1);
+    setCityFilter("all");
   };
 
   return (
@@ -151,14 +131,14 @@ function Ratings() {
           <tbody>
             {users.map((user, index) => (
               <tr key={user.uid}>
-                <td>{index + 1 + (currentPage - 1) * pageSize}</td>
+                <td>{(currentPage - 1) * pageSize + index + 1}</td>
                 <td>{user.display_name}</td>
                 <td>{user.middle_name}</td>
                 <td>{user.last_name}</td>
                 <td>{user.email}</td>
                 <td>{user.city}</td>
-                <td>{user.ratingType}</td>
-                <td>{user.rating}</td>
+                <td>{user.appRating ? "Application" : "N/A"}</td>
+                <td>{user.appRating || "N/A"}</td>
               </tr>
             ))}
           </tbody>

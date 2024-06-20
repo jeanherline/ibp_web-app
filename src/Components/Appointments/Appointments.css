@@ -668,3 +668,20 @@ button:disabled {
     font-size: 16px;
   }
 }
+
+.disabled-day{
+  background-color: rgb(157, 157, 157) !important;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+.disabled-time {
+  background-color: rgb(255, 111, 111) !important;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+.red-time-slot {
+  background-color: red !important;
+  color: white !important;
+}
+

@@ -10,9 +10,10 @@ import {
   doc,
   updateDoc,
   getDoc,
-  addDoc, 
+  addDoc,
   setDoc,
-  serverTimestamp 
+  serverTimestamp,
+  onSnapshot,
 } from "firebase/firestore"; // Import necessary functions directly from Firebase Firestore
 import { fs } from "./Firebase"; // Import fs from your Firebase configuration file
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
@@ -40,23 +41,43 @@ const getAppointments = async (
 
   // Apply status filter if not "all"
   if (statusFilter !== "all") {
-    queryRef = query(queryRef, where("appointmentDetails.appointmentStatus", "==", statusFilter));
+    queryRef = query(
+      queryRef,
+      where("appointmentDetails.appointmentStatus", "==", statusFilter)
+    );
   }
 
   // Apply assistance filter if not "all"
   if (assistanceFilter !== "all") {
-    queryRef = query(queryRef, where("legalAssistanceRequested.selectedAssistanceType", "==", assistanceFilter));
+    queryRef = query(
+      queryRef,
+      where(
+        "legalAssistanceRequested.selectedAssistanceType",
+        "==",
+        assistanceFilter
+      )
+    );
   }
 
   // Order by controlNumber and limit results for pagination
-  queryRef = query(queryRef, orderBy("appointmentDetails.controlNumber"), limit(pageSize));
+  queryRef = query(
+    queryRef,
+    orderBy("appointmentDetails.controlNumber"),
+    limit(pageSize)
+  );
 
   // Handle pagination
   if (lastVisible) {
     if (isPrevious) {
-      queryRef = query(queryRef, startAt(lastVisible?.appointmentDetails?.controlNumber || ""));
+      queryRef = query(
+        queryRef,
+        startAt(lastVisible?.appointmentDetails?.controlNumber || "")
+      );
     } else {
-      queryRef = query(queryRef, startAfter(lastVisible?.appointmentDetails?.controlNumber || ""));
+      queryRef = query(
+        queryRef,
+        startAfter(lastVisible?.appointmentDetails?.controlNumber || "")
+      );
     }
   }
 
@@ -75,13 +96,18 @@ const getAppointments = async (
         .includes(searchText.toLowerCase()) ||
       doc.data().applicantProfile?.contactNumber?.includes(searchText) ||
       doc.data().appointmentDetails?.controlNumber?.includes(searchText) ||
-      doc.data().legalAssistanceRequested?.selectedAssistanceType?.toLowerCase().includes(searchText.toLowerCase())
+      doc
+        .data()
+        .legalAssistanceRequested?.selectedAssistanceType?.toLowerCase()
+        .includes(searchText.toLowerCase())
   );
 
   const totalQuery = await getDocs(
     query(
       collection(fs, "appointments"),
-      statusFilter !== "all" ? where("appointmentDetails.appointmentStatus", "==", statusFilter) : {}
+      statusFilter !== "all"
+        ? where("appointmentDetails.appointmentStatus", "==", statusFilter)
+        : {}
     )
   );
 
@@ -109,7 +135,6 @@ const getAppointments = async (
     lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1],
   };
 };
-
 
 const getLawyerCalendar = async (assignedLawyer) => {
   const appointmentsRef = collection(fs, "appointments");
@@ -155,32 +180,62 @@ const aptsLawyerCalendar = async (
     );
 
     if (assistanceFilter !== "all") {
-      queryRef = query(queryRef, where("legalAssistanceRequested.selectedAssistanceType", "==", assistanceFilter));
+      queryRef = query(
+        queryRef,
+        where(
+          "legalAssistanceRequested.selectedAssistanceType",
+          "==",
+          assistanceFilter
+        )
+      );
     }
 
-    queryRef = query(queryRef, orderBy("appointmentDetails.controlNumber"), limit(pageSize));
+    queryRef = query(
+      queryRef,
+      orderBy("appointmentDetails.controlNumber"),
+      limit(pageSize)
+    );
 
     if (lastVisible) {
       queryRef = isPrevious
-        ? query(queryRef, startAt(lastVisible?.appointmentDetails?.controlNumber || ""))
-        : query(queryRef, startAfter(lastVisible?.appointmentDetails?.controlNumber || ""));
+        ? query(
+            queryRef,
+            startAt(lastVisible?.appointmentDetails?.controlNumber || "")
+          )
+        : query(
+            queryRef,
+            startAfter(lastVisible?.appointmentDetails?.controlNumber || "")
+          );
     }
 
     const querySnapshot = await getDocs(queryRef);
 
     const filtered = querySnapshot.docs.filter(
       (doc) =>
-        doc.data().applicantProfile?.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        doc.data().applicantProfile?.address?.toLowerCase().includes(searchText.toLowerCase()) ||
+        doc
+          .data()
+          .applicantProfile?.fullName?.toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        doc
+          .data()
+          .applicantProfile?.address?.toLowerCase()
+          .includes(searchText.toLowerCase()) ||
         doc.data().applicantProfile?.contactNumber?.includes(searchText) ||
         doc.data().appointmentDetails?.controlNumber?.includes(searchText) ||
-        doc.data().legalAssistanceRequested?.selectedAssistanceType?.toLowerCase().includes(searchText.toLowerCase())
+        doc
+          .data()
+          .legalAssistanceRequested?.selectedAssistanceType?.toLowerCase()
+          .includes(searchText.toLowerCase())
     );
 
     const totalQuery = await getDocs(
       query(
         collection(fs, "appointments"),
-        where("appointmentDetails.appointmentStatus", "in", updatedStatusFilters),
+        where(
+          "appointmentDetails.appointmentStatus",
+          "in",
+          updatedStatusFilters
+        ),
         where("appointmentDetails.assignedLawyer", "==", assignedLawyer)
       )
     );
@@ -225,35 +280,68 @@ const aptsCalendar = async (
 
     // Ensure statusFilters include "done" and "scheduled"
     const updatedStatusFilters = ["done", "scheduled"];
-    queryRef = query(queryRef, where("appointmentDetails.appointmentStatus", "in", updatedStatusFilters));
+    queryRef = query(
+      queryRef,
+      where("appointmentDetails.appointmentStatus", "in", updatedStatusFilters)
+    );
 
     if (assistanceFilter !== "all") {
-      queryRef = query(queryRef, where("legalAssistanceRequested.selectedAssistanceType", "==", assistanceFilter));
+      queryRef = query(
+        queryRef,
+        where(
+          "legalAssistanceRequested.selectedAssistanceType",
+          "==",
+          assistanceFilter
+        )
+      );
     }
 
-    queryRef = query(queryRef, orderBy("appointmentDetails.controlNumber"), limit(pageSize));
+    queryRef = query(
+      queryRef,
+      orderBy("appointmentDetails.controlNumber"),
+      limit(pageSize)
+    );
 
     if (lastVisible) {
       queryRef = isPrevious
-        ? query(queryRef, startAt(lastVisible?.appointmentDetails?.controlNumber || ""))
-        : query(queryRef, startAfter(lastVisible?.appointmentDetails?.controlNumber || ""));
+        ? query(
+            queryRef,
+            startAt(lastVisible?.appointmentDetails?.controlNumber || "")
+          )
+        : query(
+            queryRef,
+            startAfter(lastVisible?.appointmentDetails?.controlNumber || "")
+          );
     }
 
     const querySnapshot = await getDocs(queryRef);
 
     const filtered = querySnapshot.docs.filter(
       (doc) =>
-        doc.data().applicantProfile?.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        doc.data().applicantProfile?.address?.toLowerCase().includes(searchText.toLowerCase()) ||
+        doc
+          .data()
+          .applicantProfile?.fullName?.toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        doc
+          .data()
+          .applicantProfile?.address?.toLowerCase()
+          .includes(searchText.toLowerCase()) ||
         doc.data().applicantProfile?.contactNumber?.includes(searchText) ||
         doc.data().appointmentDetails?.controlNumber?.includes(searchText) ||
-        doc.data().legalAssistanceRequested?.selectedAssistanceType?.toLowerCase().includes(searchText.toLowerCase())
+        doc
+          .data()
+          .legalAssistanceRequested?.selectedAssistanceType?.toLowerCase()
+          .includes(searchText.toLowerCase())
     );
 
     const totalQuery = await getDocs(
       query(
         collection(fs, "appointments"),
-        where("appointmentDetails.appointmentStatus", "in", updatedStatusFilters)
+        where(
+          "appointmentDetails.appointmentStatus",
+          "in",
+          updatedStatusFilters
+        )
       )
     );
 
@@ -290,28 +378,42 @@ const getLawyerAppointments = async (
   pageSize,
   searchText,
   natureOfLegalAssistanceFilter,
-  currentUser,
-  appointmentStatus,
-  assignedLawyer
+  currentUser
 ) => {
   try {
     let queryRef = collection(fs, "appointments");
 
     // Apply appointment status filter
     if (filter && filter !== "all") {
-      queryRef = query(queryRef, where("appointmentDetails.appointmentStatus", "==", filter));
+      queryRef = query(
+        queryRef,
+        where("appointmentDetails.appointmentStatus", "==", filter)
+      );
     }
 
     if (natureOfLegalAssistanceFilter !== "all") {
-      queryRef = query(queryRef, where("legalAssistanceRequested.selectedAssistanceType", "==", natureOfLegalAssistanceFilter));
+      queryRef = query(
+        queryRef,
+        where(
+          "legalAssistanceRequested.selectedAssistanceType",
+          "==",
+          natureOfLegalAssistanceFilter
+        )
+      );
     }
 
-    if (assignedLawyer) {
-      queryRef = query(queryRef, where("appointmentDetails.assignedLawyer", "==", assignedLawyer));
-    }
+    // Ensure only appointments assigned to the current user are fetched
+    queryRef = query(
+      queryRef,
+      where("appointmentDetails.assignedLawyer", "==", currentUser.uid)
+    );
 
     // Order by controlNumber and limit results for pagination
-    queryRef = query(queryRef, orderBy("appointmentDetails.controlNumber"), limit(pageSize));
+    queryRef = query(
+      queryRef,
+      orderBy("appointmentDetails.controlNumber"),
+      limit(pageSize)
+    );
 
     // Handle pagination
     if (lastVisible) {
@@ -321,29 +423,169 @@ const getLawyerAppointments = async (
     const querySnapshot = await getDocs(queryRef);
 
     // Filter results by searchText, if any
-    const filtered = querySnapshot.docs.filter(
-      (doc) => {
-        const data = doc.data();
-        return (
-          data.applicantProfile?.fullName?.toLowerCase().includes(searchText.toLowerCase()) ||
-          data.applicantProfile?.address?.toLowerCase().includes(searchText.toLowerCase()) ||
-          data.applicantProfile?.contactNumber?.includes(searchText) ||
-          data.appointmentDetails?.controlNumber?.includes(searchText) ||
-          data.legalAssistanceRequested?.selectedAssistanceType?.toLowerCase().includes(searchText.toLowerCase())
-        );
-      }
-    );
+    const filtered = querySnapshot.docs.filter((doc) => {
+      const data = doc.data();
+      return (
+        data.applicantProfile?.fullName
+          ?.toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        data.applicantProfile?.address
+          ?.toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        data.applicantProfile?.contactNumber?.includes(searchText) ||
+        data.appointmentDetails?.controlNumber?.includes(searchText) ||
+        data.legalAssistanceRequested?.selectedAssistanceType
+          ?.toLowerCase()
+          .includes(searchText.toLowerCase())
+      );
+    });
 
     // Manually count total documents matching the filters
     let totalQueryRef = collection(fs, "appointments");
     if (filter && filter !== "all") {
-      totalQueryRef = query(totalQueryRef, where("appointmentDetails.appointmentStatus", "==", filter));
+      totalQueryRef = query(
+        totalQueryRef,
+        where("appointmentDetails.appointmentStatus", "==", filter)
+      );
     }
     if (natureOfLegalAssistanceFilter !== "all") {
-      totalQueryRef = query(totalQueryRef, where("legalAssistanceRequested.selectedAssistanceType", "==", natureOfLegalAssistanceFilter));
+      totalQueryRef = query(
+        totalQueryRef,
+        where(
+          "legalAssistanceRequested.selectedAssistanceType",
+          "==",
+          natureOfLegalAssistanceFilter
+        )
+      );
+    }
+    totalQueryRef = query(
+      totalQueryRef,
+      where("appointmentDetails.assignedLawyer", "==", currentUser.uid)
+    );
+    const totalQuerySnapshot = await getDocs(totalQueryRef);
+    const total = totalQuerySnapshot.size;
+
+    return {
+      data: filtered.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data.applicantProfile,
+          ...data.employmentProfile,
+          ...data.legalAssistanceRequested,
+          ...data.uploadedImages,
+          createdDate: data.appointmentDetails?.createdDate,
+          appointmentStatus: data.appointmentDetails?.appointmentStatus,
+          controlNumber: data.appointmentDetails?.controlNumber,
+          appointmentDate: data.appointmentDetails?.appointmentDate,
+          clientEligibility: data.clientEligibility,
+          appointmentDetails: data.appointmentDetails,
+        };
+      }),
+      total: total,
+      firstDoc: querySnapshot.docs[0],
+      lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1],
+    };
+  } catch (error) {
+    console.error("Failed to fetch appointments:", error);
+    throw error;
+  }
+};
+
+export const getAdminAppointments = async (
+  filter,
+  lastVisible,
+  pageSize,
+  searchText,
+  natureOfLegalAssistanceFilter,
+  currentUser,
+  appointmentStatus,
+  assignedLawyer
+) => {
+  try {
+    let queryRef = collection(fs, "appointments");
+
+    // Apply appointment status filter
+    if (filter && filter !== "all") {
+      queryRef = query(
+        queryRef,
+        where("appointmentDetails.appointmentStatus", "==", filter)
+      );
+    }
+
+    if (natureOfLegalAssistanceFilter !== "all") {
+      queryRef = query(
+        queryRef,
+        where(
+          "legalAssistanceRequested.selectedAssistanceType",
+          "==",
+          natureOfLegalAssistanceFilter
+        )
+      );
+    }
+
+    if (assignedLawyer) {
+      queryRef = query(
+        queryRef,
+        where("appointmentDetails.assignedLawyer", "==", assignedLawyer)
+      );
+    }
+
+    // Order by controlNumber and limit results for pagination
+    queryRef = query(
+      queryRef,
+      orderBy("appointmentDetails.controlNumber"),
+      limit(pageSize)
+    );
+
+    // Handle pagination
+    if (lastVisible) {
+      queryRef = query(queryRef, startAfter(lastVisible));
+    }
+
+    const querySnapshot = await getDocs(queryRef);
+
+    // Filter results by searchText, if any
+    const filtered = querySnapshot.docs.filter((doc) => {
+      const data = doc.data();
+      return (
+        data.applicantProfile?.fullName
+          ?.toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        data.applicantProfile?.address
+          ?.toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        data.applicantProfile?.contactNumber?.includes(searchText) ||
+        data.appointmentDetails?.controlNumber?.includes(searchText) ||
+        data.legalAssistanceRequested?.selectedAssistanceType
+          ?.toLowerCase()
+          .includes(searchText.toLowerCase())
+      );
+    });
+
+    // Manually count total documents matching the filters
+    let totalQueryRef = collection(fs, "appointments");
+    if (filter && filter !== "all") {
+      totalQueryRef = query(
+        totalQueryRef,
+        where("appointmentDetails.appointmentStatus", "==", filter)
+      );
+    }
+    if (natureOfLegalAssistanceFilter !== "all") {
+      totalQueryRef = query(
+        totalQueryRef,
+        where(
+          "legalAssistanceRequested.selectedAssistanceType",
+          "==",
+          natureOfLegalAssistanceFilter
+        )
+      );
     }
     if (assignedLawyer) {
-      totalQueryRef = query(totalQueryRef, where("appointmentDetails.assignedLawyer", "==", assignedLawyer));
+      totalQueryRef = query(
+        totalQueryRef,
+        where("appointmentDetails.assignedLawyer", "==", assignedLawyer)
+      );
     }
     const totalQuerySnapshot = await getDocs(totalQueryRef);
     const total = totalQuerySnapshot.size;
@@ -380,23 +622,43 @@ const updateAppointment = async (appointmentId, updatedData) => {
   await updateDoc(appointmentRef, updatedData);
 };
 
-export const getBookedSlots = async () => {
+export const getLawyerBookedSlots = async (lawyerId) => {
+  const snapshot = await getDocs(
+    query(
+      collection(fs, "appointments"),
+      where("appointmentDetails.assignedLawyer", "==", lawyerId)
+    )
+  );
+
+  const slots = snapshot.docs
+    .map((doc) => doc.data().appointmentDetails?.appointmentDate)
+    .filter((date) => date)
+    .map((date) => date.toDate());
+
+  return slots;
+};
+
+export const getBookedSlots = (callback) => {
   const appointmentsRef = collection(fs, "appointments");
   const q = query(
     appointmentsRef,
     where("appointmentDetails.appointmentStatus", "==", "scheduled")
-  ); 
-  const querySnapshot = await getDocs(q);
+  );
 
-  const bookedSlots = [];
-  querySnapshot.forEach((doc) => {
-    const appointmentData = doc.data();
-    if (appointmentData.appointmentDetails?.appointmentDate) {
-      bookedSlots.push(appointmentData.appointmentDetails.appointmentDate.toDate());
+  return onSnapshot(q, (querySnapshot) => {
+    const bookedSlots = [];
+    querySnapshot.forEach((doc) => {
+      const appointmentData = doc.data();
+      if (appointmentData.appointmentDetails?.appointmentDate) {
+        bookedSlots.push(
+          appointmentData.appointmentDetails.appointmentDate.toDate()
+        );
+      }
+    });
+    if (typeof callback === "function") {
+      callback(bookedSlots);
     }
   });
-
-  return bookedSlots;
 };
 
 export const getCalendar = async () => {
@@ -422,7 +684,15 @@ export const getCalendar = async () => {
   return bookedSlots;
 };
 
-const getUsers = async (statusFilter, filterType, cityFilter, searchText, lastVisible, pageSize, pageNumber = 1) => {
+const getUsers = async (
+  statusFilter,
+  filterType,
+  cityFilter,
+  searchText,
+  lastVisible,
+  pageSize,
+  pageNumber = 1
+) => {
   try {
     let queryRef = collection(fs, "users");
 
@@ -439,7 +709,11 @@ const getUsers = async (statusFilter, filterType, cityFilter, searchText, lastVi
     }
 
     if (searchText) {
-      queryRef = query(queryRef, where("display_name", ">=", searchText), where("display_name", "<=", searchText + "\uf8ff"));
+      queryRef = query(
+        queryRef,
+        where("display_name", ">=", searchText),
+        where("display_name", "<=", searchText + "\uf8ff")
+      );
     }
 
     if (lastVisible) {
@@ -449,7 +723,10 @@ const getUsers = async (statusFilter, filterType, cityFilter, searchText, lastVi
     }
 
     const querySnapshot = await getDocs(queryRef);
-    const users = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const users = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
     const lastVisibleDoc = querySnapshot.docs[querySnapshot.docs.length - 1];
 
     return { users, lastVisibleDoc };
@@ -459,7 +736,12 @@ const getUsers = async (statusFilter, filterType, cityFilter, searchText, lastVi
   }
 };
 
-const getUsersCount = async (statusFilter, filterType, cityFilter, searchText) => {
+const getUsersCount = async (
+  statusFilter,
+  filterType,
+  cityFilter,
+  searchText
+) => {
   try {
     let queryRef = collection(fs, "users");
 
@@ -476,7 +758,11 @@ const getUsersCount = async (statusFilter, filterType, cityFilter, searchText) =
     }
 
     if (searchText) {
-      queryRef = query(queryRef, where("display_name", ">=", searchText), where("display_name", "<=", searchText + "\uf8ff"));
+      queryRef = query(
+        queryRef,
+        where("display_name", ">=", searchText),
+        where("display_name", "<=", searchText + "\uf8ff")
+      );
     }
 
     const querySnapshot = await getDocs(queryRef);
@@ -513,7 +799,11 @@ const addUser = async (userData) => {
   const auth = getAuth();
   try {
     // Create user with email and password
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      password
+    );
     const user = userCredential.user;
 
     // Get the user's UID
@@ -535,14 +825,13 @@ const addUser = async (userData) => {
       member_type: member_type,
       user_status: user_status || "active", // Defaulting to "active" if user_status is not provided
       created_time: serverTimestamp(),
-      uid: uid
+      uid: uid,
     });
   } catch (error) {
     console.error("Error creating user:", error);
     // Handle errors here
   }
 };
-
 
 const getUserById = async (userId) => {
   const userRef = doc(fs, "users", userId);
@@ -554,79 +843,16 @@ const getUserById = async (userId) => {
   }
 };
 
-
-// Function to get users with pagination, filtering, and search
-export const getRatingsUsers = async (filterStatus, cityFilter, searchText, lastVisible, pageSize) => {
-  let query = fs.collection("users");
-
-  // Apply city filter
-  if (cityFilter !== "all") {
-    query = query.where("city", "==", cityFilter);
-  }
-
-  // Apply search text filter
-  if (searchText) {
-    query = query.where("display_name", ">=", searchText).where("display_name", "<=", searchText + "\uf8ff");
-  }
-
-  // Apply pagination
-  if (lastVisible) {
-    query = query.startAfter(lastVisible);
-  }
-
-  query = query.limit(pageSize);
-
-  const snapshot = await query.get();
-  const users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
-  const lastVisibleDoc = snapshot.docs[snapshot.docs.length - 1];
-
-  return { users, lastVisibleDoc };
+export {
+  getAppointments,
+  updateAppointment,
+  getLawyerAppointments,
+  getLawyerCalendar,
+  aptsLawyerCalendar,
+  getUsers,
+  updateUser,
+  addUser,
+  getUserById,
+  getUsersCount,
+  aptsCalendar,
 };
-
-// Function to get total user count with filters and search
-export const getRatingsUsersCount = async (filterStatus, cityFilter, searchText) => {
-  let query = fs.collection("users");
-
-  // Apply city filter
-  if (cityFilter !== "all") {
-    query = query.where("city", "==", cityFilter);
-  }
-
-  // Apply search text filter
-  if (searchText) {
-    query = query.where("display_name", ">=", searchText).where("display_name", "<=", searchText + "\uf8ff");
-  }
-
-  const snapshot = await query.get();
-  return snapshot.size;
-};
-
-// Function to get appointment ratings for a specific user
-export const getRatingsAppointmentsRatings = async (userId) => {
-  const appointmentsRef = fs.collection("appointments");
-  const snapshot = await appointmentsRef.where("userId", "==", userId).get();
-  const ratings = [];
-
-  snapshot.forEach(doc => {
-    const appointment = doc.data();
-    if (appointment.appointmentDetails && appointment.appointmentDetails.aptRating !== undefined) {
-      ratings.push(appointment.appointmentDetails.aptRating);
-    }
-  });
-
-  return ratings;
-};
-
-// Function to get application ratings for a specific user
-export const getRatingsAppRatings = async (userId) => {
-  const usersRef = fs.collection("users").doc(userId);
-  const doc = await usersRef.get();
-
-  if (doc.exists && doc.data().appRating !== undefined) {
-    return [doc.data().appRating];
-  }
-
-  return [];
-};
-
-export { getAppointments, updateAppointment, getLawyerAppointments, getLawyerCalendar, aptsLawyerCalendar, getUsers, updateUser, addUser, getUserById, getUsersCount, aptsCalendar};

@@ -1417,7 +1417,7 @@ function Appointments() {
                   filterTime={(time) => filterTime(time)}
                   dateFormat="MMMM d, yyyy h:mm aa"
                   inline
-                  timeIntervals={15}
+                  timeIntervals={30}
                   minTime={new Date(new Date().setHours(13, 0, 0))}
                   maxTime={new Date(new Date().setHours(17, 0, 0))}
                   dayClassName={(date) =>
