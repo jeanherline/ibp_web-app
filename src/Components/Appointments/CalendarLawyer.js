@@ -60,7 +60,9 @@ function CalendarLawyer() {
 
   useEffect(() => {
     if (selectedAppointment?.appointmentDetails?.assignedLawyer) {
-      fetchAssignedLawyerDetails(selectedAppointment.appointmentDetails.assignedLawyer);
+      fetchAssignedLawyerDetails(
+        selectedAppointment.appointmentDetails.assignedLawyer
+      );
     }
   }, [selectedAppointment]);
 
@@ -308,43 +310,36 @@ function CalendarLawyer() {
                 </h2>
                 <table className="table table-striped table-bordered">
                   <tbody>
-                    <tr className="no-print">
-                      <th>QR Code:</th>
-                      <td>
-                      {selectedAppointment.appointmentDetails?.apptType === "Online" && (
-                        <tr className="no-print">
-                          <th>QR Code:</th>
-                          <td>
-                            {selectedAppointment.appointmentDetails ? (
-                              <a
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openImageModal(
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  );
-                                }}
-                              >
-                                <img
-                                  src={
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  }
-                                  alt="QR Code"
-                                  className="img-thumbnail qr-code-image"
-                                  style={{ width: "100px", cursor: "pointer" }}
-                                />
-                              </a>
-                            ) : (
-                              "Not Available"
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                      </td>
-                    </tr>
-
+                    {selectedAppointment.appointmentDetails?.apptType ===
+                      "Online" && (
+                      <tr className="no-print">
+                        <th>QR Code:</th>
+                        <td>
+                          {selectedAppointment.appointmentDetails ? (
+                            <a
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openImageModal(
+                                  selectedAppointment.appointmentDetails.qrCode
+                                );
+                              }}
+                            >
+                              <img
+                                src={
+                                  selectedAppointment.appointmentDetails.qrCode
+                                }
+                                alt="QR Code"
+                                className="img-thumbnail qr-code-image"
+                                style={{ width: "100px", cursor: "pointer" }}
+                              />
+                            </a>
+                          ) : (
+                            "Not Available"
+                          )}
+                        </td>
+                      </tr>
+                    )}
                     <tr>
                       <th>Control Number:</th>
                       <td>{selectedAppointment.controlNumber}</td>
@@ -443,7 +438,7 @@ function CalendarLawyer() {
                       )}
                       {selectedAppointment.appointmentStatus === "denied" && (
                         <>
-                         <tr>
+                          <tr>
                             <th>Reviewed By:</th>
                             <td>
                               {reviewerDetails
@@ -469,7 +464,7 @@ function CalendarLawyer() {
                       )}
                       {selectedAppointment.appointmentStatus === "done" && (
                         <>
-                        <tr>
+                          <tr>
                             <th>Reviewed By:</th>
                             <td>
                               {reviewerDetails
@@ -592,109 +587,55 @@ function CalendarLawyer() {
                       <td>{selectedAppointment?.address || "Not Available"}</td>
                     </tr>
                     <tr>
-                        <th>Contact Number:</th>
-                        <td>
-                          {selectedAppointment?.contactNumber ||
-                            "Not Available"}
-                        </td>
-                      </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
-                        <>
-                          <tr>
-                            <th>Address:</th>
-                            <td>
-                              {selectedAppointment?.address || "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Gender:</th>
-                            <td>
-                              {selectedAppointment?.selectedGender ||
-                                "Not Specified"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Name:</th>
-                            <td>
-                              {selectedAppointment.spouseName ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Occupation:</th>
-                            <td>
-                              {selectedAppointment.spouseOccupation ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Children Names and Ages:</th>
-                            <td>
-                              {selectedAppointment.childrenNamesAges ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                        </>
-                      )}
-                  </tbody>
-                </table>
-              </section>
-              {selectedAppointment.appointmentDetails?.apptType ===
-                  "Online" && (
-                  <section className="mb-4 print-section">
-                    <h2>
-                      <em
-                        style={{
-                          color: "#a34bc9",
-                          fontSize: "16px",
-                        }}
-                      >
-                        Employment Profile
-                      </em>
-                    </h2>
-                    <table className="table table-striped table-bordered">
-                      <tbody>
+                      <th>Contact Number:</th>
+                      <td>
+                        {selectedAppointment?.contactNumber || "Not Available"}
+                      </td>
+                    </tr>
+                    {selectedAppointment.appointmentDetails?.apptType ===
+                      "Online" && (
+                      <>
                         <tr>
-                          <th>Occupation:</th>
+                          <th>Address:</th>
                           <td>
-                            {selectedAppointment.occupation || "Not Available"}
+                            {selectedAppointment?.address || "Not Available"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Type of Employment:</th>
+                          <th>Gender:</th>
                           <td>
-                            {selectedAppointment?.kindOfEmployment ||
+                            {selectedAppointment?.selectedGender ||
                               "Not Specified"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Employer Name:</th>
+                          <th>Spouse Name:</th>
                           <td>
-                            {selectedAppointment?.employerName ||
+                            {selectedAppointment.spouseName || "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Spouse Occupation:</th>
+                          <td>
+                            {selectedAppointment.spouseOccupation ||
                               "Not Available"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Employer Address:</th>
+                          <th>Children Names and Ages:</th>
                           <td>
-                            {selectedAppointment.employerAddress ||
+                            {selectedAppointment.childrenNamesAges ||
                               "Not Available"}
                           </td>
                         </tr>
-                        <tr>
-                          <th>Monthly Income:</th>
-                          <td>
-                            {selectedAppointment.monthlyIncome ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </section>
-                )}
-
-<section className="mb-4 print-section">
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </section>
+              {selectedAppointment.appointmentDetails?.apptType ===
+                "Online" && (
+                <section className="mb-4 print-section">
                   <h2>
                     <em
                       style={{
@@ -702,46 +643,96 @@ function CalendarLawyer() {
                         fontSize: "16px",
                       }}
                     >
-                      Nature of Legal Assistance Requested
+                      Employment Profile
                     </em>
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
                       <tr>
-                        <th>Type of Legal Assistance:</th>
+                        <th>Occupation:</th>
                         <td>
-                          {selectedAppointment.selectedAssistanceType ||
+                          {selectedAppointment.occupation || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Type of Employment:</th>
+                        <td>
+                          {selectedAppointment?.kindOfEmployment ||
                             "Not Specified"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
-                        <>
-                          <tr>
-                            <th>Problem:</th>
-                            <td>
-                              {selectedAppointment.problems || "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Reason for Problem:</th>
-                            <td>
-                              {selectedAppointment.problemReason ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Desired Solutions:</th>
-                            <td>
-                              {selectedAppointment.desiredSolutions ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                        </>
-                      )}
+                      <tr>
+                        <th>Employer Name:</th>
+                        <td>
+                          {selectedAppointment?.employerName || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Employer Address:</th>
+                        <td>
+                          {selectedAppointment.employerAddress ||
+                            "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Monthly Income:</th>
+                        <td>
+                          {selectedAppointment.monthlyIncome || "Not Available"}
+                        </td>
+                      </tr>
                     </tbody>
                   </table>
                 </section>
+              )}
+
+              <section className="mb-4 print-section">
+                <h2>
+                  <em
+                    style={{
+                      color: "#a34bc9",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Nature of Legal Assistance Requested
+                  </em>
+                </h2>
+                <table className="table table-striped table-bordered">
+                  <tbody>
+                    <tr>
+                      <th>Type of Legal Assistance:</th>
+                      <td>
+                        {selectedAppointment.selectedAssistanceType ||
+                          "Not Specified"}
+                      </td>
+                    </tr>
+                    {selectedAppointment.appointmentDetails?.apptType ===
+                      "Online" && (
+                      <>
+                        <tr>
+                          <th>Problem:</th>
+                          <td>
+                            {selectedAppointment.problems || "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Reason for Problem:</th>
+                          <td>
+                            {selectedAppointment.problemReason ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Desired Solutions:</th>
+                          <td>
+                            {selectedAppointment.desiredSolutions ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </section>
 
               <section className="mb-4 print-section no-print">
                 <h2>
@@ -751,8 +742,7 @@ function CalendarLawyer() {
                 </h2>
                 <table className="table table-striped table-bordered">
                   <tbody>
-                    <tr>
-                    {selectedAppointment.appointmentDetails?.apptType ===
+                  {selectedAppointment.appointmentDetails?.apptType ===
                         "Walk-in" && (
                         <>
                           <tr>
@@ -809,6 +799,7 @@ function CalendarLawyer() {
                           </tr>
                         </>
                       )}
+                    <tr>
                       <th>Barangay Certificate of Indigency:</th>
                       <td>
                         {selectedAppointment.barangayImageUrl ? (
@@ -816,9 +807,7 @@ function CalendarLawyer() {
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              openImageModal(
-                                selectedAppointment.barangayImageUrl
-                              );
+                              openImageModal(selectedAppointment.barangayImageUrl);
                             }}
                           >
                             <img
