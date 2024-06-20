@@ -6,6 +6,7 @@ import Appointments from './Components/Appointments/Appointments';
 import ApptsFrontDesk from './Components/Appointments/ApptsFrontDesk'; 
 import ApptsLawyer from './Components/Appointments/ApptsLawyer'; 
 import ApptsHead from './Components/Appointments/ApptsHead'; 
+import WalkInForm from './Components/WalkInForm/WalkInForm'; 
 import CalendarLawyer from './Components/Appointments/CalendarLawyer'; 
 import ApptsCalendar from './Components/Appointments/ApptsCalendar';
 import Profile from './Components/Profile/Profile';
@@ -29,7 +30,8 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/scanner" element={<QRCodeScanner />} />
           <Route path="/welcome" element={<Welcome />} />
-          <Route path="/users" element={<Users />} />
+          <Route path="/users" element={<Users />} /> 
+          <Route path="/walkin" element={<WalkInForm />} /> 
           <Route path="/frontdesk" element={<ApptsFrontDesk />} />
           <Route path="/head" element={<ApptsHead />} />
           <Route path="/calendarLawyer" element={<CalendarLawyer />} />

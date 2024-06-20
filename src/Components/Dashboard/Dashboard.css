@@ -1,9 +1,38 @@
 .dashboard-container {
-    display: flex;
-  }
-  
-  .main-content {
-    flex: 1;
-    padding: 20px;
-  }
-  
+  display: flex;
+}
+
+.main-content {
+  flex: 5;
+  padding: 20px;
+}
+
+.chart-container {
+  margin-bottom: 20px;
+}
+
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  text-align: center;
+}
+
+.stat-card h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.stat-card p {
+  margin: 10px 0 0;
+  font-size: 24px;
+  color: #555;
+}
