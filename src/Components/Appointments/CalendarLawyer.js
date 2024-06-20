@@ -464,6 +464,15 @@ function CalendarLawyer() {
                       )}
                       {selectedAppointment.appointmentStatus === "done" && (
                         <>
+                        <tr>
+                              <th>Appointment Date:</th>
+                              <td>
+                                {getFormattedDate(
+                                  selectedAppointment.appointmentDate,
+                                  true
+                                )}
+                              </td>
+                            </tr>
                           <tr>
                             <th>Reviewed By:</th>
                             <td>

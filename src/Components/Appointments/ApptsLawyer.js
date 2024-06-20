@@ -315,7 +315,7 @@ function AppsLawyer() {
       setCurrentPage((prevPage) => prevPage + 1);
     }
   };
-  
+
   const handlePrevious = async () => {
     if (currentPage > 1) {
       const { data, firstDoc } = await getLawyerAppointments(
@@ -332,7 +332,7 @@ function AppsLawyer() {
       setCurrentPage((prevPage) => prevPage - 1);
     }
   };
-  
+
   const handleFirst = async () => {
     const { data, firstDoc } = await getLawyerAppointments(
       filter,
@@ -346,7 +346,7 @@ function AppsLawyer() {
     setLastVisible(firstDoc);
     setCurrentPage(1);
   };
-  
+
   const handleLast = async () => {
     const { data, lastDoc } = await getLawyerAppointments(
       filter,
@@ -737,9 +737,8 @@ function AppsLawyer() {
               <th>Control Number</th>
               <th>Full Name</th>
               <th>Nature of Legal Assistance Requested</th>
-              <th>Date Submitted</th>
-              <th>Appointment Date</th>
-              <th>Appointment Type</th>
+              <th>Scheduled Date</th>
+              <th>Type</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
@@ -752,9 +751,8 @@ function AppsLawyer() {
                   <td>{appointment.controlNumber}</td>
                   <td>{appointment.fullName}</td>
                   <td>{appointment.selectedAssistanceType}</td>
-                   <td>{getFormattedDate(appointment.createdDate)}</td>
-                  <td>{getFormattedDate(appointment.appointmentDate)}</td>
-                  <td>{appointment.appointmentDetails?.apptType }</td>
+                  <td>{getFormattedDate(appointment.appointmentDate, true)}</td>
+                  <td>{appointment.appointmentDetails?.apptType}</td>
                   <td>
                     {capitalizeFirstLetter(appointment.appointmentStatus)}
                   </td>
@@ -984,7 +982,8 @@ function AppsLawyer() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                    {selectedAppointment.appointmentDetails?.apptType === "Online" && (
+                      {selectedAppointment.appointmentDetails?.apptType ===
+                        "Online" && (
                         <tr className="no-print">
                           <th>QR Code:</th>
                           <td>
@@ -1054,7 +1053,7 @@ function AppsLawyer() {
                                 )}
                               </td>
                             </tr>
-                 <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1100,7 +1099,7 @@ function AppsLawyer() {
                         )}
                         {selectedAppointment.appointmentStatus === "denied" && (
                           <>
-                         <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1127,6 +1126,15 @@ function AppsLawyer() {
                         {selectedAppointment.appointmentStatus === "done" && (
                           <>
                             <tr>
+                              <th>Appointment Date:</th>
+                              <td>
+                                {getFormattedDate(
+                                  selectedAppointment.appointmentDate,
+                                  true
+                                )}
+                              </td>
+                            </tr>
+                            <tr>
                               <th>Eligibility:</th>
                               <td>
                                 {capitalizeFirstLetter(
@@ -1135,7 +1143,7 @@ function AppsLawyer() {
                                 )}
                               </td>
                             </tr>
-                 <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1185,7 +1193,7 @@ function AppsLawyer() {
                                 )}
                               </td>
                             </tr>
-                 <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1341,7 +1349,7 @@ function AppsLawyer() {
                   </section>
                 )}
 
-<section className="mb-4 print-section">
+                <section className="mb-4 print-section">
                   <h2>
                     <em
                       style={{
@@ -1389,7 +1397,7 @@ function AppsLawyer() {
                     </tbody>
                   </table>
                 </section>
-                
+
                 <section className="mb-4 print-section no-print">
                   <h2>
                     <em style={{ color: "#a34bc9", fontSize: "16px" }}>
@@ -1398,7 +1406,7 @@ function AppsLawyer() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                    {selectedAppointment.appointmentDetails?.apptType ===
+                      {selectedAppointment.appointmentDetails?.apptType ===
                         "Walk-in" && (
                         <>
                           <tr>
@@ -1647,6 +1655,7 @@ function AppsLawyer() {
                     placeholder="Enter any relevant notes here..."
                     value={clientEligibility.notes}
                     onChange={handleChange}
+                    required
                   ></textarea>
                 </div>
                 <button>Submit</button>

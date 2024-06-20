@@ -67,7 +67,7 @@ const getAppointments = async (
   // Order by controlNumber and limit results for pagination
   queryRef = query(
     queryRef,
-    orderBy("appointmentDetails.controlNumber"),
+    orderBy("appointmentDetails.createdDate", "desc"),
     limit(pageSize)
   );
 
@@ -197,7 +197,7 @@ const aptsLawyerCalendar = async (
 
     queryRef = query(
       queryRef,
-      orderBy("appointmentDetails.controlNumber"),
+      orderBy("appointmentDetails.createdDate", "desc"),
       limit(pageSize)
     );
 
@@ -303,7 +303,7 @@ const aptsCalendar = async (
 
     queryRef = query(
       queryRef,
-      orderBy("appointmentDetails.controlNumber"),
+      orderBy("appointmentDetails.createdDate", "desc"),
       limit(pageSize)
     );
 
@@ -416,7 +416,7 @@ const getLawyerAppointments = async (
     // Order by controlNumber and limit results for pagination
     queryRef = query(
       queryRef,
-      orderBy("appointmentDetails.controlNumber"),
+      orderBy("appointmentDetails.createdDate", "desc"),
       limit(pageSize)
     );
 
@@ -600,7 +600,7 @@ export const getAdminAppointments = async (
     // Order by controlNumber and limit results for pagination
     queryRef = query(
       queryRef,
-      orderBy("appointmentDetails.controlNumber"),
+      orderBy("appointmentDetails.createdDate", "desc"),
       limit(pageSize)
     );
 
