@@ -300,26 +300,68 @@ function ApptsFrontDesk() {
     );
   };
 
-  const handleNext = () => {
-    setLastVisible(appointments[appointments.length - 1]);
-    setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
+  const handleNext = async () => {
+    if (currentPage < totalPages) {
+      const { data, lastDoc } = await getAdminAppointments(
+        filter,
+        lastVisible,
+        pageSize,
+        searchText,
+        natureOfLegalAssistanceFilter,
+        currentUser
+      );
+      setAppointments(data);
+      setLastVisible(lastDoc);
+      setCurrentPage((prevPage) => prevPage + 1);
+    }
   };
 
-  const handlePrevious = () => {
-    setLastVisible(appointments[0]);
-    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+  const handlePrevious = async () => {
+    if (currentPage > 1) {
+      const { data, firstDoc } = await getAdminAppointments(
+        filter,
+        lastVisible,
+        pageSize,
+        searchText,
+        natureOfLegalAssistanceFilter,
+        currentUser,
+        true
+      );
+      setAppointments(data);
+      setLastVisible(firstDoc);
+      setCurrentPage((prevPage) => prevPage - 1);
+    }
   };
 
-  const handleFirst = () => {
-    setLastVisible(null);
+  const handleFirst = async () => {
+    const { data, firstDoc } = await getAdminAppointments(
+      filter,
+      null,
+      pageSize,
+      searchText,
+      natureOfLegalAssistanceFilter,
+      currentUser
+    );
+    setAppointments(data);
+    setLastVisible(firstDoc);
     setCurrentPage(1);
   };
 
-  const handleLast = () => {
-    setLastVisible(appointments[appointments.length - 1]);
+  const handleLast = async () => {
+    const { data, lastDoc } = await getAdminAppointments(
+      filter,
+      lastVisible,
+      pageSize,
+      searchText,
+      natureOfLegalAssistanceFilter,
+      currentUser,
+      false,
+      true
+    );
+    setAppointments(data);
+    setLastVisible(lastDoc);
     setCurrentPage(totalPages);
   };
-
   const toggleDetails = (appointment) => {
     setSelectedAppointment(
       selectedAppointment?.id === appointment.id ? null : appointment
@@ -713,9 +755,9 @@ function ApptsFrontDesk() {
                   <td>{appointment.controlNumber}</td>
                   <td>{appointment.fullName}</td>
                   <td>{appointment.selectedAssistanceType}</td>
-                   <td>{getFormattedDate(appointment.createdDate)}</td>
+                  <td>{getFormattedDate(appointment.createdDate)}</td>
                   <td>{getFormattedDate(appointment.appointmentDate)}</td>
-                  <td>{appointment.appointmentDetails?.apptType }</td>
+                  <td>{appointment.appointmentDetails?.apptType}</td>
                   <td>
                     {capitalizeFirstLetter(appointment.appointmentStatus)}
                   </td>
@@ -810,7 +852,8 @@ function ApptsFrontDesk() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                    {selectedAppointment.appointmentDetails?.apptType === "Online" && (
+                      {selectedAppointment.appointmentDetails?.apptType ===
+                        "Online" && (
                         <tr className="no-print">
                           <th>QR Code:</th>
                           <td>
@@ -1186,7 +1229,7 @@ function ApptsFrontDesk() {
                             "Not Specified"}
                         </td>
                       </tr>
-                       {selectedAppointment.appointmentDetails?.apptType ===
+                      {selectedAppointment.appointmentDetails?.apptType ===
                         "Online" && (
                         <>
                           <tr>
@@ -1223,7 +1266,7 @@ function ApptsFrontDesk() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                    {selectedAppointment.appointmentDetails?.apptType ===
+                      {selectedAppointment.appointmentDetails?.apptType ===
                         "Walk-in" && (
                         <>
                           <tr>

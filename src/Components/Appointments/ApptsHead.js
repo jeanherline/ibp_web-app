@@ -300,23 +300,66 @@ function AppsHead() {
     );
   };
 
-  const handleNext = () => {
-    setLastVisible(appointments[appointments.length - 1]);
-    setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
+  const handleNext = async () => {
+    if (currentPage < totalPages) {
+      const { data, lastDoc } = await getAdminAppointments(
+        filter,
+        lastVisible,
+        pageSize,
+        searchText,
+        natureOfLegalAssistanceFilter,
+        currentUser
+      );
+      setAppointments(data);
+      setLastVisible(lastDoc);
+      setCurrentPage((prevPage) => prevPage + 1);
+    }
   };
-
-  const handlePrevious = () => {
-    setLastVisible(appointments[0]);
-    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+  
+  const handlePrevious = async () => {
+    if (currentPage > 1) {
+      const { data, firstDoc } = await getAdminAppointments(
+        filter,
+        lastVisible,
+        pageSize,
+        searchText,
+        natureOfLegalAssistanceFilter,
+        currentUser,
+        true
+      );
+      setAppointments(data);
+      setLastVisible(firstDoc);
+      setCurrentPage((prevPage) => prevPage - 1);
+    }
   };
-
-  const handleFirst = () => {
-    setLastVisible(null);
+  
+  const handleFirst = async () => {
+    const { data, firstDoc } = await getAdminAppointments(
+      filter,
+      null,
+      pageSize,
+      searchText,
+      natureOfLegalAssistanceFilter,
+      currentUser
+    );
+    setAppointments(data);
+    setLastVisible(firstDoc);
     setCurrentPage(1);
   };
-
-  const handleLast = () => {
-    setLastVisible(appointments[appointments.length - 1]);
+  
+  const handleLast = async () => {
+    const { data, lastDoc } = await getAdminAppointments(
+      filter,
+      lastVisible,
+      pageSize,
+      searchText,
+      natureOfLegalAssistanceFilter,
+      currentUser,
+      false,
+      true
+    );
+    setAppointments(data);
+    setLastVisible(lastDoc);
     setCurrentPage(totalPages);
   };
 
