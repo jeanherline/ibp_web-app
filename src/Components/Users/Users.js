@@ -805,6 +805,7 @@ function Users() {
                 <option value="head">Head Lawyer</option>
                 <option value="lawyer">Legal Aid Volunteer</option>
                 <option value="frontdesk">Front Desk</option>
+                <option value="client">Client</option>
               </select>
             </div>
             <br />

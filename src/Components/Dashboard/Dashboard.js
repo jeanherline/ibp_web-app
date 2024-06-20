@@ -69,8 +69,8 @@ function Dashboard() {
 
   const avgAptRatingPerCity = cities.reduce((acc, city) => {
     const cityAppointments = appointments.filter(app => {
-      const user = users.find(user => user.id === app.applicantProfile.uid);
-      return user && user.city === city && app.appointmentDetails && app.appointmentDetails.aptRating !== undefined;
+      const user = users.find(user => user.id === app.applicantProfile?.uid);
+      return user && user.city === city && app.appointmentDetails?.aptRating !== undefined;
     });
     const total = cityAppointments.reduce((sum, app) => sum + app.appointmentDetails.aptRating, 0);
     const count = cityAppointments.length;
@@ -112,7 +112,7 @@ function Dashboard() {
         label: "Total Number of Satisfied Users in Appointment Booking",
         data: cities.map(
           city => appointments.filter(
-            app => app.appointmentDetails && app.appointmentDetails.aptRating >= 4 && users.find(user => user.id === app.applicantProfile.uid).city === city
+            app => app.appointmentDetails?.aptRating >= 4 && users.find(user => user.id === app.applicantProfile?.uid)?.city === city
           ).length
         ),
         backgroundColor: "rgba(75, 192, 192, 0.6)",
@@ -166,19 +166,19 @@ function Dashboard() {
             </div>
             <div className="stat-card">
               <h2>Pending Appointments</h2>
-              <p>{appointments.filter(app => app.appointmentDetails.appointmentStatus === "pending").length}</p>
+              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "pending").length}</p>
             </div>
             <div className="stat-card">
               <h2>Approved Appointments</h2>
-              <p>{appointments.filter(app => app.appointmentDetails.appointmentStatus === "approved").length}</p>
+              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "approved").length}</p>
             </div>
             <div className="stat-card">
               <h2>Successful Appointments</h2>
-              <p>{appointments.filter(app => app.appointmentDetails.appointmentStatus === "done").length}</p>
+              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "done").length}</p>
             </div>
             <div className="stat-card">
               <h2>Denied Appointments</h2>
-              <p>{appointments.filter(app => app.appointmentDetails.appointmentStatus === "denied").length}</p>
+              <p>{appointments.filter(app => app.appointmentDetails?.appointmentStatus === "denied").length}</p>
             </div>
             <div className="stat-card">
               <h2>Active App Users</h2>
