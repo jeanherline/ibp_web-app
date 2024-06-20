@@ -6,7 +6,7 @@ import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Pagination from "react-bootstrap/Pagination";
 import {
-  getAppointments,
+  getAdminAppointments,
   updateAppointment,
   getBookedSlots,
   getUserById,
@@ -74,7 +74,7 @@ function Appointments() {
     if (!currentUser) return;
 
     const fetchAppointments = async () => {
-      const { data, total } = await getAppointments(
+      const { data, total } = await getAdminAppointments(
         filter,
         lastVisible,
         pageSize,
@@ -180,11 +180,11 @@ function Appointments() {
   };
 
   useEffect(() => {
-    const fetchBookedSlots = async () => {
-      const data = await getBookedSlots();
-      setBookedSlots(data.map((slot) => new Date(slot)));
-    };
-    fetchBookedSlots();
+    const unsubscribe = getBookedSlots((slots) => {
+      setBookedSlots(slots);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -282,21 +282,22 @@ function Appointments() {
     const hours = time.getHours();
     const minutes = time.getMinutes();
     const now = new Date();
-
-    // Get the selected date's year, month, and date
-    const selectedDate = new Date(appointmentDate);
-    selectedDate.setHours(hours, minutes, 0, 0);
-
+  
     if (hours < 13 || hours >= 17 || time <= now) return false;
+  
+    const dateTime = new Date(appointmentDate);
+    dateTime.setHours(hours, minutes, 0, 0);
+  
+    // Check if the time slot is booked by the assigned lawyer (selected appointment)
+    return !isSlotBookedByAssignedLawyer(dateTime);
+  };
+  
 
-    // Check if the selected time slot is already booked
-    return !bookedSlots.some(
-      (slot) =>
-        slot.getFullYear() === selectedDate.getFullYear() &&
-        slot.getMonth() === selectedDate.getMonth() &&
-        slot.getDate() === selectedDate.getDate() &&
-        slot.getHours() === selectedDate.getHours() &&
-        slot.getMinutes() === selectedDate.getMinutes()
+  const isTimeSlotAssignedToCurrentLawyer = (dateTime) => {
+    return appointments.some(
+      (appointment) =>
+        appointment.assignedLawyer === currentUser.uid &&
+        appointment.appointmentDate.toDate().getTime() === dateTime.getTime()
     );
   };
 
@@ -384,7 +385,6 @@ function Appointments() {
       "clientEligibility.eligibility": clientEligibility.eligibility,
       "clientEligibility.notes": clientEligibility.notes,
       "appointmentDetails.appointmentStatus": status,
-      "appointmentDetails.reviewedBy": currentUser.uid,
       "appointmentDetails.assignedLawyer": clientEligibility.assistingCounsel,
       "clientEligibility.denialReason": clientEligibility.denialReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
@@ -404,7 +404,7 @@ function Appointments() {
     setShowRescheduleForm(false);
     setShowScheduleForm(false);
 
-    const { data, total } = await getAppointments(
+    const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
       pageSize,
@@ -430,7 +430,6 @@ function Appointments() {
       "appointmentDetails.assistingCounsel": clientEligibility.assistingCounsel,
       "appointmentDetails.appointmentStatus": "done",
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-      "appointmentDetails.reviewedBy": currentUser.uid,
     };
 
     await updateAppointment(selectedAppointment.id, updatedData);
@@ -439,7 +438,7 @@ function Appointments() {
     setProceedingNotes("");
     setShowProceedingNotesForm(false);
 
-    const { data, total } = await getAppointments(
+    const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
       pageSize,
@@ -468,7 +467,6 @@ function Appointments() {
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",
-      "appointmentDetails.reviewedBy": currentUser.uid,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
     };
 
@@ -478,7 +476,7 @@ function Appointments() {
     setAppointmentDate(null);
     setShowScheduleForm(false);
 
-    const { data, total } = await getAppointments(
+    const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
       pageSize,
@@ -508,7 +506,6 @@ function Appointments() {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
       "appointmentDetails.rescheduleReason": rescheduleReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-      "appointmentDetails.reviewedBy": currentUser.uid,
     };
 
     await updateAppointment(selectedAppointment.id, updatedData);
@@ -518,7 +515,7 @@ function Appointments() {
     setRescheduleReason("");
     setShowRescheduleForm(false);
 
-    const { data, total } = await getAppointments(
+    const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
       pageSize,
@@ -556,20 +553,87 @@ function Appointments() {
           slot.getHours() >= 13 &&
           slot.getHours() < 17
       ).length === 4;
-    return isFullyBooked ? "fully-booked-day disabled-day" : "";
+
+    // Check if the date is assigned to the current lawyer
+    const isAssignedToCurrentLawyer = appointments.some(
+      (appointment) =>
+        appointment.assignedLawyer === currentUser.uid &&
+        appointment.appointmentDate.toDate().toDateString() ===
+          date.toDateString()
+    );
+
+    return isFullyBooked || isAssignedToCurrentLawyer
+      ? "fully-booked-day disabled-day"
+      : "";
   };
 
   const getTimeClassName = (time) => {
-    const now = new Date();
     const dateTime = new Date(appointmentDate);
     dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
-
-    // Check if the time is booked or in the past
-    if (isSlotBooked(dateTime) || time <= now) {
+  
+    // Check if the time slot is booked by the assigned lawyer
+    if (isSlotBookedByAssignedLawyer(dateTime)) {
       return "booked-time disabled-time";
     }
+  
     return "";
   };
+  
+  
+  const filterRescheduleTime = (time) => {
+    if (!(time instanceof Date)) return false;
+    const hours = time.getHours();
+    const minutes = time.getMinutes();
+    const now = new Date();
+  
+    if (hours < 13 || hours >= 17 || time <= now) return false;
+  
+    const dateTime = new Date(rescheduleDate);
+    dateTime.setHours(hours, minutes, 0, 0);
+  
+    // Check if the time slot is booked by the assigned lawyer (selected appointment)
+    return !isSlotBookedByAssignedLawyer(dateTime);
+  };
+  
+
+  const isSlotBookedByAssignedLawyer = (dateTime) => {
+    return appointments.some((appointment) => {
+      const appointmentDate = appointment.appointmentDetails?.appointmentDate;
+      const assignedLawyer = appointment.appointmentDetails?.assignedLawyer;
+      return (
+        assignedLawyer &&
+        appointmentDate &&
+        assignedLawyer === selectedAppointment?.appointmentDetails?.assignedLawyer &&
+        appointmentDate.toDate().getTime() === dateTime.getTime()
+      );
+    });
+  };
+  
+  const isSlotBookedByCurrentUser = (dateTime) => {
+    return bookedSlots.some(
+      (slot) =>
+        slot.getDate() === dateTime.getDate() &&
+        slot.getMonth() === dateTime.getMonth() &&
+        slot.getFullYear() === dateTime.getFullYear() &&
+        slot.getHours() === dateTime.getHours() &&
+        slot.getMinutes() === dateTime.getMinutes() &&
+        slot.assignedLawyer === currentUser.uid
+    );
+  };
+
+  const getTimeRescheduleClassName = (time) => {
+    const dateTime = new Date(rescheduleDate);
+    dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+  
+    // Check if the time slot is booked by the assigned lawyer
+    if (isSlotBookedByAssignedLawyer(dateTime)) {
+      return "booked-time disabled-time";
+    }
+  
+    return "";
+  };
+  
+  
 
   const resetFilters = () => {
     setFilter("all");
@@ -939,33 +1003,6 @@ function Appointments() {
                           "scheduled" && (
                           <>
                             <tr>
-                              <th>Appointment Date:</th>
-                              <td>
-                                {getFormattedDate(
-                                  selectedAppointment.appointmentDate,
-                                  true
-                                )}
-                              </td>
-                            </tr>
-                            <tr>
-                              <th>Reschedule Reason</th>
-                              <td>
-                                {capitalizeFirstLetter(
-                                  selectedAppointment.rescheduleReason
-                                ) || "N/A"}
-                              </td>
-                            </tr>
-                            <tr>
-                              <th>Updated Date and Time:</th>
-                              <td>
-                                {getFormattedDate(
-                                  selectedAppointment.appointmentDetails
-                                    ?.updatedTime,
-                                  true
-                                )}
-                              </td>
-                            </tr>
-                            <tr>
                               <th>Eligibility:</th>
                               <td>
                                 {capitalizeFirstLetter(
@@ -997,18 +1034,45 @@ function Appointments() {
                                   "N/A"}
                               </td>
                             </tr>
+                            <tr>
+                              <th>Appointment Date:</th>
+                              <td>
+                                {getFormattedDate(
+                                  selectedAppointment.appointmentDate,
+                                  true
+                                )}
+                              </td>
+                            </tr>
+                            <tr>
+                              <th>Reschedule Reason</th>
+                              <td>
+                                {capitalizeFirstLetter(
+                                  selectedAppointment.rescheduleReason
+                                ) || "N/A"}
+                              </td>
+                            </tr>
+                            <tr>
+                              <th>Updated Date and Time:</th>
+                              <td>
+                                {getFormattedDate(
+                                  selectedAppointment.appointmentDetails
+                                    ?.updatedTime,
+                                  true
+                                )}
+                              </td>
+                            </tr>
                           </>
                         )}
                         {selectedAppointment.appointmentStatus === "denied" && (
                           <>
-                           <tr>
-                            <th>Reviewed By:</th>
-                            <td>
-                              {reviewerDetails
-                                ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
-                                : "Not Available"}
-                            </td>
-                          </tr>
+                            <tr>
+                              <th>Reviewed By:</th>
+                              <td>
+                                {reviewerDetails
+                                  ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
+                                  : "Not Available"}
+                              </td>
+                            </tr>
                             <tr>
                               <th>Denial Reason:</th>
                               <td>
@@ -1570,21 +1634,21 @@ function Appointments() {
             <form onSubmit={handleRescheduleSubmit}>
               <div>
                 <ReactDatePicker
-                  selected={appointmentDate}
-                  onChange={(date) => setAppointmentDate(date)}
+                  selected={rescheduleDate}
+                  onChange={(date) => setRescheduleDate(date)}
                   showTimeSelect
                   filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterTime(time)}
+                  filterTime={(time) => filterRescheduleTime(time)}
                   dateFormat="MMMM d, yyyy h:mm aa"
                   inline
-                  timeIntervals={15}
+                  timeIntervals={30}
                   minTime={new Date(new Date().setHours(13, 0, 0))}
                   maxTime={new Date(new Date().setHours(17, 0, 0))}
                   dayClassName={(date) =>
                     getDayClassName(date) +
                     (new Date() > date ? " disabled-day" : "")
                   }
-                  timeClassName={(time) => getTimeClassName(time)}
+                  timeClassName={(time) => getTimeRescheduleClassName(time)}
                 />
               </div>
               <div>
@@ -1597,48 +1661,49 @@ function Appointments() {
                   placeholder="Enter reason for reschedule here..."
                   value={rescheduleReason}
                   onChange={handleRescheduleChange}
+                  required
                 ></textarea>
               </div>
               <button>Submit</button>
             </form>
           </div>
         )}
-        {selectedAppointment && showScheduleForm && (
-          <div className="client-eligibility">
-            <div style={{ position: "relative" }}>
-              <button
-                onClick={handleCloseModal}
-                className="close-button"
-                style={{ position: "absolute", top: "15px", right: "15px" }}
-              >
-                ×
-              </button>
-            </div>
-            <h2>Schedule Appointment</h2>
-            <form onSubmit={handleScheduleSubmit}>
-              <div>
-                <ReactDatePicker
-                  selected={appointmentDate}
-                  onChange={(date) => setAppointmentDate(date)}
-                  showTimeSelect
-                  filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterTime(time)}
-                  dateFormat="MMMM d, yyyy h:mm aa"
-                  inline
-                  timeIntervals={15}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
-                  dayClassName={(date) =>
-                    getDayClassName(date) +
-                    (new Date() > date ? " disabled-day" : "")
-                  }
-                  timeClassName={(time) => getTimeClassName(time)}
-                />
-              </div>
-              <button>Submit</button>
-            </form>
-          </div>
-        )}
+      {selectedAppointment && showScheduleForm && (
+  <div className="client-eligibility">
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={handleCloseModal}
+        className="close-button"
+        style={{ position: "absolute", top: "15px", right: "15px" }}
+      >
+        ×
+      </button>
+    </div>
+    <h2>Schedule Appointment</h2>
+    <form onSubmit={handleScheduleSubmit}>
+      <div>
+        <ReactDatePicker
+          selected={appointmentDate}
+          onChange={(date) => setAppointmentDate(date)}
+          showTimeSelect
+          filterDate={(date) => filterDate(date) && date > new Date()}
+          filterTime={(time) => filterTime(time)}
+          dateFormat="MMMM d, yyyy h:mm aa"
+          inline
+          timeIntervals={30}
+          minTime={new Date(new Date().setHours(13, 0, 0))}
+          maxTime={new Date(new Date().setHours(17, 0, 0))}
+          dayClassName={(date) =>
+            getDayClassName(date) + (new Date() > date ? " disabled-day" : "")
+          }
+          timeClassName={(time) => getTimeClassName(time)}
+        />
+      </div>
+      <button>Submit</button>
+    </form>
+  </div>
+)}
+
         {showSnackbar && <div className="snackbar">{snackbarMessage}</div>}
       </div>
     </div>

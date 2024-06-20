@@ -5,6 +5,7 @@ import Dashboard from './Components/Dashboard/Dashboard';
 import Appointments from './Components/Appointments/Appointments'; 
 import ApptsFrontDesk from './Components/Appointments/ApptsFrontDesk'; 
 import ApptsLawyer from './Components/Appointments/ApptsLawyer'; 
+import ApptsHead from './Components/Appointments/ApptsHead'; 
 import CalendarLawyer from './Components/Appointments/CalendarLawyer'; 
 import ApptsCalendar from './Components/Appointments/ApptsCalendar';
 import Profile from './Components/Profile/Profile';
@@ -30,6 +31,7 @@ function App() {
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/users" element={<Users />} />
           <Route path="/frontdesk" element={<ApptsFrontDesk />} />
+          <Route path="/head" element={<ApptsHead />} />
           <Route path="/calendarLawyer" element={<CalendarLawyer />} />
           <Route path="/lawyer" element={<ApptsLawyer />} />
           <Route path="/ratings" element={<Ratings />} />

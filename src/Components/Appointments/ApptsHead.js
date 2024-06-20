@@ -6,7 +6,7 @@ import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Pagination from "react-bootstrap/Pagination";
 import {
-  getLawyerAppointments,
+  getAdminAppointments,
   updateAppointment,
   getBookedSlots,
   getUserById,
@@ -24,7 +24,7 @@ import {
 import { Tooltip, OverlayTrigger } from "react-bootstrap";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
 
-function AppsLawyer() {
+function AppsHead() {
   const [appointments, setAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -74,7 +74,7 @@ function AppsLawyer() {
     if (!currentUser) return;
 
     const fetchAppointments = async () => {
-      const { data, total } = await getLawyerAppointments(
+      const { data, total } = await getAdminAppointments(
         filter,
         lastVisible,
         pageSize,
@@ -288,7 +288,7 @@ function AppsLawyer() {
     const dateTime = new Date(appointmentDate);
     dateTime.setHours(hours, minutes, 0, 0);
 
-    // Check if the time slot is booked by the assigned lawyer (current user)
+    // Check if the time slot is booked by the assigned lawyer (selected appointment)
     return !isSlotBookedByAssignedLawyer(dateTime);
   };
 
@@ -403,7 +403,7 @@ function AppsLawyer() {
     setShowRescheduleForm(false);
     setShowScheduleForm(false);
 
-    const { data, total } = await getLawyerAppointments(
+    const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
       pageSize,
@@ -437,7 +437,7 @@ function AppsLawyer() {
     setProceedingNotes("");
     setShowProceedingNotesForm(false);
 
-    const { data, total } = await getLawyerAppointments(
+    const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
       pageSize,
@@ -475,7 +475,7 @@ function AppsLawyer() {
     setAppointmentDate(null);
     setShowScheduleForm(false);
 
-    const { data, total } = await getLawyerAppointments(
+    const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
       pageSize,
@@ -514,7 +514,7 @@ function AppsLawyer() {
     setRescheduleReason("");
     setShowRescheduleForm(false);
 
-    const { data, total } = await getLawyerAppointments(
+    const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
       pageSize,
@@ -589,20 +589,18 @@ function AppsLawyer() {
     const dateTime = new Date(rescheduleDate);
     dateTime.setHours(hours, minutes, 0, 0);
 
-    // Check if the time slot is booked by the assigned lawyer (current user)
+    // Check if the time slot is booked by the assigned lawyer (selected appointment)
     return !isSlotBookedByAssignedLawyer(dateTime);
   };
 
   const isSlotBookedByAssignedLawyer = (dateTime) => {
-    return appointments.some((appointment) => {
-      const appointmentDate = appointment.appointmentDetails?.appointmentDate;
-      const assignedLawyer = appointment.appointmentDetails?.assignedLawyer;
-      return (
-        assignedLawyer ===
-          selectedAppointment?.appointmentDetails?.assignedLawyer &&
-        appointmentDate?.toDate().getTime() === dateTime.getTime()
-      );
-    });
+    return appointments.some(
+      (appointment) =>
+        appointment.appointmentDetails.assignedLawyer ===
+          selectedAppointment.appointmentDetails.assignedLawyer &&
+        appointment.appointmentDetails.appointmentDate.toDate().getTime() ===
+          dateTime.getTime()
+    );
   };
 
   const isSlotBookedByCurrentUser = (dateTime) => {
@@ -663,7 +661,7 @@ function AppsLawyer() {
         &nbsp;&nbsp;
         <select onChange={(e) => setFilter(e.target.value)} value={filter}>
           <option value="all">Status</option>
-          <option value="approved">Approved</option>
+          <option value="pending">Pending</option>
           <option value="scheduled">Scheduled</option>
           <option value="denied">Denied</option>
           <option value="done">Done</option>
@@ -726,140 +724,32 @@ function AppsLawyer() {
                       <FontAwesomeIcon icon={faEye} />
                     </button>
                     &nbsp; &nbsp;
-                    {appointment.appointmentStatus === "approved" && (
-                      <>
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={renderTooltip({ title: "Schedule" })}
-                        >
-                          <button
-                            onClick={() => {
-                              setSelectedAppointment(appointment);
-                              setShowProceedingNotesForm(false);
-                              setShowRescheduleForm(false);
-                              setShowScheduleForm(true);
-                            }}
-                            style={{
-                              backgroundColor: "#1DB954",
-                              color: "white",
-                              border: "none",
-                              padding: "5px 10px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faCalendarAlt} />
-                          </button>
-                        </OverlayTrigger>
-                        &nbsp; &nbsp;
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={renderTooltip({ title: "Done" })}
-                        >
-                          <button
-                            disabled
-                            style={{
-                              backgroundColor: "gray",
-                              color: "white",
-                              border: "none",
-                              padding: "5px 10px",
-                              cursor: "not-allowed",
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faCheck} />
-                          </button>
-                        </OverlayTrigger>
-                      </>
-                    )}
-                    {appointment.appointmentStatus === "scheduled" && (
-                      <>
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={renderTooltip({ title: "Reschedule" })}
-                        >
-                          <button
-                            onClick={() => {
-                              setSelectedAppointment(appointment);
-                              setShowProceedingNotesForm(false);
-                              setShowRescheduleForm(true);
-                              setShowScheduleForm(false);
-                            }}
-                            style={{
-                              backgroundColor: "#ff8b61",
-                              color: "white",
-                              border: "none",
-                              padding: "5px 10px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faCalendarAlt} />
-                          </button>
-                        </OverlayTrigger>
-                        &nbsp; &nbsp;
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={renderTooltip({ title: "Done" })}
-                        >
-                          <button
-                            onClick={() => {
-                              setSelectedAppointment(appointment);
-                              setShowProceedingNotesForm(true);
-                              setShowRescheduleForm(false);
-                              setShowScheduleForm(false);
-                            }}
-                            style={{
-                              backgroundColor: "#1DB954",
-                              color: "white",
-                              border: "none",
-                              padding: "5px 10px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faCheck} />
-                          </button>
-                        </OverlayTrigger>
-                      </>
-                    )}
-                    {(appointment.appointmentStatus === "pending" ||
-                      appointment.appointmentStatus === "done" ||
-                      appointment.appointmentStatus === "denied") && (
-                      <>
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={renderTooltip({ title: "Schedule" })}
-                        >
-                          <button
-                            disabled
-                            style={{
-                              backgroundColor: "gray",
-                              color: "white",
-                              border: "none",
-                              padding: "5px 10px",
-                              cursor: "not-allowed",
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faCalendarAlt} />
-                          </button>
-                        </OverlayTrigger>
-                        &nbsp; &nbsp;
-                        <OverlayTrigger
-                          placement="top"
-                          overlay={renderTooltip({ title: "Done" })}
-                        >
-                          <button
-                            disabled
-                            style={{
-                              backgroundColor: "gray",
-                              color: "white",
-                              border: "none",
-                              padding: "5px 10px",
-                              cursor: "not-allowed",
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faCheck} />
-                          </button>
-                        </OverlayTrigger>
-                      </>
-                    )}
+                    <button
+                      disabled
+                      style={{
+                        backgroundColor: "gray",
+                        color: "white",
+                        border: "none",
+                        padding: "5px 10px",
+                        cursor: "not-allowed",
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faCalendarAlt} />
+                    </button>
+                    &nbsp; &nbsp;
+                    <button
+                      disabled
+                      style={{
+                        backgroundColor: "gray",
+                        color: "white",
+                        border: "none",
+                        padding: "5px 10px",
+                        cursor: "not-allowed",
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faCheck} />
+                    </button>
+                    &nbsp; &nbsp;
                   </td>
                 </tr>
               ))
@@ -1720,4 +1610,4 @@ const ImageModal = ({ isOpen, url, onClose }) => {
   );
 };
 
-export default AppsLawyer;
+export default AppsHead;

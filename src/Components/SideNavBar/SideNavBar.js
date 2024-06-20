@@ -194,7 +194,7 @@ function SideNavBar() {
                 </li>
                 <li>
                   <NavLink
-                    to="/appointments"
+                    to="/head"
                     className={({ isActive }) => (isActive ? "active" : "")}
                   >
                     Appointments
@@ -204,6 +204,15 @@ function SideNavBar() {
             )}
             {userData && userData.member_type === "frontdesk" && (
               <>
+                              <li>
+                  <NavLink
+                    to="/apptsCalendar"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Appts. Calendar
+                  </NavLink>
+                </li>
+                <li></li>
                 <li>
                   <NavLink
                     to="/frontdesk"
