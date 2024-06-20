@@ -894,15 +894,7 @@ function AppsHead() {
                                 )}
                               </td>
                             </tr>
-                            <tr>
-                              <th>Reviewed By:</th>
-                              <td>
-                                {reviewerDetails
-                                  ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
-                                  : "Not Available"}
-                              </td>
-                            </tr>
-                            <tr>
+                 <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -948,11 +940,11 @@ function AppsHead() {
                         )}
                         {selectedAppointment.appointmentStatus === "denied" && (
                           <>
-                            <tr>
-                              <th>Reviewed By:</th>
+                         <tr>
+                              <th>Assigned Lawyer:</th>
                               <td>
-                                {reviewerDetails
-                                  ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
+                                {assignedLawyerDetails
+                                  ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
                                   : "Not Available"}
                               </td>
                             </tr>
@@ -983,15 +975,7 @@ function AppsHead() {
                                 )}
                               </td>
                             </tr>
-                            <tr>
-                              <th>Reviewed By:</th>
-                              <td>
-                                {reviewerDetails
-                                  ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
-                                  : "Not Available"}
-                              </td>
-                            </tr>
-                            <tr>
+                 <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1041,15 +1025,7 @@ function AppsHead() {
                                 )}
                               </td>
                             </tr>
-                            <tr>
-                              <th>Reviewed By:</th>
-                              <td>
-                                {reviewerDetails
-                                  ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
-                                  : "Not Available"}
-                              </td>
-                            </tr>
-                            <tr>
+                 <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
