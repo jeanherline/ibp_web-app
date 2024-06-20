@@ -243,6 +243,18 @@ function Dashboard() {
                 }
               </p>
             </div>
+            <div className="stat-card">
+              <h2>Active App Users</h2>
+              <p>
+                {users.filter((user) => user.user_status === "active").length}
+              </p>
+            </div>
+            <div className="stat-card">
+              <h2>Inactive App Users</h2>
+              <p>
+                {users.filter((user) => user.user_status === "inactive").length}
+              </p>
+            </div>
             {auth.currentUser?.member_type === "lawyer" && (
               <>
                 <div className="stat-card">
