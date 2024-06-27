@@ -12,10 +12,13 @@ import {
   startAfter, 
   orderBy, 
   updateDoc,
-  getDoc  // Import getDoc here
+  getDoc,
+  setDoc,
+  addDoc,
+  serverTimestamp 
 } from 'firebase/firestore';
-import { getAuth, signOut } from 'firebase/auth'; // Import onAuthStateChanged
-import { getStorage } from 'firebase/storage';
+import { getAuth, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -37,6 +40,7 @@ const storage = getStorage(app);
 
 export { 
   app, auth, fs, storage, 
-  doc, collection, query, where, getDocs, 
-  limit, startAfter, orderBy, updateDoc, getDoc, signOut // Export getDoc here
+  doc, collection, query, where, getDocs, addDoc,
+  limit, startAfter, orderBy, updateDoc, getDoc, setDoc, serverTimestamp,
+  signOut, createUserWithEmailAndPassword, ref, uploadBytes, getDownloadURL 
 };
