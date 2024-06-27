@@ -987,8 +987,6 @@ function Appointments() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <tr className="no-print">
                           <th>QR Code:</th>
                           <td>
@@ -1018,7 +1016,6 @@ function Appointments() {
                             )}
                           </td>
                         </tr>
-                      )}
 
                       <tr>
                         <th>Control Number:</th>
@@ -1257,8 +1254,6 @@ function Appointments() {
                             "Not Available"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <>
                           <tr>
                             <th>Address:</th>
@@ -1295,13 +1290,10 @@ function Appointments() {
                             </td>
                           </tr>
                         </>
-                      )}
                     </tbody>
                   </table>
                 </section>
 
-                {selectedAppointment.appointmentDetails?.apptType ===
-                  "Online" && (
                   <section className="mb-4 print-section">
                     <h2>
                       <em
@@ -1352,7 +1344,6 @@ function Appointments() {
                       </tbody>
                     </table>
                   </section>
-                )}
 
                 <section className="mb-4 print-section">
                   <h2>
@@ -1374,8 +1365,6 @@ function Appointments() {
                             "Not Specified"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <>
                           <tr>
                             <th>Problem:</th>
@@ -1398,7 +1387,6 @@ function Appointments() {
                             </td>
                           </tr>
                         </>
-                      )}
                     </tbody>
                   </table>
                 </section>

@@ -12,10 +12,16 @@ import {
   getUserById,
   getUsers,
 } from "../../Config/FirebaseServices";
-import { Timestamp } from "firebase/firestore";
 import { useAuth } from "../../AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { auth } from "../../Config/Firebase";
+import {
+  addDoc,
+  collection,
+  getFirestore,
+  Timestamp,
+} from "firebase/firestore";
+import { fs, auth } from "../../Config/Firebase";
+
 import {
   faEye,
   faCheck,
@@ -315,7 +321,7 @@ function AppsHead() {
       setCurrentPage((prevPage) => prevPage + 1);
     }
   };
-  
+
   const handlePrevious = async () => {
     if (currentPage > 1) {
       const { data, firstDoc } = await getAdminAppointments(
@@ -332,7 +338,7 @@ function AppsHead() {
       setCurrentPage((prevPage) => prevPage - 1);
     }
   };
-  
+
   const handleFirst = async () => {
     const { data, firstDoc } = await getAdminAppointments(
       filter,
@@ -346,7 +352,7 @@ function AppsHead() {
     setLastVisible(firstDoc);
     setCurrentPage(1);
   };
-  
+
   const handleLast = async () => {
     const { data, lastDoc } = await getAdminAppointments(
       filter,
@@ -415,14 +421,28 @@ function AppsHead() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
+    if (!selectedAppointment) {
+      console.error("Selected appointment is not available.");
+      alert("Selected appointment is not available.");
+      return;
+    }
+  
+    console.log("Selected Appointment:", selectedAppointment);
+  
+    if (!selectedAppointment.uid) {
+      console.error("Applicant UID is not available.", selectedAppointment);
+      alert("Applicant UID is not available.");
+      return;
+    }
+  
     let status = "pending";
     if (clientEligibility.eligibility === "yes") {
       status = "approved";
     } else if (clientEligibility.eligibility === "no") {
       status = "denied";
     }
-
+  
     const updatedData = {
       "clientEligibility.eligibility": clientEligibility.eligibility,
       "clientEligibility.notes": clientEligibility.notes,
@@ -431,9 +451,53 @@ function AppsHead() {
       "clientEligibility.denialReason": clientEligibility.denialReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
     };
-
+  
     await updateAppointment(selectedAppointment.id, updatedData);
-
+  
+    // Notify the user
+    const userMessage =
+      clientEligibility.eligibility === "yes"
+        ? `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been approved. Please wait for the specific date of appointment.`
+        : `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been denied. Reason: ${clientEligibility.denialReason}.`;
+  
+    await addDoc(collection(fs, "notifications"), {
+      uid: selectedAppointment.uid,
+      message: userMessage,
+      type: "appointment",
+      read: false,
+      timestamp: Timestamp.fromDate(new Date()),
+    });
+  
+    // Notify the assigned lawyer
+    if (
+      clientEligibility.eligibility === "yes" &&
+      clientEligibility.assistingCounsel
+    ) {
+      const lawyerMessage = `An appointment request with Ticket Number ${selectedAppointment.controlNumber} has been approved. Please schedule the appointment for the client assigned to you.`;
+  
+      await addDoc(collection(fs, "notifications"), {
+        uid: clientEligibility.assistingCounsel,
+        message: lawyerMessage,
+        type: "appointment",
+        read: false,
+        timestamp: Timestamp.fromDate(new Date()),
+      });
+    }
+  
+    // Notify the current authenticated user
+    const authUserMessage =
+      clientEligibility.eligibility === "yes"
+        ? `You have successfully approved the appointment request with Ticket Number ${selectedAppointment.controlNumber}.`
+        : `You have successfully denied the appointment request with Ticket Number ${selectedAppointment.controlNumber}.`;
+  
+    await addDoc(collection(fs, "notifications"), {
+      uid: currentUser.uid,
+      message: authUserMessage,
+      type: "appointment",
+      read: false,
+      timestamp: Timestamp.fromDate(new Date()),
+    });
+  
     setSelectedAppointment(null);
     setClientEligibility({
       eligibility: "",
@@ -445,7 +509,7 @@ function AppsHead() {
     setShowProceedingNotesForm(false);
     setShowRescheduleForm(false);
     setShowScheduleForm(false);
-
+  
     const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
@@ -456,11 +520,12 @@ function AppsHead() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-
+  
     setSnackbarMessage("Form has been successfully submitted.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
+  
 
   const handleSubmitProceedingNotes = async (e) => {
     e.preventDefault();
@@ -751,8 +816,7 @@ function AppsHead() {
                   <td>{appointment.fullName}</td>
                   <td>{appointment.selectedAssistanceType}</td>
                   <td>{getFormattedDate(appointment.appointmentDate, true)}</td>
-                  <td>{getFormattedDate(appointment.appointmentDate, true)}</td>
-                  <td>{appointment.appointmentDetails?.apptType }</td>
+                  <td>{appointment.appointmentDetails?.apptType}</td>
                   <td>
                     {capitalizeFirstLetter(appointment.appointmentStatus)}
                   </td>
@@ -874,37 +938,33 @@ function AppsHead() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                    {selectedAppointment.appointmentDetails?.apptType === "Online" && (
-                        <tr className="no-print">
-                          <th>QR Code:</th>
-                          <td>
-                            {selectedAppointment.appointmentDetails ? (
-                              <a
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openImageModal(
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  );
-                                }}
-                              >
-                                <img
-                                  src={
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  }
-                                  alt="QR Code"
-                                  className="img-thumbnail qr-code-image"
-                                  style={{ width: "100px", cursor: "pointer" }}
-                                />
-                              </a>
-                            ) : (
-                              "Not Available"
-                            )}
-                          </td>
-                        </tr>
-                      )}
+                      <tr className="no-print">
+                        <th>QR Code:</th>
+                        <td>
+                          {selectedAppointment.appointmentDetails ? (
+                            <a
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openImageModal(
+                                  selectedAppointment.appointmentDetails.qrCode
+                                );
+                              }}
+                            >
+                              <img
+                                src={
+                                  selectedAppointment.appointmentDetails.qrCode
+                                }
+                                alt="QR Code"
+                                className="img-thumbnail qr-code-image"
+                                style={{ width: "100px", cursor: "pointer" }}
+                              />
+                            </a>
+                          ) : (
+                            "Not Available"
+                          )}
+                        </td>
+                      </tr>
 
                       <tr>
                         <th>Control Number:</th>
@@ -944,7 +1004,7 @@ function AppsHead() {
                                 )}
                               </td>
                             </tr>
-                 <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -990,7 +1050,7 @@ function AppsHead() {
                         )}
                         {selectedAppointment.appointmentStatus === "denied" && (
                           <>
-                         <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1016,7 +1076,7 @@ function AppsHead() {
                         )}
                         {selectedAppointment.appointmentStatus === "done" && (
                           <>
-                          <tr>
+                            <tr>
                               <th>Appointment Date:</th>
                               <td>
                                 {getFormattedDate(
@@ -1034,7 +1094,7 @@ function AppsHead() {
                                 )}
                               </td>
                             </tr>
-                 <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1084,7 +1144,7 @@ function AppsHead() {
                                 )}
                               </td>
                             </tr>
-                 <tr>
+                            <tr>
                               <th>Assigned Lawyer:</th>
                               <td>
                                 {assignedLawyerDetails
@@ -1136,109 +1196,100 @@ function AppsHead() {
                             : "N/A"}
                         </td>
                       </tr>
-                     <tr>
+                      <tr>
                         <th>Contact Number:</th>
                         <td>
                           {selectedAppointment?.contactNumber ||
                             "Not Available"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
-                        <>
-                          <tr>
-                            <th>Address:</th>
-                            <td>
-                              {selectedAppointment?.address || "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Gender:</th>
-                            <td>
-                              {selectedAppointment?.selectedGender ||
-                                "Not Specified"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Name:</th>
-                            <td>
-                              {selectedAppointment.spouseName ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Occupation:</th>
-                            <td>
-                              {selectedAppointment.spouseOccupation ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Children Names and Ages:</th>
-                            <td>
-                              {selectedAppointment.childrenNamesAges ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                        </>
-                      )}
-                    </tbody>
-                  </table>
-                </section>
-
-                {selectedAppointment.appointmentDetails?.apptType ===
-                  "Online" && (
-                  <section className="mb-4 print-section">
-                    <h2>
-                      <em
-                        style={{
-                          color: "#a34bc9",
-                          fontSize: "16px",
-                        }}
-                      >
-                        Employment Profile
-                      </em>
-                    </h2>
-                    <table className="table table-striped table-bordered">
-                      <tbody>
+                      <>
                         <tr>
-                          <th>Occupation:</th>
+                          <th>Address:</th>
                           <td>
-                            {selectedAppointment.occupation || "Not Available"}
+                            {selectedAppointment?.address || "Not Available"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Type of Employment:</th>
+                          <th>Gender:</th>
                           <td>
-                            {selectedAppointment?.kindOfEmployment ||
+                            {selectedAppointment?.selectedGender ||
                               "Not Specified"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Employer Name:</th>
+                          <th>Spouse Name:</th>
                           <td>
-                            {selectedAppointment?.employerName ||
+                            {selectedAppointment.spouseName || "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Spouse Occupation:</th>
+                          <td>
+                            {selectedAppointment.spouseOccupation ||
                               "Not Available"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Employer Address:</th>
+                          <th>Children Names and Ages:</th>
                           <td>
-                            {selectedAppointment.employerAddress ||
+                            {selectedAppointment.childrenNamesAges ||
                               "Not Available"}
                           </td>
                         </tr>
-                        <tr>
-                          <th>Monthly Income:</th>
-                          <td>
-                            {selectedAppointment.monthlyIncome ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </section>
-                )}
+                      </>
+                    </tbody>
+                  </table>
+                </section>
+
+                <section className="mb-4 print-section">
+                  <h2>
+                    <em
+                      style={{
+                        color: "#a34bc9",
+                        fontSize: "16px",
+                      }}
+                    >
+                      Employment Profile
+                    </em>
+                  </h2>
+                  <table className="table table-striped table-bordered">
+                    <tbody>
+                      <tr>
+                        <th>Occupation:</th>
+                        <td>
+                          {selectedAppointment.occupation || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Type of Employment:</th>
+                        <td>
+                          {selectedAppointment?.kindOfEmployment ||
+                            "Not Specified"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Employer Name:</th>
+                        <td>
+                          {selectedAppointment?.employerName || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Employer Address:</th>
+                        <td>
+                          {selectedAppointment.employerAddress ||
+                            "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Monthly Income:</th>
+                        <td>
+                          {selectedAppointment.monthlyIncome || "Not Available"}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </section>
 
                 <section className="mb-4 print-section">
                   <h2>
@@ -1260,31 +1311,28 @@ function AppsHead() {
                             "Not Specified"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
-                        <>
-                          <tr>
-                            <th>Problem:</th>
-                            <td>
-                              {selectedAppointment.problems || "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Reason for Problem:</th>
-                            <td>
-                              {selectedAppointment.problemReason ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Desired Solutions:</th>
-                            <td>
-                              {selectedAppointment.desiredSolutions ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                        </>
-                      )}
+                      <>
+                        <tr>
+                          <th>Problem:</th>
+                          <td>
+                            {selectedAppointment.problems || "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Reason for Problem:</th>
+                          <td>
+                            {selectedAppointment.problemReason ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Desired Solutions:</th>
+                          <td>
+                            {selectedAppointment.desiredSolutions ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                      </>
                     </tbody>
                   </table>
                 </section>
@@ -1297,63 +1345,6 @@ function AppsHead() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                    {selectedAppointment.appointmentDetails?.apptType ===
-                        "Walk-in" && (
-                        <>
-                          <tr>
-                            <th>Application Form 1</th>
-                            <td>
-                              {selectedAppointment.form1 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form1);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form1}
-                                    alt="Application Form 1"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Application Form 2</th>
-                            <td>
-                              {selectedAppointment.form2 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form2);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form2}
-                                    alt="Application Form 2"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                        </>
-                      )}
                       <tr>
                         <th>Barangay Certificate of Indigency:</th>
                         <td>
@@ -1540,7 +1531,7 @@ function AppsHead() {
                   <b>
                     <label>Notes:</label>
                   </b>
-                                    <textarea
+                  <textarea
                     name="notes"
                     rows="4"
                     placeholder="Enter any relevant notes here..."

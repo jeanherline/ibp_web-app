@@ -850,8 +850,6 @@ function ApptsFrontDesk() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <tr className="no-print">
                           <th>QR Code:</th>
                           <td>
@@ -881,7 +879,6 @@ function ApptsFrontDesk() {
                             )}
                           </td>
                         </tr>
-                      )}
                       <tr>
                         <th>Control Number:</th>
                         <td>{selectedAppointment.controlNumber}</td>
@@ -1119,8 +1116,6 @@ function ApptsFrontDesk() {
                             "Not Available"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <>
                           <tr>
                             <th>Address:</th>
@@ -1157,13 +1152,10 @@ function ApptsFrontDesk() {
                             </td>
                           </tr>
                         </>
-                      )}
                     </tbody>
                   </table>
                 </section>
 
-                {selectedAppointment.appointmentDetails?.apptType ===
-                  "Online" && (
                   <section className="mb-4 print-section">
                     <h2>
                       <em
@@ -1214,7 +1206,6 @@ function ApptsFrontDesk() {
                       </tbody>
                     </table>
                   </section>
-                )}
 
                 <section className="mb-4 print-section">
                   <h2>
@@ -1236,8 +1227,7 @@ function ApptsFrontDesk() {
                             "Not Specified"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
+                   
                         <>
                           <tr>
                             <th>Problem:</th>
@@ -1260,7 +1250,6 @@ function ApptsFrontDesk() {
                             </td>
                           </tr>
                         </>
-                      )}
                     </tbody>
                   </table>
                 </section>
@@ -1273,63 +1262,6 @@ function ApptsFrontDesk() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Walk-in" && (
-                        <>
-                          <tr>
-                            <th>Application Form 1</th>
-                            <td>
-                              {selectedAppointment.form1 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form1);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form1}
-                                    alt="Application Form 1"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Application Form 2</th>
-                            <td>
-                              {selectedAppointment.form2 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form2);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form2}
-                                    alt="Application Form 2"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                        </>
-                      )}
                       <tr>
                         <th>Barangay Certificate of Indigency:</th>
                         <td>
@@ -1424,256 +1356,6 @@ function ApptsFrontDesk() {
           )}
         <br />
         <br />
-        {selectedAppointment &&
-          selectedAppointment.appointmentStatus === "pending" && (
-            <div className="client-eligibility">
-              <h2>Client's Eligibility</h2>
-              <form onSubmit={handleSubmit}>
-                <b>
-                  <p>Is the client eligible?</p>
-                </b>
-                <label>
-                  <input
-                    type="radio"
-                    name="eligibility"
-                    value="yes"
-                    onChange={handleEligibilityChange}
-                    required
-                  />{" "}
-                  Yes, the client is Eligible
-                </label>
-                <br />
-                <label>
-                  <input
-                    type="radio"
-                    name="eligibility"
-                    value="no"
-                    onChange={handleEligibilityChange}
-                    required
-                  />{" "}
-                  No, the client is DISQUALIFIED/DENIED
-                </label>
-                <br />
-                <br />
-                {clientEligibility.eligibility === "yes" && (
-                  <div>
-                    <b>
-                      <label>Assign a Lawyer: *</label>
-                    </b>
-                    <select
-                      name="assistingCounsel"
-                      onChange={handleChange}
-                      required
-                    >
-                      <option value="">Select a Lawyer</option>
-                      {lawyers.map((lawyer) => (
-                        <option key={lawyer.uid} value={lawyer.uid}>
-                          {`${lawyer.display_name} ${lawyer.middle_name} ${lawyer.last_name}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {clientEligibility.eligibility === "no" && (
-                  <div>
-                    <b>
-                      <p>If Disqualified/Denied:</p>
-                    </b>
-                    <em>
-                      <p>
-                        Please select the reason for the possible
-                        Denial/Disqualification of the Client
-                      </p>
-                    </em>
-                    <label>
-                      <input
-                        type="radio"
-                        name="denialReason"
-                        value="meansTest"
-                        onChange={handleDenialReasonChange}
-                        required
-                      />{" "}
-                      Persons who do not pass the means and merit test (sec. 5
-                      of the Revised Manual of Operations of the NCLA)
-                    </label>
-                    <br />
-                    <br />
-                    <label>
-                      <input
-                        type="radio"
-                        name="denialReason"
-                        value="alreadyRepresented"
-                        onChange={handleDenialReasonChange}
-                        required
-                      />{" "}
-                      Parties already represented by a counsel de parte (sec. 5
-                      of the Revised Manual of Operations of the NCLA)
-                    </label>
-                  </div>
-                )}
-                <br />
-                <div>
-                  <b>
-                    <label>Notes:</label>
-                  </b>
-                  <textarea
-                    name="notes"
-                    rows="4"
-                    placeholder="Enter any relevant notes here..."
-                    value={clientEligibility.notes}
-                    onChange={handleChange}
-                    required
-                  ></textarea>
-                </div>
-                <button>Submit</button>
-              </form>
-            </div>
-          )}
-        {selectedAppointment && showProceedingNotesForm && (
-          <div className="client-eligibility">
-            <div style={{ position: "relative" }}>
-              <button
-                onClick={handleCloseModal}
-                className="close-button"
-                style={{ position: "absolute", top: "15px", right: "15px" }}
-              >
-                ×
-              </button>
-            </div>
-            <h2>Remarks</h2>
-            <form onSubmit={handleSubmitProceedingNotes}>
-              <div>
-                <b>
-                  <label>Record of Consultation *</label>
-                </b>
-                <textarea
-                  name="proceedingNotes"
-                  rows="4"
-                  placeholder="Enter proceeding notes here..."
-                  value={proceedingNotes}
-                  onChange={handleNotesChange}
-                  required
-                ></textarea>
-              </div>
-              <div>
-                <b>
-                  <label>IBP Paralegal/Staff:</label>
-                </b>
-                <input
-                  type="text"
-                  name="ibpParalegalStaff"
-                  placeholder="Enter name here..."
-                  value={clientEligibility.ibpParalegalStaff}
-                  onChange={handleChange}
-                />
-                <b>
-                  <label>Assisting Counsel:</label>
-                </b>
-                <input
-                  type="text"
-                  name="assistingCounsel"
-                  placeholder="Enter name here..."
-                  value={clientEligibility.assistingCounsel}
-                  onChange={handleChange}
-                />
-              </div>
-              <button>Submit</button>
-            </form>
-          </div>
-        )}
-        {selectedAppointment && showRescheduleForm && (
-          <div className="client-eligibility">
-            <div style={{ position: "relative" }}>
-              <button
-                onClick={handleCloseModal}
-                className="close-button"
-                style={{ position: "absolute", top: "15px", right: "15px" }}
-              >
-                ×
-              </button>
-            </div>
-            <h2>Reschedule Appointment</h2>
-            <p>
-              <strong>Current Appointment Date:</strong> <br></br>
-              {getFormattedDate(
-                selectedAppointment.appointmentDetails.appointmentDate,
-                true
-              )}
-            </p>
-            <form onSubmit={handleRescheduleSubmit}>
-              <div>
-                <ReactDatePicker
-                  selected={rescheduleDate}
-                  onChange={(date) => setRescheduleDate(date)}
-                  showTimeSelect
-                  filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterRescheduleTime(time)}
-                  dateFormat="MMMM d, yyyy h:mm aa"
-                  inline
-                  timeIntervals={30}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
-                  dayClassName={(date) =>
-                    getDayClassName(date) +
-                    (new Date() > date ? " disabled-day" : "")
-                  }
-                  timeClassName={(time) => getTimeRescheduleClassName(time)}
-                />
-              </div>
-              <div>
-                <b>
-                  <label>Reason for Reschedule:</label>
-                </b>
-                <textarea
-                  name="rescheduleReason"
-                  rows="4"
-                  placeholder="Enter reason for reschedule here..."
-                  value={rescheduleReason}
-                  onChange={handleRescheduleChange}
-                  required
-                ></textarea>
-              </div>
-              <button>Submit</button>
-            </form>
-          </div>
-        )}
-        {selectedAppointment && showScheduleForm && (
-          <div className="client-eligibility">
-            <div style={{ position: "relative" }}>
-              <button
-                onClick={handleCloseModal}
-                className="close-button"
-                style={{ position: "absolute", top: "15px", right: "15px" }}
-              >
-                ×
-              </button>
-            </div>
-            <h2>Schedule Appointment</h2>
-            <form onSubmit={handleScheduleSubmit}>
-              <div>
-                <ReactDatePicker
-                  selected={appointmentDate}
-                  onChange={(date) => setAppointmentDate(date)}
-                  showTimeSelect
-                  filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterTime(time)}
-                  dateFormat="MMMM d, yyyy h:mm aa"
-                  inline
-                  timeIntervals={30}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
-                  dayClassName={(date) =>
-                    getDayClassName(date) +
-                    (new Date() > date ? " disabled-day" : "")
-                  }
-                  timeClassName={(time) => getTimeClassName(time)}
-                />
-              </div>
-              <button>Submit</button>
-            </form>
-          </div>
-        )}
-        {showSnackbar && <div className="snackbar">{snackbarMessage}</div>}
       </div>
     </div>
   );

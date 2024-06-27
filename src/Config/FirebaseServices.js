@@ -18,21 +18,9 @@ import {
 import { fs, storage, signOut } from "./Firebase"; // Import fs from your Firebase configuration file
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { toPng } from 'html-to-image';
-import { QRCodeCanvas } from 'qrcode.react';
-import ReactDOMServer from 'react-dom/server';
-
-export const uploadImage = async (file, path) => {
-  try {
-    const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
-    return downloadURL;
-  } catch (error) {
-    console.error("Error uploading image: ", error.message);
-    throw error;
-  }
-};
+import { toPng } from "html-to-image";
+import { QRCodeCanvas } from "qrcode.react";
+import ReactDOMServer from "react-dom/server";
 
 const getAppointments = async (
   statusFilter,
@@ -45,7 +33,7 @@ const getAppointments = async (
   let queryRef = collection(fs, "appointments");
 
   // Apply status filter if not "all"
-  if (statusFilter !== "all") {
+  if (statusFilter && statusFilter !== "all") {
     queryRef = query(
       queryRef,
       where("appointmentDetails.appointmentStatus", "==", statusFilter)
@@ -53,7 +41,7 @@ const getAppointments = async (
   }
 
   // Apply assistance filter if not "all"
-  if (assistanceFilter !== "all") {
+  if (assistanceFilter && assistanceFilter !== "all") {
     queryRef = query(
       queryRef,
       where(
@@ -110,7 +98,7 @@ const getAppointments = async (
   const totalQuery = await getDocs(
     query(
       collection(fs, "appointments"),
-      statusFilter !== "all"
+      statusFilter && statusFilter !== "all"
         ? where("appointmentDetails.appointmentStatus", "==", statusFilter)
         : {}
     )
@@ -140,6 +128,7 @@ const getAppointments = async (
     lastDoc: querySnapshot.docs[querySnapshot.docs.length - 1],
   };
 };
+
 
 const getLawyerCalendar = async (assignedLawyer) => {
   const appointmentsRef = collection(fs, "appointments");
@@ -396,7 +385,7 @@ const getLawyerAppointments = async (
       );
     }
 
-    if (natureOfLegalAssistanceFilter !== "all") {
+    if (natureOfLegalAssistanceFilter && natureOfLegalAssistanceFilter !== "all") {
       queryRef = query(
         queryRef,
         where(
@@ -408,10 +397,12 @@ const getLawyerAppointments = async (
     }
 
     // Ensure only appointments assigned to the current user are fetched
-    queryRef = query(
-      queryRef,
-      where("appointmentDetails.assignedLawyer", "==", currentUser.uid)
-    );
+    if (currentUser?.uid) {
+      queryRef = query(
+        queryRef,
+        where("appointmentDetails.assignedLawyer", "==", currentUser.uid)
+      );
+    }
 
     // Order by controlNumber and limit results for pagination
     queryRef = query(
@@ -453,7 +444,7 @@ const getLawyerAppointments = async (
         where("appointmentDetails.appointmentStatus", "==", filter)
       );
     }
-    if (natureOfLegalAssistanceFilter !== "all") {
+    if (natureOfLegalAssistanceFilter && natureOfLegalAssistanceFilter !== "all") {
       totalQueryRef = query(
         totalQueryRef,
         where(
@@ -463,10 +454,12 @@ const getLawyerAppointments = async (
         )
       );
     }
-    totalQueryRef = query(
-      totalQueryRef,
-      where("appointmentDetails.assignedLawyer", "==", currentUser.uid)
-    );
+    if (currentUser?.uid) {
+      totalQueryRef = query(
+        totalQueryRef,
+        where("appointmentDetails.assignedLawyer", "==", currentUser.uid)
+      );
+    }
     const totalQuerySnapshot = await getDocs(totalQueryRef);
     const total = totalQuerySnapshot.size;
 
@@ -497,16 +490,6 @@ const getLawyerAppointments = async (
   }
 };
 
-export const createAppointment = async (appointmentData) => {
-  try {
-    const appointmentRef = doc(collection(fs, "appointments"));
-    await setDoc(appointmentRef, appointmentData);
-    return appointmentRef.id;
-  } catch (error) {
-    console.error("Error creating appointment: ", error.message);
-    throw error;
-  }
-};
 
 export const generateControlNumber = () => {
   const now = new Date();
@@ -519,43 +502,6 @@ export const generateControlNumber = () => {
     .getSeconds()
     .toString()
     .padStart(2, "0")}`;
-};
-
-// Function to generate QR code and upload to Firebase Storage
-export const generateQrCodeImageUrl = async (controlNumber) => {
-  try {
-    // Create a container to render the QR code
-    const container = document.createElement('div');
-    container.style.width = '200px';
-    container.style.height = '200px';
-    container.style.backgroundColor = '#ffffff';
-    
-    // Render the QR code to the container
-    ReactDOMServer.renderToStaticMarkup(
-      <QRCodeCanvas
-        value={controlNumber}
-        size={200}
-        bgColor="#ffffff"
-        fgColor="#000000"
-        level="L"
-      />
-    );
-    
-    // Convert the QR code to PNG
-    const pngDataUrl = await toPng(container);
-    const response = await fetch(pngDataUrl);
-    const blob = await response.blob();
-
-    // Upload the PNG to Firebase Storage
-    const fileName = `qr_code_${controlNumber}.png`;
-    const storageRef = ref(storage, fileName);
-    await uploadBytes(storageRef, blob);
-    const downloadUrl = await getDownloadURL(storageRef);
-    return downloadUrl;
-  } catch (error) {
-    console.error("Error generating QR code: ", error.message);
-    throw error;
-  }
 };
 
 export const getAdminAppointments = async (
@@ -762,7 +708,7 @@ const getUsers = async (
   try {
     let queryRef = collection(fs, "users");
 
-    if (statusFilter !== "all") {
+    if (statusFilter && statusFilter !== "all") {
       queryRef = query(queryRef, where("user_status", "==", statusFilter));
     }
 
@@ -770,7 +716,7 @@ const getUsers = async (
       queryRef = query(queryRef, where("member_type", "==", filterType));
     }
 
-    if (cityFilter !== "all") {
+    if (cityFilter && cityFilter !== "all") {
       queryRef = query(queryRef, where("city", "==", cityFilter));
     }
 
@@ -801,6 +747,7 @@ const getUsers = async (
     throw error;
   }
 };
+
 
 const getUsersCount = async (
   statusFilter,
@@ -902,7 +849,42 @@ const addUser = async (userData) => {
   }
 };
 
-const getUserById = async (userId) => {
+export const createAppointment = async (appointmentData) => {
+  try {
+    const appointmentRef = doc(collection(fs, "appointments"));
+    await setDoc(appointmentRef, appointmentData);
+    return appointmentRef.id;
+  } catch (error) {
+    console.error("Error creating appointment: ", error.message);
+    throw error;
+  }
+};
+
+export const getAppointmentByUid = async (uid) => {
+  const q = query(
+    collection(fs, "appointments"),
+    where("applicantProfile.uid", "==", uid)
+  );
+  const querySnapshot = await getDocs(q);
+  if (!querySnapshot.empty) {
+    return querySnapshot.docs[0].data(); // return the first matching appointment
+  }
+  return null;
+};
+
+export const getAppointmentByEmail = async (email) => {
+  const q = query(
+    collection(fs, "appointments"),
+    where("applicantProfile.email", "==", email)
+  );
+  const querySnapshot = await getDocs(q);
+  if (!querySnapshot.empty) {
+    return querySnapshot.docs[0].data(); // return the first matching appointment
+  }
+  return null;
+};
+
+export const getUserById = async (userId) => {
   const userRef = doc(fs, "users", userId);
   const userDoc = await getDoc(userRef);
   if (userDoc.exists()) {
@@ -912,6 +894,26 @@ const getUserById = async (userId) => {
   }
 };
 
+export const getUserByEmail = async (email) => {
+  const q = query(collection(fs, "users"), where("email", "==", email));
+  const querySnapshot = await getDocs(q);
+  if (!querySnapshot.empty) {
+    return querySnapshot.docs[0].data(); // return the first matching user
+  }
+  return null;
+};
+
+export const uploadImage = async (file, path) => {
+  try {
+    const storageRef = ref(storage, path);
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
+    return downloadURL;
+  } catch (error) {
+    console.error("Error uploading image: ", error.message);
+    throw error;
+  }
+};
 export {
   getAppointments,
   updateAppointment,
@@ -921,7 +923,6 @@ export {
   getUsers,
   updateUser,
   addUser,
-  getUserById,
   getUsersCount,
   aptsCalendar,
 };

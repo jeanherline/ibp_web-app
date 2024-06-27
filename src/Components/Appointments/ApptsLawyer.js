@@ -12,10 +12,11 @@ import {
   getUserById,
   getUsers,
 } from "../../Config/FirebaseServices";
-import { Timestamp } from "firebase/firestore";
 import { useAuth } from "../../AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { auth } from "../../Config/Firebase";
+import { fs, auth } from "../../Config/Firebase";
+import { addDoc, collection, Timestamp } from "firebase/firestore";
+
 import {
   faEye,
   faCheck,
@@ -33,6 +34,7 @@ function AppsLawyer() {
   const [totalPages, setTotalPages] = useState(1);
   const [lastVisible, setLastVisible] = useState(null);
   const pageSize = 7;
+  const [clientAttend, setClientAttend] = useState(null);
   const [clientEligibility, setClientEligibility] = useState({
     eligibility: "",
     denialReason: "",
@@ -463,22 +465,22 @@ function AppsLawyer() {
 
   const handleSubmitProceedingNotes = async (e) => {
     e.preventDefault();
-
+  
     const updatedData = {
       "appointmentDetails.proceedingNotes": proceedingNotes,
-      "appointmentDetails.ibpParalegalStaff":
-        clientEligibility.ibpParalegalStaff,
+      "appointmentDetails.ibpParalegalStaff": clientEligibility.ibpParalegalStaff,
       "appointmentDetails.assistingCounsel": clientEligibility.assistingCounsel,
       "appointmentDetails.appointmentStatus": "done",
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+      "appointmentDetails.clientAttend": clientAttend,
     };
-
+  
     await updateAppointment(selectedAppointment.id, updatedData);
-
+  
     setSelectedAppointment(null);
     setProceedingNotes("");
     setShowProceedingNotesForm(false);
-
+  
     const { data, total } = await getLawyerAppointments(
       filter,
       lastVisible,
@@ -489,34 +491,178 @@ function AppsLawyer() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-
-    setSnackbarMessage("Remarks has been successfully submitted.");
+  
+    const formattedDate = selectedAppointment.appointmentDetails.appointmentDate
+      .toDate()
+      .toLocaleString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
+      });
+  
+    const statusMessage =
+      clientAttend === "yes"
+        ? `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been completed on ${formattedDate}.`
+        : `You did not attend your appointment with Ticket Number ${selectedAppointment.controlNumber} scheduled on ${formattedDate}.`;
+  
+    // Notify the user about the appointment status
+    if (selectedAppointment?.applicantProfile?.uid) {
+      await addDoc(collection(fs, "notifications"), {
+        uid: selectedAppointment.applicantProfile.uid, 
+        message: statusMessage,
+        type: "appointment",
+        read: false,
+        timestamp: Timestamp.fromDate(new Date()),
+      });
+    } else {
+      console.error("Applicant UID is undefined");
+    }
+  
+    // Prepare the lawyer's full name
+    // const lawyerFullName = `${currentUser.display_name} ${
+    //   currentUser.middle_name ? currentUser.middle_name + " " : ""
+    // }${currentUser.last_name}`;
+  
+    // // Notify head lawyers about the appointment completion or non-attendance
+    // const headLawyerMessage =
+    //   clientAttend === "yes"
+    //     ? `The appointment for Ticket Number ${selectedAppointment.controlNumber} has been completed by ${lawyerFullName} on ${formattedDate}.`
+    //     : `The client did not attend the appointment for Ticket Number ${selectedAppointment.controlNumber} scheduled by ${lawyerFullName} on ${formattedDate}.`;
+  
+    // let headLawyers = [];
+    // try {
+    //   const result = await getUsers("active", "head");
+    //   headLawyers = result.users || [];
+    // } catch (error) {
+    //   console.error("Failed to fetch head lawyers:", error);
+    // }
+  
+    // for (const headLawyer of headLawyers) {
+    //   if (headLawyer.uid) {
+    //     await addDoc(collection(fs, "notifications"), {
+    //       uid: headLawyer.uid,
+    //       member_type: "head",
+    //       message: headLawyerMessage,
+    //       type: "appointment",
+    //       read: false,
+    //       timestamp: Timestamp.fromDate(new Date()),
+    //     });
+    //   } else {
+    //     console.error("Head Lawyer UID is undefined");
+    //   }
+    // }
+  
+    // Notify the current authenticated user (lawyer) about the appointment status
+    if (currentUser?.uid) {
+      const lawyerMessage =
+        clientAttend === "yes"
+          ? `You have marked the appointment for Ticket Number ${selectedAppointment.controlNumber} as completed on ${formattedDate}.`
+          : `You have marked the appointment for Ticket Number ${selectedAppointment.controlNumber} as not attended on ${formattedDate}.`;
+  
+      await addDoc(collection(fs, "notifications"), {
+        uid: currentUser.uid,
+        message: lawyerMessage,
+        type: "appointment",
+        read: false,
+        timestamp: Timestamp.fromDate(new Date()),
+      });
+    } else {
+      console.error("Current User UID is undefined");
+    }
+  
+    setSnackbarMessage("Remarks have been successfully submitted.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
+  
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (!appointmentDate) {
       setSnackbarMessage("Appointment date is required.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-
+  
+    const formattedDate = appointmentDate.toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
+  
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
     };
-
+  
     await updateAppointment(selectedAppointment.id, updatedData);
-
+  
+    // Notify the user
+    const userMessage = `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been scheduled for ${formattedDate}.`;
+  
+    if (selectedAppointment?.applicantProfile?.uid) {
+      await addDoc(collection(fs, "notifications"), {
+        uid: selectedAppointment.applicantProfile.uid,
+        message: userMessage,
+        type: "appointment",
+        read: false,
+        timestamp: Timestamp.fromDate(new Date()),
+      });
+    } else {
+      console.error("Applicant UID is undefined.");
+    }
+  
+    // Prepare the lawyer's full name with fallback for missing data
+    // const lawyerFullName = `${currentUser.display_name || ''} ${currentUser.middle_name || ''} ${currentUser.last_name || ''}`.trim();
+  
+    // // Notify the head lawyers
+    // const headLawyerMessage = `The appointment request with Ticket Number ${selectedAppointment.controlNumber} has been scheduled by ${lawyerFullName} for ${formattedDate}.`;
+  
+    // const { users: headLawyers } = await getUsers("active", "head");
+  
+    // headLawyers.forEach(async (headLawyer) => {
+    //   if (headLawyer.uid) {
+    //     await addDoc(collection(fs, "notifications"), {
+    //       uid: headLawyer.uid,
+    //       member_type: "head",
+    //       message: headLawyerMessage,
+    //       type: "appointment",
+    //       read: false,
+    //       timestamp: Timestamp.fromDate(new Date()),
+    //     });
+    //   } else {
+    //     console.error("Head lawyer UID is undefined.");
+    //   }
+    // });
+  
+    // Notify the current authenticated user (lawyer)
+    const lawyerMessage = `You have successfully scheduled an appointment for Ticket Number ${selectedAppointment.controlNumber} on ${formattedDate}.`;
+  
+    if (currentUser.uid) {
+      await addDoc(collection(fs, "notifications"), {
+        uid: currentUser.uid,
+        message: lawyerMessage,
+        type: "appointment",
+        read: false,
+        timestamp: Timestamp.fromDate(new Date()),
+      });
+    } else {
+      console.error("Current user UID is undefined.");
+    }
+  
     setSelectedAppointment(null);
     setAppointmentDate(null);
     setShowScheduleForm(false);
-
+  
     const { data, total } = await getLawyerAppointments(
       filter,
       lastVisible,
@@ -527,35 +673,114 @@ function AppsLawyer() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-
+  
     setSnackbarMessage("Appointment has been successfully scheduled.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
+  
+  
+
 
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (!rescheduleDate) {
       setSnackbarMessage("Reschedule date is required.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-
+  
+    const formattedOldDate =
+      selectedAppointment.appointmentDetails.appointmentDate
+        .toDate()
+        .toLocaleString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "numeric",
+          minute: "numeric",
+          hour12: true,
+        });
+  
+    const formattedNewDate = rescheduleDate.toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
+  
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
       "appointmentDetails.rescheduleReason": rescheduleReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
     };
-
+  
     await updateAppointment(selectedAppointment.id, updatedData);
-
+  
+    // Notify the user about the reschedule if the applicantProfile exists
+    if (selectedAppointment?.applicantProfile?.uid) {
+      const userMessage = `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been rescheduled from ${formattedOldDate} to ${formattedNewDate}. Reason: ${rescheduleReason}.`;
+  
+      await addDoc(collection(fs, "notifications"), {
+        uid: selectedAppointment.applicantProfile.uid,
+        message: userMessage,
+        type: "appointment",
+        read: false,
+        timestamp: Timestamp.fromDate(new Date()),
+      });
+    }
+  
+    // Prepare the lawyer's full name
+    // const lawyerFullName = `${currentUser.display_name} ${
+    //   currentUser.middle_name ? currentUser.middle_name + " " : ""
+    // }${currentUser.last_name}`;
+  
+    // // Notify the head lawyers about the reschedule
+    // const headLawyerMessage = `${lawyerFullName} has rescheduled the appointment for Ticket Number ${selectedAppointment.controlNumber} from ${formattedOldDate} to ${formattedNewDate}. Reason: ${rescheduleReason}.`;
+  
+    // let headLawyers = [];
+    // try {
+    //   const result = await getUsers("active", "head");
+    //   headLawyers = result.users || [];
+    // } catch (error) {
+    //   console.error("Failed to fetch head lawyers:", error);
+    // }
+  
+    // for (const headLawyer of headLawyers) {
+    //   if (headLawyer.uid) {
+    //     await addDoc(collection(fs, "notifications"), {
+    //       uid: headLawyer.uid,
+    //       member_type: "head",
+    //       message: headLawyerMessage,
+    //       type: "appointment",
+    //       read: false,
+    //       timestamp: Timestamp.fromDate(new Date()),
+    //     });
+    //   }
+    // }
+  
+    // Notify the current authenticated user (lawyer) about the reschedule
+    if (currentUser?.uid) {
+      const lawyerMessage = `You have successfully rescheduled the appointment for Ticket Number ${selectedAppointment.controlNumber} from ${formattedOldDate} to ${formattedNewDate}. Reason: ${rescheduleReason}.`;
+  
+      await addDoc(collection(fs, "notifications"), {
+        uid: currentUser.uid,
+        message: lawyerMessage,
+        type: "appointment",
+        read: false,
+        timestamp: Timestamp.fromDate(new Date()),
+      });
+    }
+  
     setSelectedAppointment(null);
     setRescheduleDate(null);
     setRescheduleReason("");
     setShowRescheduleForm(false);
-
+  
     const { data, total } = await getLawyerAppointments(
       filter,
       lastVisible,
@@ -566,11 +791,13 @@ function AppsLawyer() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-
+  
     setSnackbarMessage("Appointment has been successfully rescheduled.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
+  
+  
 
   const getFormattedDate = (timestamp, includeTime = false) => {
     if (!timestamp) return "N/A";
@@ -982,8 +1209,6 @@ function AppsLawyer() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <tr className="no-print">
                           <th>QR Code:</th>
                           <td>
@@ -1013,7 +1238,6 @@ function AppsLawyer() {
                             )}
                           </td>
                         </tr>
-                      )}
 
                       <tr>
                         <th>Control Number:</th>
@@ -1252,8 +1476,6 @@ function AppsLawyer() {
                             "Not Available"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <>
                           <tr>
                             <th>Address:</th>
@@ -1290,13 +1512,10 @@ function AppsLawyer() {
                             </td>
                           </tr>
                         </>
-                      )}
                     </tbody>
                   </table>
                 </section>
 
-                {selectedAppointment.appointmentDetails?.apptType ===
-                  "Online" && (
                   <section className="mb-4 print-section">
                     <h2>
                       <em
@@ -1347,7 +1566,6 @@ function AppsLawyer() {
                       </tbody>
                     </table>
                   </section>
-                )}
 
                 <section className="mb-4 print-section">
                   <h2>
@@ -1369,8 +1587,6 @@ function AppsLawyer() {
                             "Not Specified"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <>
                           <tr>
                             <th>Problem:</th>
@@ -1393,7 +1609,6 @@ function AppsLawyer() {
                             </td>
                           </tr>
                         </>
-                      )}
                     </tbody>
                   </table>
                 </section>
@@ -1406,63 +1621,6 @@ function AppsLawyer() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Walk-in" && (
-                        <>
-                          <tr>
-                            <th>Application Form 1</th>
-                            <td>
-                              {selectedAppointment.form1 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form1);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form1}
-                                    alt="Application Form 1"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Application Form 2</th>
-                            <td>
-                              {selectedAppointment.form2 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form2);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form2}
-                                    alt="Application Form 2"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                        </>
-                      )}
                       <tr>
                         <th>Barangay Certificate of Indigency:</th>
                         <td>
@@ -1675,6 +1833,33 @@ function AppsLawyer() {
             </div>
             <h2>Remarks</h2>
             <form onSubmit={handleSubmitProceedingNotes}>
+            <div>
+                <b>
+                  <label>Did the client attend the appointment? *</label>
+                </b>
+                <label>
+                  <input
+                    type="radio"
+                    name="clientAttend"
+                    value="yes"
+                    onChange={(e) => setClientAttend(e.target.value)}
+                    required
+                  />{" "}
+                  Yes
+                </label>
+                <br />
+                <label>
+                  <input
+                    type="radio"
+                    name="clientAttend"
+                    value="no"
+                    onChange={(e) => setClientAttend(e.target.value)}
+                    required
+                  />{" "}
+                  No
+                </label>
+              </div>
+              <br />
               <div>
                 <b>
                   <label>Record of Consultation *</label>
@@ -1688,6 +1873,7 @@ function AppsLawyer() {
                   required
                 ></textarea>
               </div>
+              <br />
               <div>
                 <b>
                   <label>IBP Paralegal/Staff:</label>
@@ -1755,7 +1941,7 @@ function AppsLawyer() {
               </div>
               <div>
                 <b>
-                  <label>Reason for Reschedule:</label>
+                  <label>Reason for Reschedule: *</label>
                 </b>
                 <textarea
                   name="rescheduleReason"
