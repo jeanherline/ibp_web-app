@@ -1,22 +1,15 @@
 const { google } = require('googleapis');
-const path = require('path');
-const fs = require('fs');
 
-// Path to your service account JSON file (update to your path)
-const keyPath = path.join(__dirname, '../keys/google-meet-services.json');
+// Parse the service account key from the environment variable
+const serviceAccountKey = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
 
 // Initialize Google Auth Client
-const auth = new google.auth.GoogleAuth({
-  keyFile: keyPath,
-  scopes: ['https://www.googleapis.com/auth/calendar'],
-});
-
-// Ensure auth is working
-auth.getClient().then((client) => {
-  console.log("Google API authenticated successfully");
-}).catch((error) => {
-  console.error("Authentication error: ", error.message);
-});
+const auth = new google.auth.JWT(
+  serviceAccountKey.client_email,
+  null,
+  serviceAccountKey.private_key,
+  ['https://www.googleapis.com/auth/calendar']
+);
 
 // Function to create a Google Meet event
 const createGoogleMeetEvent = async (appointmentDate, clientEmail) => {
@@ -50,21 +43,11 @@ const createGoogleMeetEvent = async (appointmentDate, clientEmail) => {
       conferenceDataVersion: 1,
     });
 
-    // Logging the full response to debug
-    console.log('Event creation response:', response.data);
-    if (response.data.hangoutLink) {
-      console.log('Google Meet link created:', response.data.hangoutLink);
-    } else {
-      console.warn('Google Meet link not found in response');
-    }
-    
-    return response.data.hangoutLink; // Return the Meet link
-    
+    return response.data.hangoutLink;
   } catch (error) {
     console.error('Error creating Google Meet event:', error.response?.data || error.message);
     throw error;
   }
 };
-
 
 module.exports = { createGoogleMeetEvent };
