@@ -18,7 +18,6 @@ import Welcome from './Components/QRCode/Welcome';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-
 function App() {
   return (
     <Router>

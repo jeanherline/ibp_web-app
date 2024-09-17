@@ -16,7 +16,6 @@ import { useAuth } from "../../AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { fs, auth } from "../../Config/Firebase";
 import { addDoc, collection, Timestamp } from "firebase/firestore";
-
 import {
   faEye,
   faCheck,
@@ -24,6 +23,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { Tooltip, OverlayTrigger } from "react-bootstrap";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
+import axios from "axios"; // Import axios for Google Meet API requests
 
 function AppsLawyer() {
   const [appointments, setAppointments] = useState([]);
@@ -45,6 +45,9 @@ function AppsLawyer() {
   const [appointmentDate, setAppointmentDate] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState(null);
   const [rescheduleReason, setRescheduleReason] = useState("");
+  const [appointmentType, setAppointmentType] = useState(""); // New State for Appointment Type (In-person or Online)
+  const [rescheduleAppointmentType, setRescheduleAppointmentType] =
+    useState(""); // New state for rescheduled appointment type
   const [bookedSlots, setBookedSlots] = useState([]);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
@@ -61,6 +64,39 @@ function AppsLawyer() {
   const [totalFilteredItems, setTotalFilteredItems] = useState(0);
   const [lawyers, setLawyers] = useState([]);
   const [assignedLawyerDetails, setAssignedLawyerDetails] = useState(null);
+  const [holidays, setHolidays] = useState([]);
+
+  // Helper function to fetch holidays for a given year
+  const fetchPhilippineHolidays = async (year) => {
+    const apiKey = "Tg81da2wKkGUa2ESCULJSPpHitfrWmjF"; // Your Calendarific API key
+    const country = "PH"; // Country code for the Philippines
+    const url = `https://calendarific.com/api/v2/holidays?&api_key=${apiKey}&country=${country}&year=${year}`;
+
+    try {
+      const response = await axios.get(url);
+      const holidays = response.data.response.holidays;
+
+      // Filter only public holidays
+      return holidays
+        .filter((holiday) => holiday.type.includes("National holiday"))
+        .map((holiday) => new Date(holiday.date.iso));
+    } catch (error) {
+      console.error("Error fetching holidays from Calendarific:", error);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    const loadHolidays = async () => {
+      const currentYear = new Date().getFullYear();
+      const holidaysCurrentYear = await fetchPhilippineHolidays(currentYear);
+      const holidaysNextYear = await fetchPhilippineHolidays(currentYear + 1);
+
+      setHolidays([...holidaysCurrentYear, ...holidaysNextYear]);
+    };
+
+    loadHolidays();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -107,7 +143,6 @@ function AppsLawyer() {
       "appointment-details-section"
     ).innerHTML;
 
-    // Exclude the uploaded images section from the print
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = printContents;
     const noPrintSection = tempDiv.querySelector(".no-print");
@@ -153,7 +188,7 @@ function AppsLawyer() {
       }
     `);
     printWindow.document.write("</style>");
-    printWindow.document.write(`
+    printWindow.document.write(` 
       <div style="text-align: center;">
         <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
         <h2>Integrated Bar of the Philippines - Malolos</h2>
@@ -178,7 +213,7 @@ function AppsLawyer() {
     printWindow.print();
     printWindow.close();
 
-    window.location.reload(); // Reload to ensure the app state is consistent
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -267,6 +302,15 @@ function AppsLawyer() {
   const filterDate = (date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    // Check if the date is a holiday
+    const isHoliday = holidays.some(
+      (holiday) =>
+        holiday.getFullYear() === date.getFullYear() &&
+        holiday.getMonth() === date.getMonth() &&
+        holiday.getDate() === date.getDate()
+    );
+
     const isFullyBooked =
       bookedSlots.filter(
         (slot) =>
@@ -276,7 +320,8 @@ function AppsLawyer() {
           slot.getHours() >= 13 &&
           slot.getHours() < 17
       ).length === 4;
-    return isWeekday(date) && date >= today && !isFullyBooked;
+
+    return !isHoliday && isWeekday(date) && date >= today && !isFullyBooked;
   };
 
   const filterTime = (time) => {
@@ -290,7 +335,6 @@ function AppsLawyer() {
     const dateTime = new Date(appointmentDate);
     dateTime.setHours(hours, minutes, 0, 0);
 
-    // Check if the time slot is booked by the assigned lawyer (current user)
     return !isSlotBookedByAssignedLawyer(dateTime);
   };
 
@@ -364,6 +408,7 @@ function AppsLawyer() {
     setLastVisible(lastDoc);
     setCurrentPage(totalPages);
   };
+
   const toggleDetails = (appointment) => {
     setSelectedAppointment(
       selectedAppointment?.id === appointment.id ? null : appointment
@@ -385,6 +430,28 @@ function AppsLawyer() {
   const openImageModal = (url) => {
     setCurrentImageUrl(url);
     setIsModalOpen(true);
+  };
+
+  // ImageModal Component Definition
+  const ImageModal = ({ isOpen, url, onClose }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="image-container">
+            <img
+              src={url}
+              alt="Fullscreen Image"
+              className="fullscreen-image"
+            />
+          </div>
+          <button onClick={onClose} className="close-button">
+            &times;
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const handleDenialReasonChange = (e) => {
@@ -465,22 +532,23 @@ function AppsLawyer() {
 
   const handleSubmitProceedingNotes = async (e) => {
     e.preventDefault();
-  
+
     const updatedData = {
       "appointmentDetails.proceedingNotes": proceedingNotes,
-      "appointmentDetails.ibpParalegalStaff": clientEligibility.ibpParalegalStaff,
+      "appointmentDetails.ibpParalegalStaff":
+        clientEligibility.ibpParalegalStaff,
       "appointmentDetails.assistingCounsel": clientEligibility.assistingCounsel,
       "appointmentDetails.appointmentStatus": "done",
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
       "appointmentDetails.clientAttend": clientAttend,
     };
-  
+
     await updateAppointment(selectedAppointment.id, updatedData);
-  
+
     setSelectedAppointment(null);
     setProceedingNotes("");
     setShowProceedingNotesForm(false);
-  
+
     const { data, total } = await getLawyerAppointments(
       filter,
       lastVisible,
@@ -491,7 +559,7 @@ function AppsLawyer() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-  
+
     const formattedDate = selectedAppointment.appointmentDetails.appointmentDate
       .toDate()
       .toLocaleString("en-US", {
@@ -502,16 +570,15 @@ function AppsLawyer() {
         minute: "numeric",
         hour12: true,
       });
-  
+
     const statusMessage =
       clientAttend === "yes"
         ? `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been completed on ${formattedDate}.`
         : `You did not attend your appointment with Ticket Number ${selectedAppointment.controlNumber} scheduled on ${formattedDate}.`;
-  
-    // Notify the user about the appointment status
+
     if (selectedAppointment?.applicantProfile?.uid) {
       await addDoc(collection(fs, "notifications"), {
-        uid: selectedAppointment.applicantProfile.uid, 
+        uid: selectedAppointment.applicantProfile.uid,
         message: statusMessage,
         type: "appointment",
         read: false,
@@ -520,48 +587,13 @@ function AppsLawyer() {
     } else {
       console.error("Applicant UID is undefined");
     }
-  
-    // Prepare the lawyer's full name
-    // const lawyerFullName = `${currentUser.display_name} ${
-    //   currentUser.middle_name ? currentUser.middle_name + " " : ""
-    // }${currentUser.last_name}`;
-  
-    // // Notify head lawyers about the appointment completion or non-attendance
-    // const headLawyerMessage =
-    //   clientAttend === "yes"
-    //     ? `The appointment for Ticket Number ${selectedAppointment.controlNumber} has been completed by ${lawyerFullName} on ${formattedDate}.`
-    //     : `The client did not attend the appointment for Ticket Number ${selectedAppointment.controlNumber} scheduled by ${lawyerFullName} on ${formattedDate}.`;
-  
-    // let headLawyers = [];
-    // try {
-    //   const result = await getUsers("active", "head");
-    //   headLawyers = result.users || [];
-    // } catch (error) {
-    //   console.error("Failed to fetch head lawyers:", error);
-    // }
-  
-    // for (const headLawyer of headLawyers) {
-    //   if (headLawyer.uid) {
-    //     await addDoc(collection(fs, "notifications"), {
-    //       uid: headLawyer.uid,
-    //       member_type: "head",
-    //       message: headLawyerMessage,
-    //       type: "appointment",
-    //       read: false,
-    //       timestamp: Timestamp.fromDate(new Date()),
-    //     });
-    //   } else {
-    //     console.error("Head Lawyer UID is undefined");
-    //   }
-    // }
-  
-    // Notify the current authenticated user (lawyer) about the appointment status
+
     if (currentUser?.uid) {
       const lawyerMessage =
         clientAttend === "yes"
           ? `You have marked the appointment for Ticket Number ${selectedAppointment.controlNumber} as completed on ${formattedDate}.`
           : `You have marked the appointment for Ticket Number ${selectedAppointment.controlNumber} as not attended on ${formattedDate}.`;
-  
+
       await addDoc(collection(fs, "notifications"), {
         uid: currentUser.uid,
         message: lawyerMessage,
@@ -572,97 +604,65 @@ function AppsLawyer() {
     } else {
       console.error("Current User UID is undefined");
     }
-  
+
     setSnackbarMessage("Remarks have been successfully submitted.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
-  
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!appointmentDate) {
       setSnackbarMessage("Appointment date is required.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-  
-    const formattedDate = appointmentDate.toLocaleString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      hour12: true,
-    });
-  
+
+    let googleMeetLink =
+      selectedAppointment.appointmentDetails?.googleMeetLink || null; // Check if link already exists
+
+    if (appointmentType === "online" && !googleMeetLink) {
+      // Only create link if it's an online appointment and the link doesn't exist
+      try {
+        // Call your backend API to create Google Meet event
+        const response = await axios.post("/api/create-google-meet", {
+          appointmentDate: appointmentDate.toISOString(),
+          clientEmail: selectedAppointment.applicantProfile?.email,
+        });
+
+        googleMeetLink = response.data.hangoutLink; // Capture the new Google Meet link
+        console.log("Google Meet API response:", response.data); // Debugging response
+      } catch (error) {
+        console.error(
+          "Error creating Google Meet event:",
+          error.response?.data || error.message
+        );
+        setSnackbarMessage("Failed to create Google Meet event.");
+        setShowSnackbar(true);
+        setTimeout(() => setShowSnackbar(false), 3000);
+        return;
+      }
+    }
+
+    // Save the new Google Meet link (if created) or update existing appointment details
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+      ...(googleMeetLink && {
+        "appointmentDetails.googleMeetLink": googleMeetLink,
+      }),
     };
-  
+
     await updateAppointment(selectedAppointment.id, updatedData);
-  
-    // Notify the user
-    const userMessage = `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been scheduled for ${formattedDate}.`;
-  
-    if (selectedAppointment?.applicantProfile?.uid) {
-      await addDoc(collection(fs, "notifications"), {
-        uid: selectedAppointment.applicantProfile.uid,
-        message: userMessage,
-        type: "appointment",
-        read: false,
-        timestamp: Timestamp.fromDate(new Date()),
-      });
-    } else {
-      console.error("Applicant UID is undefined.");
-    }
-  
-    // Prepare the lawyer's full name with fallback for missing data
-    // const lawyerFullName = `${currentUser.display_name || ''} ${currentUser.middle_name || ''} ${currentUser.last_name || ''}`.trim();
-  
-    // // Notify the head lawyers
-    // const headLawyerMessage = `The appointment request with Ticket Number ${selectedAppointment.controlNumber} has been scheduled by ${lawyerFullName} for ${formattedDate}.`;
-  
-    // const { users: headLawyers } = await getUsers("active", "head");
-  
-    // headLawyers.forEach(async (headLawyer) => {
-    //   if (headLawyer.uid) {
-    //     await addDoc(collection(fs, "notifications"), {
-    //       uid: headLawyer.uid,
-    //       member_type: "head",
-    //       message: headLawyerMessage,
-    //       type: "appointment",
-    //       read: false,
-    //       timestamp: Timestamp.fromDate(new Date()),
-    //     });
-    //   } else {
-    //     console.error("Head lawyer UID is undefined.");
-    //   }
-    // });
-  
-    // Notify the current authenticated user (lawyer)
-    const lawyerMessage = `You have successfully scheduled an appointment for Ticket Number ${selectedAppointment.controlNumber} on ${formattedDate}.`;
-  
-    if (currentUser.uid) {
-      await addDoc(collection(fs, "notifications"), {
-        uid: currentUser.uid,
-        message: lawyerMessage,
-        type: "appointment",
-        read: false,
-        timestamp: Timestamp.fromDate(new Date()),
-      });
-    } else {
-      console.error("Current user UID is undefined.");
-    }
-  
+
     setSelectedAppointment(null);
     setAppointmentDate(null);
     setShowScheduleForm(false);
-  
+
+    // Reload appointments to reflect changes
     const { data, total } = await getLawyerAppointments(
       filter,
       lastVisible,
@@ -673,114 +673,70 @@ function AppsLawyer() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-  
+
     setSnackbarMessage("Appointment has been successfully scheduled.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
-  
-  
-
 
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!rescheduleDate) {
       setSnackbarMessage("Reschedule date is required.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-  
-    const formattedOldDate =
-      selectedAppointment.appointmentDetails.appointmentDate
-        .toDate()
-        .toLocaleString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "numeric",
-          hour12: true,
+
+    if (!rescheduleAppointmentType) {
+      setSnackbarMessage("Please select appointment type.");
+      setShowSnackbar(true);
+      setTimeout(() => setShowSnackbar(false), 3000);
+      return;
+    }
+
+    let googleMeetLink =
+      selectedAppointment.appointmentDetails?.googleMeetLink || null;
+
+    if (rescheduleAppointmentType === "online" && !googleMeetLink) {
+      try {
+        const response = await axios.post("/api/create-google-meet", {
+          appointmentDate: rescheduleDate.toISOString(),
+          clientEmail: selectedAppointment.applicantProfile?.email,
         });
-  
-    const formattedNewDate = rescheduleDate.toLocaleString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "numeric",
-      minute: "numeric",
-      hour12: true,
-    });
-  
+
+        googleMeetLink = response.data.hangoutLink;
+      } catch (error) {
+        console.error(
+          "Error creating Google Meet event:",
+          error.response?.data || error.message
+        );
+        setSnackbarMessage("Failed to create Google Meet event.");
+        setShowSnackbar(true);
+        setTimeout(() => setShowSnackbar(false), 3000);
+        return;
+      }
+    }
+
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
       "appointmentDetails.rescheduleReason": rescheduleReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+      "appointmentDetails.apptType": rescheduleAppointmentType,
+      ...(googleMeetLink && {
+        "appointmentDetails.googleMeetLink": googleMeetLink,
+      }),
     };
-  
+
     await updateAppointment(selectedAppointment.id, updatedData);
-  
-    // Notify the user about the reschedule if the applicantProfile exists
-    if (selectedAppointment?.applicantProfile?.uid) {
-      const userMessage = `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been rescheduled from ${formattedOldDate} to ${formattedNewDate}. Reason: ${rescheduleReason}.`;
-  
-      await addDoc(collection(fs, "notifications"), {
-        uid: selectedAppointment.applicantProfile.uid,
-        message: userMessage,
-        type: "appointment",
-        read: false,
-        timestamp: Timestamp.fromDate(new Date()),
-      });
-    }
-  
-    // Prepare the lawyer's full name
-    // const lawyerFullName = `${currentUser.display_name} ${
-    //   currentUser.middle_name ? currentUser.middle_name + " " : ""
-    // }${currentUser.last_name}`;
-  
-    // // Notify the head lawyers about the reschedule
-    // const headLawyerMessage = `${lawyerFullName} has rescheduled the appointment for Ticket Number ${selectedAppointment.controlNumber} from ${formattedOldDate} to ${formattedNewDate}. Reason: ${rescheduleReason}.`;
-  
-    // let headLawyers = [];
-    // try {
-    //   const result = await getUsers("active", "head");
-    //   headLawyers = result.users || [];
-    // } catch (error) {
-    //   console.error("Failed to fetch head lawyers:", error);
-    // }
-  
-    // for (const headLawyer of headLawyers) {
-    //   if (headLawyer.uid) {
-    //     await addDoc(collection(fs, "notifications"), {
-    //       uid: headLawyer.uid,
-    //       member_type: "head",
-    //       message: headLawyerMessage,
-    //       type: "appointment",
-    //       read: false,
-    //       timestamp: Timestamp.fromDate(new Date()),
-    //     });
-    //   }
-    // }
-  
-    // Notify the current authenticated user (lawyer) about the reschedule
-    if (currentUser?.uid) {
-      const lawyerMessage = `You have successfully rescheduled the appointment for Ticket Number ${selectedAppointment.controlNumber} from ${formattedOldDate} to ${formattedNewDate}. Reason: ${rescheduleReason}.`;
-  
-      await addDoc(collection(fs, "notifications"), {
-        uid: currentUser.uid,
-        message: lawyerMessage,
-        type: "appointment",
-        read: false,
-        timestamp: Timestamp.fromDate(new Date()),
-      });
-    }
-  
+
     setSelectedAppointment(null);
     setRescheduleDate(null);
     setRescheduleReason("");
+    setRescheduleAppointmentType(""); // Clear the state after submitting
     setShowRescheduleForm(false);
-  
+
     const { data, total } = await getLawyerAppointments(
       filter,
       lastVisible,
@@ -791,13 +747,11 @@ function AppsLawyer() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-  
+
     setSnackbarMessage("Appointment has been successfully rescheduled.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
-  
-  
 
   const getFormattedDate = (timestamp, includeTime = false) => {
     if (!timestamp) return "N/A";
@@ -822,7 +776,6 @@ function AppsLawyer() {
           slot.getHours() < 17
       ).length === 4;
 
-    // Check if the date is assigned to the current lawyer
     const isAssignedToCurrentLawyer = appointments.some(
       (appointment) =>
         appointment.assignedLawyer === currentUser.uid &&
@@ -839,7 +792,6 @@ function AppsLawyer() {
     const dateTime = new Date(appointmentDate);
     dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
 
-    // Check if the time slot is booked by the assigned lawyer
     if (isSlotBookedByAssignedLawyer(dateTime)) {
       return "booked-time disabled-time";
     }
@@ -858,7 +810,6 @@ function AppsLawyer() {
     const dateTime = new Date(rescheduleDate);
     dateTime.setHours(hours, minutes, 0, 0);
 
-    // Check if the time slot is booked by the assigned lawyer (current user)
     return !isSlotBookedByAssignedLawyer(dateTime);
   };
 
@@ -890,7 +841,6 @@ function AppsLawyer() {
     const dateTime = new Date(rescheduleDate);
     dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
 
-    // Check if the time slot is booked by the assigned lawyer
     if (isSlotBookedByAssignedLawyer(dateTime)) {
       return "booked-time disabled-time";
     }
@@ -963,10 +913,11 @@ function AppsLawyer() {
               <th>#</th>
               <th>Control Number</th>
               <th>Full Name</th>
-              <th>Nature of Legal Assistance Requested</th>
+              <th>Legal Assistance</th>
               <th>Scheduled Date</th>
               <th>Type</th>
               <th>Status</th>
+              <th>Link</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -982,6 +933,23 @@ function AppsLawyer() {
                   <td>{appointment.appointmentDetails?.apptType}</td>
                   <td>
                     {capitalizeFirstLetter(appointment.appointmentStatus)}
+                  </td>
+                  <td>
+                    {/* Show the Google Meet link if the appointment is online */}
+                    {appointment.appointmentDetails?.apptType === "online" &&
+                    appointment.appointmentDetails?.googleMeetLink ? (
+                      <>
+                        <a
+                          href={appointment.appointmentDetails.googleMeetLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Join Google Meet
+                        </a>
+                      </>
+                    ) : (
+                      "N/A"
+                    )}
                   </td>
                   <td>
                     <button
@@ -1136,7 +1104,7 @@ function AppsLawyer() {
               ))
             ) : (
               <tr>
-                <td colSpan="7" style={{ textAlign: "center" }}>
+                <td colSpan="8" style={{ textAlign: "center" }}>
                   No results found.
                 </td>
               </tr>
@@ -1209,36 +1177,24 @@ function AppsLawyer() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                        <tr className="no-print">
-                          <th>QR Code:</th>
+                      {selectedAppointment.appointmentDetails
+                        ?.appointmentType === "online" && (
+                        <tr>
+                          <th>Google Meet Link:</th>
                           <td>
-                            {selectedAppointment.appointmentDetails ? (
-                              <a
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openImageModal(
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  );
-                                }}
-                              >
-                                <img
-                                  src={
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  }
-                                  alt="QR Code"
-                                  className="img-thumbnail qr-code-image"
-                                  style={{ width: "100px", cursor: "pointer" }}
-                                />
-                              </a>
-                            ) : (
-                              "Not Available"
-                            )}
+                            <a
+                              href={
+                                selectedAppointment.appointmentDetails
+                                  ?.googleMeetLink
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Join Google Meet
+                            </a>
                           </td>
                         </tr>
-
+                      )}
                       <tr>
                         <th>Control Number:</th>
                         <td>{selectedAppointment.controlNumber}</td>
@@ -1476,96 +1432,93 @@ function AppsLawyer() {
                             "Not Available"}
                         </td>
                       </tr>
-                        <>
-                          <tr>
-                            <th>Address:</th>
-                            <td>
-                              {selectedAppointment?.address || "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Gender:</th>
-                            <td>
-                              {selectedAppointment?.selectedGender ||
-                                "Not Specified"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Name:</th>
-                            <td>
-                              {selectedAppointment.spouseName ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Occupation:</th>
-                            <td>
-                              {selectedAppointment.spouseOccupation ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Children Names and Ages:</th>
-                            <td>
-                              {selectedAppointment.childrenNamesAges ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                        </>
-                    </tbody>
-                  </table>
-                </section>
-
-                  <section className="mb-4 print-section">
-                    <h2>
-                      <em
-                        style={{
-                          color: "#a34bc9",
-                          fontSize: "16px",
-                        }}
-                      >
-                        Employment Profile
-                      </em>
-                    </h2>
-                    <table className="table table-striped table-bordered">
-                      <tbody>
+                      <>
                         <tr>
-                          <th>Occupation:</th>
+                          <th>Address:</th>
                           <td>
-                            {selectedAppointment.occupation || "Not Available"}
+                            {selectedAppointment?.address || "Not Available"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Type of Employment:</th>
+                          <th>Gender:</th>
                           <td>
-                            {selectedAppointment?.kindOfEmployment ||
+                            {selectedAppointment?.selectedGender ||
                               "Not Specified"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Employer Name:</th>
+                          <th>Spouse Name:</th>
                           <td>
-                            {selectedAppointment?.employerName ||
+                            {selectedAppointment.spouseName || "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Spouse Occupation:</th>
+                          <td>
+                            {selectedAppointment.spouseOccupation ||
                               "Not Available"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Employer Address:</th>
+                          <th>Children Names and Ages:</th>
                           <td>
-                            {selectedAppointment.employerAddress ||
+                            {selectedAppointment.childrenNamesAges ||
                               "Not Available"}
                           </td>
                         </tr>
-                        <tr>
-                          <th>Monthly Income:</th>
-                          <td>
-                            {selectedAppointment.monthlyIncome ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </section>
+                      </>
+                    </tbody>
+                  </table>
+                </section>
+
+                <section className="mb-4 print-section">
+                  <h2>
+                    <em
+                      style={{
+                        color: "#a34bc9",
+                        fontSize: "16px",
+                      }}
+                    >
+                      Employment Profile
+                    </em>
+                  </h2>
+                  <table className="table table-striped table-bordered">
+                    <tbody>
+                      <tr>
+                        <th>Occupation:</th>
+                        <td>
+                          {selectedAppointment.occupation || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Type of Employment:</th>
+                        <td>
+                          {selectedAppointment?.kindOfEmployment ||
+                            "Not Specified"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Employer Name:</th>
+                        <td>
+                          {selectedAppointment?.employerName || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Employer Address:</th>
+                        <td>
+                          {selectedAppointment.employerAddress ||
+                            "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Monthly Income:</th>
+                        <td>
+                          {selectedAppointment.monthlyIncome || "Not Available"}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </section>
 
                 <section className="mb-4 print-section">
                   <h2>
@@ -1587,28 +1540,28 @@ function AppsLawyer() {
                             "Not Specified"}
                         </td>
                       </tr>
-                        <>
-                          <tr>
-                            <th>Problem:</th>
-                            <td>
-                              {selectedAppointment.problems || "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Reason for Problem:</th>
-                            <td>
-                              {selectedAppointment.problemReason ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Desired Solutions:</th>
-                            <td>
-                              {selectedAppointment.desiredSolutions ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                        </>
+                      <>
+                        <tr>
+                          <th>Problem:</th>
+                          <td>
+                            {selectedAppointment.problems || "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Reason for Problem:</th>
+                          <td>
+                            {selectedAppointment.problemReason ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Desired Solutions:</th>
+                          <td>
+                            {selectedAppointment.desiredSolutions ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                      </>
                     </tbody>
                   </table>
                 </section>
@@ -1833,7 +1786,7 @@ function AppsLawyer() {
             </div>
             <h2>Remarks</h2>
             <form onSubmit={handleSubmitProceedingNotes}>
-            <div>
+              <div>
                 <b>
                   <label>Did the client attend the appointment? *</label>
                 </b>
@@ -1921,37 +1874,57 @@ function AppsLawyer() {
             </p>
             <form onSubmit={handleRescheduleSubmit}>
               <div>
-                <ReactDatePicker
-                  selected={rescheduleDate}
-                  onChange={(date) => setRescheduleDate(date)}
-                  showTimeSelect
-                  filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterRescheduleTime(time)}
-                  dateFormat="MMMM d, yyyy h:mm aa"
-                  inline
-                  timeIntervals={30}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
-                  dayClassName={(date) =>
-                    getDayClassName(date) +
-                    (new Date() > date ? " disabled-day" : "")
-                  }
-                  timeClassName={(time) => getTimeRescheduleClassName(time)}
-                />
-              </div>
-              <div>
                 <b>
                   <label>Reason for Reschedule: *</label>
                 </b>
                 <textarea
                   name="rescheduleReason"
                   rows="4"
-                  placeholder="Enter reason for reschedule here..."
+                  placeholder="Enter reason for reschedule..."
                   value={rescheduleReason}
                   onChange={handleRescheduleChange}
                   required
                 ></textarea>
               </div>
+              <div>
+                <b>
+                  <label>Reschedule Date and Time: *</label>
+                </b>
+                <br />
+                <ReactDatePicker
+                  selected={rescheduleDate}
+                  onChange={(date) => setRescheduleDate(date)}
+                  showTimeSelect
+                  filterDate={(date) => filterDate(date) && date > new Date()}
+                  filterTime={(time) => filterRescheduleTime(time)}
+                  dateFormat="MM/dd/yy h:mm aa"
+                  inline
+                  timeIntervals={60}
+                  minTime={new Date(new Date().setHours(13, 0, 0))}
+                  maxTime={new Date(new Date().setHours(17, 0, 0))}
+                  dayClassName={(date) => getDayClassName(date)}
+                  timeClassName={(time) => getTimeRescheduleClassName(time)}
+                />
+              </div>
+              <br />
+              <div>
+                <b>
+                  <label>Type of Rescheduled Appointment *</label>
+                </b>
+                <select
+                  name="rescheduleAppointmentType"
+                  value={rescheduleAppointmentType}
+                  onChange={(e) => setRescheduleAppointmentType(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>
+                    Select Type
+                  </option>
+                  <option value="in-person">In-person Consultation</option>
+                  <option value="online">Online Video Consultation</option>
+                </select>
+              </div>
+              <br />
               <button>Submit</button>
             </form>
           </div>
@@ -1970,49 +1943,57 @@ function AppsLawyer() {
             <h2>Schedule Appointment</h2>
             <form onSubmit={handleScheduleSubmit}>
               <div>
+                <b>
+                  <label>Appointment Date and Time: *</label>
+                </b>
+                <br />
                 <ReactDatePicker
                   selected={appointmentDate}
                   onChange={(date) => setAppointmentDate(date)}
                   showTimeSelect
                   filterDate={(date) => filterDate(date) && date > new Date()}
                   filterTime={(time) => filterTime(time)}
-                  dateFormat="MMMM d, yyyy h:mm aa"
+                  dateFormat="MM/dd/yy h:mm aa"
                   inline
-                  timeIntervals={30}
+                  timeIntervals={60}
                   minTime={new Date(new Date().setHours(13, 0, 0))}
                   maxTime={new Date(new Date().setHours(17, 0, 0))}
-                  dayClassName={(date) =>
-                    getDayClassName(date) +
-                    (new Date() > date ? " disabled-day" : "")
-                  }
+                  dayClassName={(date) => getDayClassName(date)}
                   timeClassName={(time) => getTimeClassName(time)}
                 />
               </div>
+              <br />
+              <div>
+                <b>
+                  <label>Type of Appointment *</label>
+                </b>
+                <select
+                  name="appointmentType"
+                  value={appointmentType}
+                  onChange={(e) => setAppointmentType(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>
+                    Select Type
+                  </option>
+                  <option value="in-person">In-person Consultation</option>
+                  <option value="online">Online Video Consultation</option>
+                </select>
+              </div>
+              <br />
               <button>Submit</button>
             </form>
           </div>
         )}
-        {showSnackbar && <div className="snackbar">{snackbarMessage}</div>}
+        <br />
+        {showSnackbar && (
+          <div className="snackbar">
+            <p>{snackbarMessage}</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-const ImageModal = ({ isOpen, url, onClose }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="image-container">
-          <img src={url} alt="Fullscreen Image" className="fullscreen-image" />
-        </div>
-        <button onClick={onClose} className="close-button">
-          &times;
-        </button>
-      </div>
-    </div>
-  );
-};
 
 export default AppsLawyer;
