@@ -12,7 +12,6 @@ import {
   getDocs,
   writeBatch,
 } from "firebase/firestore";
-import "react-tooltip/dist/react-tooltip.css"; // Make sure to import the CSS for react-tooltip
 import "./SideNavBar.css";
 
 function SideNavBar() {
@@ -383,7 +382,10 @@ function SideNavBar() {
         </div>
       )}
 
-      <Tooltip id="tooltip" />
+      <Tooltip
+        className="custom-tooltip"
+        style={{ backgroundColor: "black", color: "white" }}
+      />
     </>
   );
 }
