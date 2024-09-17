@@ -1,7 +1,12 @@
 const { google } = require('googleapis');
+const fs = require('fs');
+const path = require('path');
 
-// Parse the service account key from the environment variable
-const serviceAccountKey = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+// Load the service account key file path from the environment variable
+const serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH;
+
+// Parse the service account key JSON file
+const serviceAccountKey = JSON.parse(fs.readFileSync(path.resolve(serviceAccountKeyPath), 'utf8'));
 
 // Initialize Google Auth Client
 const auth = new google.auth.JWT(
