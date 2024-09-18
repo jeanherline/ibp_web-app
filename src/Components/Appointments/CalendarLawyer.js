@@ -310,8 +310,6 @@ function CalendarLawyer() {
                 </h2>
                 <table className="table table-striped table-bordered">
                   <tbody>
-                    {selectedAppointment.appointmentDetails?.apptType ===
-                      "Online" && (
                       <tr className="no-print">
                         <th>QR Code:</th>
                         <td>
@@ -339,7 +337,6 @@ function CalendarLawyer() {
                           )}
                         </td>
                       </tr>
-                    )}
                     <tr>
                       <th>Control Number:</th>
                       <td>{selectedAppointment.controlNumber}</td>
@@ -464,6 +461,15 @@ function CalendarLawyer() {
                       )}
                       {selectedAppointment.appointmentStatus === "done" && (
                         <>
+                        <tr>
+                              <th>Appointment Date:</th>
+                              <td>
+                                {getFormattedDate(
+                                  selectedAppointment.appointmentDate,
+                                  true
+                                )}
+                              </td>
+                            </tr>
                           <tr>
                             <th>Reviewed By:</th>
                             <td>
@@ -592,8 +598,6 @@ function CalendarLawyer() {
                         {selectedAppointment?.contactNumber || "Not Available"}
                       </td>
                     </tr>
-                    {selectedAppointment.appointmentDetails?.apptType ===
-                      "Online" && (
                       <>
                         <tr>
                           <th>Address:</th>
@@ -629,12 +633,9 @@ function CalendarLawyer() {
                           </td>
                         </tr>
                       </>
-                    )}
                   </tbody>
                 </table>
               </section>
-              {selectedAppointment.appointmentDetails?.apptType ===
-                "Online" && (
                 <section className="mb-4 print-section">
                   <h2>
                     <em
@@ -683,8 +684,6 @@ function CalendarLawyer() {
                     </tbody>
                   </table>
                 </section>
-              )}
-
               <section className="mb-4 print-section">
                 <h2>
                   <em
@@ -742,63 +741,6 @@ function CalendarLawyer() {
                 </h2>
                 <table className="table table-striped table-bordered">
                   <tbody>
-                  {selectedAppointment.appointmentDetails?.apptType ===
-                        "Walk-in" && (
-                        <>
-                          <tr>
-                            <th>Application Form 1</th>
-                            <td>
-                              {selectedAppointment.form1 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form1);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form1}
-                                    alt="Application Form 1"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Application Form 2</th>
-                            <td>
-                              {selectedAppointment.form2 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form2);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form2}
-                                    alt="Application Form 2"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                        </>
-                      )}
                     <tr>
                       <th>Barangay Certificate of Indigency:</th>
                       <td>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { fs, auth, query, where } from "../../Config/Firebase";
 import SideNavBar from "../SideNavBar/SideNavBar";
 import "./Dashboard.css";
@@ -26,6 +26,9 @@ ChartJS.register(
 function Dashboard() {
   const [users, setUsers] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isLawyer, setIsLawyer] = useState(false);
+  const [nextAppointment, setNextAppointment] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,7 +41,7 @@ function Dashboard() {
       const currentUserId = auth.currentUser?.uid;
 
       let appointmentsQuery = collection(fs, "appointments");
-      if (auth.currentUser?.member_type === "lawyer") {
+      if (isLawyer) {
         appointmentsQuery = query(
           appointmentsQuery,
           where("appointmentDetails.assignedLawyer", "==", currentUserId)
@@ -52,15 +55,47 @@ function Dashboard() {
 
       setUsers(usersList);
       setAppointments(appointmentsList);
+
+      // Find the next upcoming appointment
+      const upcomingAppointments = appointmentsList
+        .filter(
+          (app) =>
+            app.appointmentDetails?.assignedLawyer === currentUserId &&
+            app.appointmentDetails?.appointmentStatus === "scheduled" &&
+            app.appointmentDetails?.appointmentDate.toDate() > new Date()
+        )
+        .sort(
+          (a, b) =>
+            a.appointmentDetails.appointmentDate.toDate() -
+            b.appointmentDetails.appointmentDate.toDate()
+        );
+
+      if (upcomingAppointments.length > 0) {
+        setNextAppointment(upcomingAppointments[0]);
+      }
     };
 
+    const fetchCurrentUser = async () => {
+      if (auth.currentUser) {
+        const userDoc = await getDoc(doc(fs, "users", auth.currentUser.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setCurrentUser(userData);
+          setIsLawyer(userData.member_type === "lawyer");
+        }
+      }
+    };
+
+    fetchCurrentUser();
     fetchData();
-  }, []);
+  }, [isLawyer]);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
         window.location.href = "/";
+      } else {
+        console.log("Current user:", user);
       }
     });
 
@@ -101,6 +136,31 @@ function Dashboard() {
     acc[city] = count ? (total / count).toFixed(2) : 0;
     return acc;
   }, {});
+
+  // Calculate assigned appointments per city for the current lawyer
+  const assignedAptPerCityData = cities.reduce((acc, city) => {
+    const cityAppointments = appointments.filter((app) => {
+      const user = users.find((user) => user.id === app.applicantProfile?.uid);
+      return (
+        user &&
+        user.city === city &&
+        app.appointmentDetails?.assignedLawyer === auth.currentUser?.uid
+      );
+    });
+    acc[city] = cityAppointments.length;
+    return acc;
+  }, {});
+
+  const assignedAptPerCityChartData = {
+    labels: cities,
+    datasets: [
+      {
+        label: "Total Number of Assigned Appointments",
+        data: cities.map((city) => assignedAptPerCityData[city]),
+        backgroundColor: "rgba(153, 102, 255, 0.6)",
+      },
+    ],
+  };
 
   // Process the data to fit into the charts
   const usersPerCityData = {
@@ -195,67 +255,79 @@ function Dashboard() {
         <br />
         <center>
           <div className="stats-container">
-            <div className="stat-card">
-              <h2>Total Appointments</h2>
-              <p>{appointments.length}</p>
-            </div>
-            <div className="stat-card">
-              <h2>Pending Appointments</h2>
-              <p>
-                {
-                  appointments.filter(
-                    (app) =>
-                      app.appointmentDetails?.appointmentStatus === "pending"
-                  ).length
-                }
-              </p>
-            </div>
-            <div className="stat-card">
-              <h2>Approved Appointments</h2>
-              <p>
-                {
-                  appointments.filter(
-                    (app) =>
-                      app.appointmentDetails?.appointmentStatus === "scheduled"
-                  ).length
-                }
-              </p>
-            </div>
-            <div className="stat-card">
-              <h2>Successful Appointments</h2>
-              <p>
-                {
-                  appointments.filter(
-                    (app) =>
-                      app.appointmentDetails?.appointmentStatus === "done"
-                  ).length
-                }
-              </p>
-            </div>
-            <div className="stat-card">
-              <h2>Denied Appointments</h2>
-              <p>
-                {
-                  appointments.filter(
-                    (app) =>
-                      app.appointmentDetails?.appointmentStatus === "denied"
-                  ).length
-                }
-              </p>
-            </div>
-            <div className="stat-card">
-              <h2>Active App Users</h2>
-              <p>
-                {users.filter((user) => user.user_status === "active").length}
-              </p>
-            </div>
-            <div className="stat-card">
-              <h2>Inactive App Users</h2>
-              <p>
-                {users.filter((user) => user.user_status === "inactive").length}
-              </p>
-            </div>
-            {auth.currentUser?.member_type === "lawyer" && (
+            {!isLawyer && (
+              <>
+                <div className="stat-card">
+                  <h2>Total Appointments</h2>
+                  <p>{appointments.length}</p>
+                </div>
+                <div className="stat-card">
+                  <h2>Pending Appointments</h2>
+                  <p>
+                    {
+                      appointments.filter(
+                        (app) =>
+                          app.appointmentDetails?.appointmentStatus ===
+                          "pending"
+                      ).length
+                    }
+                  </p>
+                </div>
+                <div className="stat-card">
+                  <h2>Approved Appointments</h2>
+                  <p>
+                    {
+                      appointments.filter(
+                        (app) =>
+                          app.appointmentDetails?.appointmentStatus ===
+                          "scheduled"
+                      ).length
+                    }
+                  </p>
+                </div>
+                <div className="stat-card">
+                  <h2>Successful Appointments</h2>
+                  <p>
+                    {
+                      appointments.filter(
+                        (app) =>
+                          app.appointmentDetails?.appointmentStatus === "done"
+                      ).length
+                    }
+                  </p>
+                </div>
+                <div className="stat-card">
+                  <h2>Denied Appointments</h2>
+                  <p>
+                    {
+                      appointments.filter(
+                        (app) =>
+                          app.appointmentDetails?.appointmentStatus === "denied"
+                      ).length
+                    }
+                  </p>
+                </div>
+                <div className="stat-card">
+                  <h2>Active App Users</h2>
+                  <p>
+                    {
+                      users.filter((user) => user.user_status === "active")
+                        .length
+                    }
+                  </p>
+                </div>
+                <div className="stat-card">
+                  <h2>Inactive App Users</h2>
+                  <p>
+                    {
+                      users.filter((user) => user.user_status === "inactive")
+                        .length
+                    }
+                  </p>
+                </div>
+              </>
+            )}
+            {isLawyer && (
               <>
                 <div className="stat-card">
                   <h2>Your Total Appointments</h2>
@@ -265,20 +337,6 @@ function Dashboard() {
                         (app) =>
                           app.appointmentDetails?.assignedLawyer ===
                           auth.currentUser?.uid
-                      ).length
-                    }
-                  </p>
-                </div>
-                <div className="stat-card">
-                  <h2>Your Pending Appointments</h2>
-                  <p>
-                    {
-                      appointments.filter(
-                        (app) =>
-                          app.appointmentDetails?.appointmentStatus ===
-                            "pending" &&
-                          app.appointmentDetails?.assignedLawyer ===
-                            auth.currentUser?.uid
                       ).length
                     }
                   </p>
@@ -311,63 +369,83 @@ function Dashboard() {
                     }
                   </p>
                 </div>
-                <div className="stat-card">
-                  <h2>Your Denied Appointments</h2>
-                  <p>
-                    {
-                      appointments.filter(
-                        (app) =>
-                          app.appointmentDetails?.appointmentStatus ===
-                            "denied" &&
-                          app.appointmentDetails?.assignedLawyer ===
-                            auth.currentUser?.uid
-                      ).length
-                    }
-                  </p>
-                </div>
+                {nextAppointment && (
+                  <div className="next-appointment-card">
+                    <h2>Next Upcoming Appointment</h2>
+                    <p>
+                      {nextAppointment.appointmentDetails.appointmentDate
+                        .toDate()
+                        .toLocaleString()}
+                    </p>
+                    <p>
+                      {nextAppointment.applicantProfile.fullName}
+                    </p>
+                  </div>
+                )}
               </>
             )}
           </div>
         </center>
-        <div className="chart-container">
-          <br />
-          <Bar
-            data={usersPerCityData}
-            options={{
-              ...chartOptions,
-              title: {
-                ...chartOptions.title,
-                text: "Total Number of Users per City in Bulacan",
-              },
-            }}
-          />
-        </div>
-        <div className="chart-container">
-          <br />
-          <Bar
-            data={satisfiedAppUsersPerCityData}
-            options={{
-              ...chartOptions,
-              title: {
-                ...chartOptions.title,
-                text: "Average Ratings of App Users per City",
-              },
-            }}
-          />
-        </div>
-        <div className="chart-container">
-          <br />
-          <Bar
-            data={satisfiedUsersInBookingPerCityData}
-            options={{
-              ...chartOptions,
-              title: {
-                ...chartOptions.title,
-                text: "Average Ratings of App Users in Appointment Booking per City",
-              },
-            }}
-          />
-        </div>
+        {!isLawyer && (
+          <>
+            <div className="chart-container">
+              <br />
+              <Bar
+                data={usersPerCityData}
+                options={{
+                  ...chartOptions,
+                  title: {
+                    ...chartOptions.title,
+                    text: "Total Number of Users per City in Bulacan",
+                  },
+                }}
+              />
+            </div>
+            <div className="chart-container">
+              <br />
+              <Bar
+                data={satisfiedAppUsersPerCityData}
+                options={{
+                  ...chartOptions,
+                  title: {
+                    ...chartOptions.title,
+                    text: "Average Ratings of App Users per City",
+                  },
+                }}
+              />
+            </div>
+            <div className="chart-container">
+              <br />
+              <Bar
+                data={satisfiedUsersInBookingPerCityData}
+                options={{
+                  ...chartOptions,
+                  title: {
+                    ...chartOptions.title,
+                    text: "Average Ratings of App Users in Appointment Booking per City",
+                  },
+                }}
+              />
+            </div>
+          </>
+        )}
+        {isLawyer && (
+          <>
+            <div className="chart-container">
+              <br />
+              <Bar
+                data={assignedAptPerCityChartData}
+                options={{
+                  ...chartOptions,
+                  title: {
+                    ...chartOptions.title,
+                    text: "Total Number of Assigned Appointments per City in Bulacan",
+                  },
+                }}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

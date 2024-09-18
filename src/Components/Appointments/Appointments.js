@@ -742,9 +742,8 @@ function Appointments() {
               <th>Control Number</th>
               <th>Full Name</th>
               <th>Nature of Legal Assistance Requested</th>
-              <th>Date Submitted</th>
-              <th>Appointment Date</th>
-              <th>Appointment Type</th>
+              <th>Scheduled Date</th>
+              <th>Type</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
@@ -757,8 +756,7 @@ function Appointments() {
                   <td>{appointment.controlNumber}</td>
                   <td>{appointment.fullName}</td>
                   <td>{appointment.selectedAssistanceType}</td>
-                  <td>{getFormattedDate(appointment.createdDate)}</td>
-                  <td>{getFormattedDate(appointment.appointmentDate)}</td>
+                  <td>{getFormattedDate(appointment.appointmentDate, true)}</td>
                   <td>{appointment.appointmentDetails?.apptType}</td>
                   <td>
                     {capitalizeFirstLetter(appointment.appointmentStatus)}
@@ -989,8 +987,6 @@ function Appointments() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <tr className="no-print">
                           <th>QR Code:</th>
                           <td>
@@ -1020,7 +1016,6 @@ function Appointments() {
                             )}
                           </td>
                         </tr>
-                      )}
 
                       <tr>
                         <th>Control Number:</th>
@@ -1132,6 +1127,15 @@ function Appointments() {
                         )}
                         {selectedAppointment.appointmentStatus === "done" && (
                           <>
+                          <tr>
+                              <th>Appointment Date:</th>
+                              <td>
+                                {getFormattedDate(
+                                  selectedAppointment.appointmentDate,
+                                  true
+                                )}
+                              </td>
+                            </tr>
                             <tr>
                               <th>Eligibility:</th>
                               <td>
@@ -1250,8 +1254,6 @@ function Appointments() {
                             "Not Available"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <>
                           <tr>
                             <th>Address:</th>
@@ -1288,13 +1290,10 @@ function Appointments() {
                             </td>
                           </tr>
                         </>
-                      )}
                     </tbody>
                   </table>
                 </section>
 
-                {selectedAppointment.appointmentDetails?.apptType ===
-                  "Online" && (
                   <section className="mb-4 print-section">
                     <h2>
                       <em
@@ -1345,7 +1344,6 @@ function Appointments() {
                       </tbody>
                     </table>
                   </section>
-                )}
 
                 <section className="mb-4 print-section">
                   <h2>
@@ -1367,8 +1365,6 @@ function Appointments() {
                             "Not Specified"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
                         <>
                           <tr>
                             <th>Problem:</th>
@@ -1391,7 +1387,6 @@ function Appointments() {
                             </td>
                           </tr>
                         </>
-                      )}
                     </tbody>
                   </table>
                 </section>
@@ -1648,12 +1643,13 @@ function Appointments() {
                   <b>
                     <label>Notes:</label>
                   </b>
-                  <textarea
+                                    <textarea
                     name="notes"
                     rows="4"
                     placeholder="Enter any relevant notes here..."
                     value={clientEligibility.notes}
                     onChange={handleChange}
+                    required
                   ></textarea>
                 </div>
                 <button>Submit</button>

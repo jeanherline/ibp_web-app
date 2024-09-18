@@ -3,7 +3,11 @@ import SideNavBar from "../SideNavBar/SideNavBar";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
-import { aptsCalendar, getCalendar, getUserById } from "../../Config/FirebaseServices"; // Assuming getCalendar is correctly named
+import {
+  aptsCalendar,
+  getCalendar,
+  getUserById,
+} from "../../Config/FirebaseServices"; // Assuming getCalendar is correctly named
 import "./Appointments.css";
 import { auth } from "../../Config/Firebase";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
@@ -28,13 +32,13 @@ function ApptsCalendar() {
 
     return () => unsubscribe();
   }, []);
-  
+
   useEffect(() => {
     const fetchAppointmentsAndSlots = async () => {
       try {
         const apptData = await aptsCalendar(statusFilters, null, 50, "");
         const slotsData = await getCalendar();
-  
+
         const formatTime = (date) => {
           let hours = date.getHours();
           const minutes = date.getMinutes().toString().padStart(2, "0");
@@ -43,7 +47,7 @@ function ApptsCalendar() {
           hours = hours ? hours : 12;
           return `${hours}:${minutes} ${ampm}`;
         };
-  
+
         const formattedAppointments = apptData.data.map((appt) => {
           const appointmentDate = new Date(appt.appointmentDate.seconds * 1000);
           return {
@@ -55,7 +59,7 @@ function ApptsCalendar() {
             ...appt,
           };
         });
-  
+
         const formattedBookedSlots = slotsData.map((slot) => {
           const appointmentDate = new Date(slot.appointmentDate.seconds * 1000);
           return {
@@ -67,13 +71,13 @@ function ApptsCalendar() {
             ...slot,
           };
         });
-  
+
         setAppointments([...formattedAppointments, ...formattedBookedSlots]);
       } catch (error) {
         console.error("Error fetching appointments and slots:", error);
       }
     };
-  
+
     fetchAppointmentsAndSlots();
   }, [statusFilters]);
 
@@ -97,7 +101,9 @@ function ApptsCalendar() {
     }
 
     if (selectedAppointment?.appointmentDetails?.assignedLawyer) {
-      fetchAssignedLawyerDetails(selectedAppointment.appointmentDetails.assignedLawyer);
+      fetchAssignedLawyerDetails(
+        selectedAppointment.appointmentDetails.assignedLawyer
+      );
     }
   }, [selectedAppointment]);
 
@@ -198,12 +204,12 @@ function ApptsCalendar() {
   };
 
   const capitalizeFirstLetter = (string) => {
-    if (string && typeof string === 'string') {
+    if (string && typeof string === "string") {
       return string.charAt(0).toUpperCase() + string.slice(1);
     }
     return string; // Return the string as is if it's undefined or not a string
   };
-  
+
   const getFormattedDate = (timestamp, includeTime = false) => {
     if (!timestamp) return "N/A";
     const date = new Date(timestamp.seconds * 1000);
@@ -285,37 +291,33 @@ function ApptsCalendar() {
                 </h2>
                 <table className="table table-striped table-bordered">
                   <tbody>
-                  {selectedAppointment.appointmentDetails?.apptType === "Online" && (
-                        <tr className="no-print">
-                          <th>QR Code:</th>
-                          <td>
-                            {selectedAppointment.appointmentDetails ? (
-                              <a
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openImageModal(
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  );
-                                }}
-                              >
-                                <img
-                                  src={
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  }
-                                  alt="QR Code"
-                                  className="img-thumbnail qr-code-image"
-                                  style={{ width: "100px", cursor: "pointer" }}
-                                />
-                              </a>
-                            ) : (
-                              "Not Available"
-                            )}
-                          </td>
-                        </tr>
-                      )}
+                    <tr className="no-print">
+                      <th>QR Code:</th>
+                      <td>
+                        {selectedAppointment.appointmentDetails ? (
+                          <a
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openImageModal(
+                                selectedAppointment.appointmentDetails.qrCode
+                              );
+                            }}
+                          >
+                            <img
+                              src={
+                                selectedAppointment.appointmentDetails.qrCode
+                              }
+                              alt="QR Code"
+                              className="img-thumbnail qr-code-image"
+                              style={{ width: "100px", cursor: "pointer" }}
+                            />
+                          </a>
+                        ) : (
+                          "Not Available"
+                        )}
+                      </td>
+                    </tr>
 
                     <tr>
                       <th>Control Number:</th>
@@ -343,7 +345,8 @@ function ApptsCalendar() {
                       </td>
                     </tr>
                     <>
-                      {selectedAppointment.appointmentStatus === "scheduled" && (
+                      {selectedAppointment.appointmentStatus ===
+                        "scheduled" && (
                         <>
                           <tr>
                             <th>Appointment Date:</th>
@@ -399,7 +402,7 @@ function ApptsCalendar() {
                       )}
                       {selectedAppointment.appointmentStatus === "denied" && (
                         <>
-                         <tr>
+                          <tr>
                             <th>Reviewed By:</th>
                             <td>
                               {reviewerDetails
@@ -425,6 +428,15 @@ function ApptsCalendar() {
                       )}
                       {selectedAppointment.appointmentStatus === "done" && (
                         <>
+                          <tr>
+                            <th>Appointment Date:</th>
+                            <td>
+                              {getFormattedDate(
+                                selectedAppointment.appointmentDate,
+                                true
+                              )}
+                            </td>
+                          </tr>
                           <tr>
                             <th>Remarks (Record of Consultation):</th>
                             <td>
@@ -527,126 +539,112 @@ function ApptsCalendar() {
                       <th>Date of Birth:</th>
                       <td>
                         {selectedAppointment.dob
-                          ? new Date(selectedAppointment.dob).toLocaleDateString(
-                              "en-US",
-                              {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                              }
-                            )
+                          ? new Date(
+                              selectedAppointment.dob
+                            ).toLocaleDateString("en-US", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })
                           : "N/A"}
                       </td>
                     </tr>
                     <tr>
                       <th>Address:</th>
-                      <td>
-                        {selectedAppointment?.address || "Not Available"}
-                      </td>
+                      <td>{selectedAppointment?.address || "Not Available"}</td>
                     </tr>
                     <tr>
-                        <th>Contact Number:</th>
+                      <th>Contact Number:</th>
+                      <td>
+                        {selectedAppointment?.contactNumber || "Not Available"}
+                      </td>
+                    </tr>
+                    <>
+                      <tr>
+                        <th>Address:</th>
                         <td>
-                          {selectedAppointment?.contactNumber ||
+                          {selectedAppointment?.address || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Gender:</th>
+                        <td>
+                          {selectedAppointment?.selectedGender ||
+                            "Not Specified"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Spouse Name:</th>
+                        <td>
+                          {selectedAppointment.spouseName || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Spouse Occupation:</th>
+                        <td>
+                          {selectedAppointment.spouseOccupation ||
                             "Not Available"}
                         </td>
                       </tr>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Online" && (
-                        <>
-                          <tr>
-                            <th>Address:</th>
-                            <td>
-                              {selectedAppointment?.address || "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Gender:</th>
-                            <td>
-                              {selectedAppointment?.selectedGender ||
-                                "Not Specified"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Name:</th>
-                            <td>
-                              {selectedAppointment.spouseName ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Occupation:</th>
-                            <td>
-                              {selectedAppointment.spouseOccupation ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Children Names and Ages:</th>
-                            <td>
-                              {selectedAppointment.childrenNamesAges ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                        </>
-                      )}
+                      <tr>
+                        <th>Children Names and Ages:</th>
+                        <td>
+                          {selectedAppointment.childrenNamesAges ||
+                            "Not Available"}
+                        </td>
+                      </tr>
+                    </>
                   </tbody>
                 </table>
               </section>
 
-              {selectedAppointment.appointmentDetails?.apptType ===
-                  "Online" && (
-                  <section className="mb-4 print-section">
-                    <h2>
-                      <em
-                        style={{
-                          color: "#a34bc9",
-                          fontSize: "16px",
-                        }}
-                      >
-                        Employment Profile
-                      </em>
-                    </h2>
-                    <table className="table table-striped table-bordered">
-                      <tbody>
-                        <tr>
-                          <th>Occupation:</th>
-                          <td>
-                            {selectedAppointment.occupation || "Not Available"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Type of Employment:</th>
-                          <td>
-                            {selectedAppointment?.kindOfEmployment ||
-                              "Not Specified"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Employer Name:</th>
-                          <td>
-                            {selectedAppointment?.employerName ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Employer Address:</th>
-                          <td>
-                            {selectedAppointment.employerAddress ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Monthly Income:</th>
-                          <td>
-                            {selectedAppointment.monthlyIncome ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </section>
-                )}
+              <section className="mb-4 print-section">
+                <h2>
+                  <em
+                    style={{
+                      color: "#a34bc9",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Employment Profile
+                  </em>
+                </h2>
+                <table className="table table-striped table-bordered">
+                  <tbody>
+                    <tr>
+                      <th>Occupation:</th>
+                      <td>
+                        {selectedAppointment.occupation || "Not Available"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Type of Employment:</th>
+                      <td>
+                        {selectedAppointment?.kindOfEmployment ||
+                          "Not Specified"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Employer Name:</th>
+                      <td>
+                        {selectedAppointment?.employerName || "Not Available"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Employer Address:</th>
+                      <td>
+                        {selectedAppointment.employerAddress || "Not Available"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Monthly Income:</th>
+                      <td>
+                        {selectedAppointment.monthlyIncome || "Not Available"}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </section>
 
               <section className="mb-4 print-section">
                 <h2>
@@ -676,7 +674,8 @@ function ApptsCalendar() {
                     <tr>
                       <th>Desired Solutions:</th>
                       <td>
-                        {selectedAppointment.desiredSolutions || "Not Available"}
+                        {selectedAppointment.desiredSolutions ||
+                          "Not Available"}
                       </td>
                     </tr>
                   </tbody>
@@ -691,63 +690,6 @@ function ApptsCalendar() {
                 </h2>
                 <table className="table table-striped table-bordered">
                   <tbody>
-                  {selectedAppointment.appointmentDetails?.apptType ===
-                        "Walk-in" && (
-                        <>
-                          <tr>
-                            <th>Application Form 1</th>
-                            <td>
-                              {selectedAppointment.form1 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form1);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form1}
-                                    alt="Application Form 1"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Application Form 2</th>
-                            <td>
-                              {selectedAppointment.form2 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form2);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form2}
-                                    alt="Application Form 2"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                        </>
-                      )}
                     <tr>
                       <th>Barangay Certificate of Indigency:</th>
                       <td>
@@ -756,7 +698,9 @@ function ApptsCalendar() {
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              openImageModal(selectedAppointment.barangayImageUrl);
+                              openImageModal(
+                                selectedAppointment.barangayImageUrl
+                              );
                             }}
                           >
                             <img

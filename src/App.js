@@ -19,7 +19,6 @@ import AuditLogs from './Components/Audit/AuditLogs';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-
 function App() {
   return (
     <Router>

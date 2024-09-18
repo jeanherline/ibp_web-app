@@ -1,17 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Tooltip } from "react-tooltip";
-import { useNavigate, NavLink, useLocation } from "react-router-dom";
+import { useNavigate, NavLink, Link, useLocation } from "react-router-dom";
 import { auth, doc, fs, signOut } from "../../Config/Firebase";
-import { getDoc, onSnapshot } from "firebase/firestore";
-import "react-tooltip/dist/react-tooltip.css"; // Make sure to import the CSS for react-tooltip
+import {
+  getDoc,
+  onSnapshot,
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  writeBatch,
+} from "firebase/firestore";
 import "./SideNavBar.css";
+<<<<<<< HEAD
 import { Link } from "react-router-dom";
+=======
+>>>>>>> 6df63e377a0b316811fdfd03beb087dede74f6c3
 
 function SideNavBar() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const notificationsRef = useRef();
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
@@ -46,6 +61,31 @@ function SideNavBar() {
     };
   }, []);
 
+  useEffect(() => {
+    if (userData) {
+      fetchUnreadCount();
+    }
+  }, [userData]);
+
+  const markNotificationsAsRead = async () => {
+    if (notifications.length > 0) {
+      const batch = writeBatch(fs);
+      notifications.forEach((notification) => {
+        if (!notification.read) {
+          const notificationRef = doc(fs, "notifications", notification.id);
+          batch.update(notificationRef, { read: true });
+        }
+      });
+      await batch.commit();
+      setNotifications((prevNotifications) =>
+        prevNotifications.map((notification) =>
+          notification.read ? notification : { ...notification, read: true }
+        )
+      );
+      setUnreadCount(0);
+    }
+  };
+
   const capitalizeFirstLetter = (str) => {
     return str.charAt(0).toUpperCase() + str.slice(1);
   };
@@ -54,6 +94,94 @@ function SideNavBar() {
     await signOut(auth);
     window.location.replace("/");
   };
+
+  const fetchUnreadCount = async () => {
+    const notificationsRef = collection(fs, "notifications");
+    const unreadQuery = query(
+      notificationsRef,
+      where("uid", "==", auth.currentUser.uid),
+      where("read", "==", false)
+    );
+
+    const unreadSnapshot = await getDocs(unreadQuery);
+    setUnreadCount(unreadSnapshot.size);
+  };
+
+  const handleNotificationsClick = async () => {
+    if (!userData) return;
+
+    if (showNotifications) {
+      setShowNotifications(false);
+      return;
+    }
+
+    const notificationsRef = collection(fs, "notifications");
+    const userNotificationsQuery = query(
+      notificationsRef,
+      where("uid", "==", auth.currentUser.uid),
+      orderBy("timestamp", "desc")
+    );
+
+    const memberTypeNotificationsQuery = query(
+      notificationsRef,
+      where("member_type", "==", userData.member_type),
+      orderBy("timestamp", "desc")
+    );
+
+    const userNotificationsSnapshot = await getDocs(userNotificationsQuery);
+    const memberTypeNotificationsSnapshot = await getDocs(
+      memberTypeNotificationsQuery
+    );
+
+    const notificationsData = [
+      ...userNotificationsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })),
+      ...memberTypeNotificationsSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })),
+    ];
+
+    setNotifications(notificationsData);
+    setShowNotifications(true);
+
+    // Mark notifications as read
+    await markNotificationsAsRead();
+    fetchUnreadCount(); // Update the unread count after marking notifications as read
+  };
+
+  const handleNotificationClick = (notification) => {
+    if (notification.type === "appointment") {
+      if (userData.member_type === "head") {
+        navigate("/head");
+      } else if (userData.member_type === "frontdesk") {
+        navigate("/frontdesk");
+      } else if (userData.member_type === "admin") {
+        navigate("/appointments");
+      } else if (userData.member_type === "lawyer") {
+        navigate("/lawyer");
+      }
+    }
+  };
+
+  // Close notifications dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target)
+      ) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <>
@@ -64,7 +192,9 @@ function SideNavBar() {
           <div className="member-type">
             Kumusta,{" "}
             {userData.member_type === "lawyer"
-              ? `Volunteer Lawyer ${capitalizeFirstLetter(userData.display_name)}`
+              ? `Volunteer Lawyer ${capitalizeFirstLetter(
+                  userData.display_name
+                )}`
               : userData.member_type === "admin"
               ? `Admin ${capitalizeFirstLetter(userData.display_name)}`
               : userData.member_type === "frontdesk"
@@ -89,9 +219,14 @@ function SideNavBar() {
         <span
           className="material-icons icon"
           data-tooltip-id="tooltip"
-          data-tooltip-content="Help"
+          data-tooltip-content="Notification"
+          onClick={handleNotificationsClick}
+          ref={notificationsRef}
         >
-          help_outline
+          notifications
+          {unreadCount > 0 && (
+            <span className="notification-count">{unreadCount}</span>
+          )}
         </span>
         <span
           className="material-icons icon"
@@ -214,7 +349,6 @@ function SideNavBar() {
                     Appts. Calendar
                   </NavLink>
                 </li>
-                <li></li>
                 <li>
                   <NavLink
                     to="/frontdesk"
@@ -240,7 +374,31 @@ function SideNavBar() {
         </footer>
       </div>
 
-      <Tooltip id="tooltip" />
+      {showNotifications && (
+        <div className="notifications-dropdown" ref={notificationsRef}>
+          <h3>Notifications</h3>
+          <ul>
+            {notifications.length > 0 ? (
+              notifications.map((notification) => (
+                <li
+                  key={notification.id}
+                  className={notification.read ? "read" : "unread"}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  {notification.message}
+                </li>
+              ))
+            ) : (
+              <li>No notifications available</li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      <Tooltip
+        className="custom-tooltip"
+        style={{ backgroundColor: "black", color: "white" }}
+      />
     </>
   );
 }
