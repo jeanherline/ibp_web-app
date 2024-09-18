@@ -6,6 +6,7 @@ import { getDoc, onSnapshot } from "firebase/firestore";
 import "react-tooltip/dist/react-tooltip.css"; // Make sure to import the CSS for react-tooltip
 import "./SideNavBar.css";
 import { Link } from "react-router-dom";
+
 function SideNavBar() {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -172,6 +173,15 @@ function SideNavBar() {
                     Users
                   </NavLink>
                 </li>
+                {/* Add the Audit Logs link for admin users */}
+                <li>
+                  <NavLink
+                    to="/auditLogs"
+                    className={({ isActive }) => (isActive ? "active" : "")}
+                  >
+                    Audit Logs
+                  </NavLink>
+                </li>
               </>
             )}
             {userData && userData.member_type === "head" && (
@@ -196,7 +206,7 @@ function SideNavBar() {
             )}
             {userData && userData.member_type === "frontdesk" && (
               <>
-                              <li>
+                <li>
                   <NavLink
                     to="/apptsCalendar"
                     className={({ isActive }) => (isActive ? "active" : "")}

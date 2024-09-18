@@ -1,0 +1,39 @@
+.error-message {
+    color: red;
+    font-weight: bold;
+  }
+  
+  .main-container {
+    display: flex;
+  }
+  
+  .sidebar {
+    width: 250px;
+  }
+  
+  .content-container {
+    flex-grow: 1;
+    padding: 20px;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+  
+  table th, table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+  }
+  
+  table th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+  }
+  
+  table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
