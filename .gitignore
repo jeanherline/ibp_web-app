@@ -13,6 +13,8 @@
 
 # .gitignore
 .env
+# Ignore the Google service account credentials
+functions/keys/google-service-account.json
 
 # misc
 .DS_Store
