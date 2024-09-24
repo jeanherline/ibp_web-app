@@ -612,28 +612,33 @@ function AppsLawyer() {
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (!appointmentDate) {
       setSnackbarMessage("Appointment date is required.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-
+  
+    if (!appointmentType) {
+      setSnackbarMessage("Please select appointment type.");
+      setShowSnackbar(true);
+      setTimeout(() => setShowSnackbar(false), 3000);
+      return;
+    }
+  
     let googleMeetLink =
       selectedAppointment.appointmentDetails?.googleMeetLink || null; // Check if link already exists
-
+  
     if (appointmentType === "online" && !googleMeetLink) {
       // Only create link if it's an online appointment and the link doesn't exist
       try {
-        // Call your backend API to create Google Meet event
         const response = await axios.post("/api/create-google-meet", {
           appointmentDate: appointmentDate.toISOString(),
           clientEmail: selectedAppointment.applicantProfile?.email,
         });
-
+  
         googleMeetLink = response.data.hangoutLink; // Capture the new Google Meet link
-        console.log("Google Meet API response:", response.data); // Debugging response
       } catch (error) {
         console.error(
           "Error creating Google Meet event:",
@@ -645,23 +650,24 @@ function AppsLawyer() {
         return;
       }
     }
-
+  
     // Save the new Google Meet link (if created) or update existing appointment details
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+      "appointmentDetails.apptType": appointmentType, // Make sure the appointment type is updated
       ...(googleMeetLink && {
         "appointmentDetails.googleMeetLink": googleMeetLink,
       }),
     };
-
+  
     await updateAppointment(selectedAppointment.id, updatedData);
-
+  
     setSelectedAppointment(null);
     setAppointmentDate(null);
     setShowScheduleForm(false);
-
+  
     // Reload appointments to reflect changes
     const { data, total } = await getLawyerAppointments(
       filter,
@@ -673,39 +679,39 @@ function AppsLawyer() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-
+  
     setSnackbarMessage("Appointment has been successfully scheduled.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
-
+  
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (!rescheduleDate) {
       setSnackbarMessage("Reschedule date is required.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-
+  
     if (!rescheduleAppointmentType) {
       setSnackbarMessage("Please select appointment type.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-
+  
     let googleMeetLink =
       selectedAppointment.appointmentDetails?.googleMeetLink || null;
-
+  
     if (rescheduleAppointmentType === "online" && !googleMeetLink) {
       try {
         const response = await axios.post("/api/create-google-meet", {
           appointmentDate: rescheduleDate.toISOString(),
           clientEmail: selectedAppointment.applicantProfile?.email,
         });
-
+  
         googleMeetLink = response.data.hangoutLink;
       } catch (error) {
         console.error(
@@ -718,25 +724,25 @@ function AppsLawyer() {
         return;
       }
     }
-
+  
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
       "appointmentDetails.rescheduleReason": rescheduleReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-      "appointmentDetails.apptType": rescheduleAppointmentType,
+      "appointmentDetails.apptType": rescheduleAppointmentType, // This line ensures the type is updated
       ...(googleMeetLink && {
         "appointmentDetails.googleMeetLink": googleMeetLink,
       }),
     };
-
+  
     await updateAppointment(selectedAppointment.id, updatedData);
-
+  
     setSelectedAppointment(null);
     setRescheduleDate(null);
     setRescheduleReason("");
     setRescheduleAppointmentType(""); // Clear the state after submitting
     setShowRescheduleForm(false);
-
+  
     const { data, total } = await getLawyerAppointments(
       filter,
       lastVisible,
@@ -747,7 +753,7 @@ function AppsLawyer() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-
+  
     setSnackbarMessage("Appointment has been successfully rescheduled.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
