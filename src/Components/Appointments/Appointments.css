@@ -219,14 +219,17 @@ button:disabled {
   border: none;
   padding: 10px;
   background-color: #fff;
-  border-radius: 8px;
+  border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  width: 350px;
+  width: 800px; /* Updated width to make it wider */
+  max-width: 800px; /* Optional, sets a max-width */
+  margin: 20px auto;
 }
 
 .react-datepicker__header {
   background-color: #f2f2f2;
   border-bottom: none;
+  border-radius: 10px 10px 0 0;
 }
 
 .react-datepicker__day-name,
@@ -241,7 +244,7 @@ button:disabled {
 .react-datepicker__day--selected,
 .react-datepicker__day--in-range,
 .react-datepicker__day--in-selecting-range {
-  background-color: #4caf50;
+  background-color: #007bff;
   color: white;
 }
 
@@ -260,7 +263,7 @@ button:disabled {
 }
 
 .react-datepicker__time-list-item--selected {
-  background-color: #4caf50;
+  background-color: #007bff;
   color: white;
 }
 
@@ -269,6 +272,11 @@ button:disabled {
   color: white;
   pointer-events: none;
 }
+
+.hidden-time {
+  display: none !important; /* Hide the disabled time slots */
+}
+
 
 .fully-booked-day {
   background-color: red !important;

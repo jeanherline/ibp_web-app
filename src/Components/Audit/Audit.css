@@ -1,39 +1,54 @@
+.main-container {
+  display: flex;
+}
+
+.sidebar {
+  width: 250px;
+  background-color: #f4f4f4;
+  padding: 10px;
+}
+
+.content-container {
+  flex: 1;
+  padding: 20px;
+}
+
+h1 {
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.loading-message {
+  color: #007bff;
+}
+
 .error-message {
-    color: red;
-    font-weight: bold;
-  }
-  
-  .main-container {
-    display: flex;
-  }
-  
-  .sidebar {
-    width: 250px;
-  }
-  
-  .content-container {
-    flex-grow: 1;
-    padding: 20px;
-  }
-  
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-  }
-  
-  table th, table td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  table th {
-    background-color: #f4f4f4;
-    font-weight: bold;
-  }
-  
-  table tr:nth-child(even) {
-    background-color: #f9f9f9;
-  }
-  
+  color: #dc3545;
+}
+
+.no-logs-message {
+  color: #6c757d;
+}
+
+.logs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.logs-table th, .logs-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.logs-table th {
+  background-color: #580049;
+  color: white;
+}
+
+.logs-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.logs-table tr:hover {
+  background-color: #ddd;
+}

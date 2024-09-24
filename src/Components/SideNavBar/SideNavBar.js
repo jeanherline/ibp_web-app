@@ -13,10 +13,6 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import "./SideNavBar.css";
-<<<<<<< HEAD
-import { Link } from "react-router-dom";
-=======
->>>>>>> 6df63e377a0b316811fdfd03beb087dede74f6c3
 
 function SideNavBar() {
   const [userData, setUserData] = useState(null);

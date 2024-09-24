@@ -1,34 +1,47 @@
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { fs } from '../../Config/Firebase'; // Ensure Firebase config is correctly imported
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { fs } from '../../Config/Firebase';
 
-// Function to subscribe to real-time audit logs using onSnapshot
-export function subscribeToAuditLogs(callback, onError) {
-  const logsRef = collection(fs, 'audit_logs');
-  const q = query(logsRef, orderBy('timestamp', 'desc'), limit(50));
+// Function to subscribe to real-time user updates
+export function subscribeToAllUserUpdates(callback, onError) {
+  try {
+    const usersRef = collection(fs, 'users');
+    const q = query(usersRef, orderBy('timestamp', 'desc'));
 
-  return onSnapshot(q, (querySnapshot) => {
-    if (!querySnapshot.empty) {
-      const changes = [];
+    // Real-time subscription to the query
+    return onSnapshot(
+      q,
+      (querySnapshot) => {
+        if (!querySnapshot.empty) {
+          const changes = [];
 
-      // Log each document change for debugging purposes
-      querySnapshot.docChanges().forEach((change) => {
-        console.log('Document Change:', change); // Debugging
+          querySnapshot.docChanges().forEach((change) => {
+            console.log('Document Change:', change); // Debugging
 
-        changes.push({
-          id: change.doc.id,
-          ...change.doc.data(),
-          changeType: change.type, // Track the type of change
-        });
-      });
+            const data = change.doc.data();
+            changes.push({
+              id: change.doc.id,
+              field: change.doc.id, // Assuming field is the document ID for simplicity
+              oldValue: change.oldValue || 'N/A',
+              newValue: data,
+              changeType: change.type,
+              timestamp: data.timestamp // Timestamp of the change
+            });
+          });
 
-      console.log('Fetched Logs:', changes); // Debugging logs
-      callback(changes); // Send the changes back to the UI
-    } else {
-      console.log('No logs found.'); // Debugging
-      callback([]); // Pass an empty array if no logs
-    }
-  }, (error) => {
-    console.error('Error fetching real-time audit logs:', error);
-    if (onError) onError(error); // Call error handler
-  });
+          console.log('Fetched Logs:', changes); // Debugging
+          callback(changes);
+        } else {
+          console.log('No logs found.'); // Debugging
+          callback([]);
+        }
+      },
+      (error) => {
+        console.error('Error fetching real-time user updates:', error);
+        if (onError) onError(error);
+      }
+    );
+  } catch (err) {
+    console.error('Error setting up user update subscription:', err);
+    if (onError) onError(err);
+  }
 }

@@ -791,13 +791,22 @@ function AppsLawyer() {
   const getTimeClassName = (time) => {
     const dateTime = new Date(appointmentDate);
     dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
-
-    if (isSlotBookedByAssignedLawyer(dateTime)) {
-      return "booked-time disabled-time";
+  
+    const hours = time.getHours();
+  
+    // Hide times outside of 1:00 PM to 4:00 PM
+    if (hours < 13 || hours > 16) {
+      return "hidden-time"; // Apply the hidden-time class to hide these times
     }
-
+  
+    // Keep current logic for checking booked slots
+    if (isSlotBookedByAssignedLawyer(dateTime)) {
+      return "booked-time disabled-time"; // Apply class for booked slots
+    }
+  
     return "";
   };
+  
 
   const filterRescheduleTime = (time) => {
     if (!(time instanceof Date)) return false;
@@ -1948,18 +1957,18 @@ function AppsLawyer() {
                 </b>
                 <br />
                 <ReactDatePicker
-                  selected={appointmentDate}
-                  onChange={(date) => setAppointmentDate(date)}
+                  selected={rescheduleDate}
+                  onChange={(date) => setRescheduleDate(date)}
                   showTimeSelect
                   filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterTime(time)}
+                  filterTime={(time) => filterRescheduleTime(time)}
                   dateFormat="MM/dd/yy h:mm aa"
                   inline
-                  timeIntervals={60}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
+                  timeIntervals={60} // Set to 60 minutes for 1-hour intervals
+                  minTime={new Date(new Date().setHours(13, 0, 0))} // Starting from 1:00 PM
+                  maxTime={new Date(new Date().setHours(17, 0, 0))} // Ending at 5:00 PM
                   dayClassName={(date) => getDayClassName(date)}
-                  timeClassName={(time) => getTimeClassName(time)}
+                  timeClassName={(time) => getTimeRescheduleClassName(time)}
                 />
               </div>
               <br />
