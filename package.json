@@ -5,12 +5,15 @@
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
+    "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-solid-svg-icons": "^6.5.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@mui/material": "^5.15.20",
     "@popperjs/core": "^2.11.6",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/user-event": "^13.5.0",
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
     "antd": "^5.18.1",
     "axios": "^1.7.7",
     "bootstrap": "^5.3.3",
@@ -20,6 +23,7 @@
     "date-fns": "^2.29.3",
     "draft-js": "^0.11.7",
     "firebase": "^10.12.0",
+    "firebase-admin": "^12.5.0",
     "googleapis": "^144.0.0",
     "html-to-image": "^1.11.11",
     "jsonwebtoken": "^9.0.2",
@@ -31,12 +35,8 @@
     "qr-scanner": "^1.4.2",
     "qrcode": "^1.5.3",
     "qrcode.react": "^3.1.0",
-<<<<<<< HEAD
     "react": "^18.3.1",
-=======
-    "react": "17.0.2",
     "react-app-rewired": "^2.2.1",
->>>>>>> 6df63e377a0b316811fdfd03beb087dede74f6c3
     "react-big-calendar": "^1.13.0",
     "react-big-scheduler": "^0.2.7",
     "react-bootstrap": "^2.10.2",
@@ -51,17 +51,11 @@
     "react-qr-reader": "^3.0.0-beta-1",
     "react-qr-scanner": "^1.0.0-alpha.11",
     "react-router-dom": "^6.23.1",
-<<<<<<< HEAD
-    "react-tooltip": "^5.26.4",
-    "web-vitals": "^2.1.4",
-    "zustand": "^4.5.5"
-=======
     "react-tooltip": "^5.28.0",
     "stream-browserify": "^3.0.0",
     "util": "^0.12.5",
     "vm-browserify": "^1.1.2",
     "web-vitals": "^2.1.4"
->>>>>>> 6df63e377a0b316811fdfd03beb087dede74f6c3
   },
   "scripts": {
     "start": "react-app-rewired start",
