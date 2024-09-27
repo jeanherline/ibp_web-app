@@ -83,18 +83,31 @@ const signInWithGoogle = async () => {
 // Create Google Meet link function
 const createGoogleMeet = async (appointmentDate, clientEmail) => {
   try {
-    // Call your backend Firebase Function to create a Google Meet link
+    // Check if the lawyer is authenticated before creating a Google Meet link
+    const token = await auth.currentUser.getIdToken();
+
     const response = await axios.post('/api/create-google-meet', {
       appointmentDate: appointmentDate.toISOString(),
       clientEmail,
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`, // Pass the Firebase token for authentication
+      },
     });
-    
+
     return response.data.hangoutLink;
   } catch (error) {
-    console.error('Error creating Google Meet link:', error);
-    throw error;
+    // If an authentication error occurs, handle it
+    if (error.response && error.response.status === 401) {
+      // Redirect the lawyer to Google login if not authenticated
+      window.location.href = '/google-login'; // Ensure you have a route to handle this
+    } else {
+      console.error('Error creating Google Meet link:', error);
+      throw error;
+    }
   }
 };
+
 
 // Sign-out function
 const logout = async () => {
