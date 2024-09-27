@@ -16,11 +16,7 @@ import { useAuth } from "../../AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { fs, auth } from "../../Config/Firebase";
 import { addDoc, collection, Timestamp } from "firebase/firestore";
-import {
-  faEye,
-  faCheck,
-  faCalendarAlt,
-} from "@fortawesome/free-solid-svg-icons";
+import { faEye, faCheck, faCalendarAlt } from "@fortawesome/free-solid-svg-icons";
 import { Tooltip, OverlayTrigger } from "react-bootstrap";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
 import axios from "axios"; // Import axios for Google Meet API requests
@@ -45,9 +41,8 @@ function ApptsLawyer() {
   const [appointmentDate, setAppointmentDate] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState(null);
   const [rescheduleReason, setRescheduleReason] = useState("");
-  const [appointmentType, setAppointmentType] = useState(""); // New State for Appointment Type (In-person or Online)
-  const [rescheduleAppointmentType, setRescheduleAppointmentType] =
-    useState(""); // New state for rescheduled appointment type
+  const [appointmentType, setAppointmentType] = useState(""); // New state for Appointment Type (In-person or Online)
+  const [rescheduleAppointmentType, setRescheduleAppointmentType] = useState(""); // New state for rescheduled appointment type
   const [bookedSlots, setBookedSlots] = useState([]);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
@@ -59,8 +54,7 @@ function ApptsLawyer() {
   const [showProceedingNotesForm, setShowProceedingNotesForm] = useState(false);
   const [showRescheduleForm, setShowRescheduleForm] = useState(false);
   const [showScheduleForm, setShowScheduleForm] = useState(false);
-  const [natureOfLegalAssistanceFilter, setNatureOfLegalAssistanceFilter] =
-    useState("all");
+  const [natureOfLegalAssistanceFilter, setNatureOfLegalAssistanceFilter] = useState("all");
   const [totalFilteredItems, setTotalFilteredItems] = useState(0);
   const [lawyers, setLawyers] = useState([]);
   const [assignedLawyerDetails, setAssignedLawyerDetails] = useState(null);
@@ -132,89 +126,6 @@ function ApptsLawyer() {
     natureOfLegalAssistanceFilter,
     currentUser,
   ]);
-
-  const handlePrint = () => {
-    if (!selectedAppointment) {
-      alert("No appointment selected");
-      return;
-    }
-
-    const printContents = document.getElementById(
-      "appointment-details-section"
-    ).innerHTML;
-
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = printContents;
-    const noPrintSection = tempDiv.querySelector(".no-print");
-    if (noPrintSection) {
-      noPrintSection.remove();
-    }
-    const modifiedPrintContents = tempDiv.innerHTML;
-
-    const printWindow = window.open("", "", "height=500, width=500");
-    printWindow.document.write(
-      "<html><head><title>Appointment Details</title></head><body>"
-    );
-    printWindow.document.write("<style>");
-    printWindow.document.write(`
-      @media print {
-        .page-break { page-break-before: always; }
-        .print-section { page-break-inside: avoid; }
-        .print-image { width: 100%; height: 100%; object-fit: cover; }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        table, th, td {
-          border: 1px solid black;
-        }
-        th, td {
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #f2f2f2;
-        }
-        .section-title {
-          color: #a34bc9;
-          font-size: 16px;
-        }
-        .no-print {
-          display: none;
-        }
-        .print-only {
-          display: block;
-        }
-      }
-    `);
-    printWindow.document.write("</style>");
-    printWindow.document.write(` 
-      <div style="text-align: center;">
-        <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
-        <h2>Integrated Bar of the Philippines - Malolos</h2>
-        <img src="${selectedAppointment.appointmentDetails.qrCode}" alt="QR Code" style="width: 100px; display: block; margin: 0 auto;" />
-      </div>
-      <hr />
-    `);
-    printWindow.document.write(modifiedPrintContents);
-
-    const images = document.querySelectorAll(".img-thumbnail");
-    images.forEach((image) => {
-      if (!image.classList.contains("qr-code-image")) {
-        printWindow.document.write("<div class='page-break'></div>");
-        printWindow.document.write(
-          `<img src='${image.src}' class='print-image' />`
-        );
-      }
-    });
-
-    printWindow.document.write("</body></html>");
-    printWindow.document.close();
-    printWindow.print();
-    printWindow.close();
-
-    window.location.reload();
-  };
 
   useEffect(() => {
     const unsubscribe = getBookedSlots((slots) => {
@@ -336,14 +247,6 @@ function ApptsLawyer() {
     dateTime.setHours(hours, minutes, 0, 0);
 
     return !isSlotBookedByAssignedLawyer(dateTime);
-  };
-
-  const isTimeSlotAssignedToCurrentLawyer = (dateTime) => {
-    return appointments.some(
-      (appointment) =>
-        appointment.assignedLawyer === currentUser.uid &&
-        appointment.appointmentDate.toDate().getTime() === dateTime.getTime()
-    );
   };
 
   const handleNext = async () => {
@@ -1987,4 +1890,3 @@ function ApptsLawyer() {
 }
 
 export default ApptsLawyer;
-

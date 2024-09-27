@@ -1,6 +1,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from 'firebase/app';
 import { getAnalytics } from 'firebase/analytics';
+
 import { 
   getFirestore, 
   doc, 
@@ -68,9 +69,11 @@ const signInWithGoogle = async () => {
       email: user.email,
       photoURL: user.photoURL,
       lastLogin: serverTimestamp(),
+      // Optionally store token if needed
+      accessToken: token,
     }, { merge: true });
     
-    return user;
+    return { user, token };
   } catch (error) {
     console.error('Error during Google sign-in:', error.message);
     throw error;
@@ -80,6 +83,7 @@ const signInWithGoogle = async () => {
 // Create Google Meet link function
 const createGoogleMeet = async (appointmentDate, clientEmail) => {
   try {
+    // Call your backend Firebase Function to create a Google Meet link
     const response = await axios.post('/api/create-google-meet', {
       appointmentDate: appointmentDate.toISOString(),
       clientEmail,
