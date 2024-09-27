@@ -1,2 +1,8 @@
+# Ignore node_modules
 node_modules/
+
+# Ignore local environment files
 *.local
+
+# Ignore the Google service account credentials
+functions/keys/google-service-account.json
