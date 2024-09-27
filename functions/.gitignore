@@ -6,3 +6,4 @@ node_modules/
 
 # Ignore the Google service account credentials
 functions/keys/google-service-account.json
+functions/keys/
