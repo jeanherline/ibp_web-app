@@ -1,33 +1,23 @@
-const { OAuth2Client } = require('google-auth-library');
-const functions = require('firebase-functions');
 const express = require('express');
 const { google } = require('googleapis');
+const functions = require('firebase-functions');
 const app = express();
-const cors = require('cors');
-app.use(cors({ origin: true }));
+
+// Middleware to parse JSON requests
 app.use(express.json());
 
 const oAuth2Client = new google.auth.OAuth2(
-  functions.config().google.client_id,
-  functions.config().google.client_secret,
-  functions.config().google.redirect_uri
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET
 );
 
-// Middleware to authenticate Firebase token and retrieve user info
-const authenticateFirebaseToken = async (req, res, next) => {
-  const token = req.headers.authorization?.split('Bearer ')[1];
-  if (!token) return res.status(401).send('Unauthorized');
+oAuth2Client.setCredentials({
+  refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+});
 
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
-    next();
-  } catch (error) {
-    res.status(401).send('Unauthorized');
-  }
-};
+const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
 
-app.post('/create-google-meet', authenticateFirebaseToken, async (req, res) => {
+app.post('/create-google-meet', async (req, res) => {
   const { appointmentDate, clientEmail } = req.body;
 
   if (!appointmentDate || !clientEmail) {
@@ -35,18 +25,6 @@ app.post('/create-google-meet', authenticateFirebaseToken, async (req, res) => {
   }
 
   try {
-    const tokens = req.user.googleTokens; // Retrieve OAuth tokens from Firestore or DB
-
-    // Ensure the lawyer has OAuth tokens, or initiate the OAuth flow
-    if (!tokens || !tokens.access_token) {
-      return res.status(401).json({ error: 'Google authentication required' });
-    }
-
-    // Set the OAuth2 credentials for the current user
-    oAuth2Client.setCredentials(tokens);
-
-    const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
-
     const event = {
       summary: 'Online Consultation',
       description: 'Consultation with client.',
@@ -78,6 +56,12 @@ app.post('/create-google-meet', authenticateFirebaseToken, async (req, res) => {
     console.error('Error creating Google Meet event:', error);
     res.status(500).send('Failed to create Google Meet event');
   }
+});
+
+// Listen on the correct port
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
 exports.createGoogleMeet = functions.https.onRequest(app);
