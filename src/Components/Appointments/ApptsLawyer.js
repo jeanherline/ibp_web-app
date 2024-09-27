@@ -629,10 +629,9 @@ function ApptsLawyer() {
   
     let googleMeetLink = null;
   
-    // Call the backend to create the Google Meet link if the appointment is online
     if (appointmentType === 'online') {
       try {
-        const response = await axios.post('http://localhost:5000/api/create-google-meet', {
+        const response = await axios.post('/api/create-google-meet', {
           appointmentDate: appointmentDate.toISOString(),
           clientEmail: selectedAppointment.applicantProfile?.email,
         });
@@ -646,7 +645,6 @@ function ApptsLawyer() {
       }
     }
   
-    // Update Firebase appointment details with the Google Meet link
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",
@@ -662,7 +660,6 @@ function ApptsLawyer() {
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
-  
   
   
   const handleRescheduleSubmit = async (e) => {
