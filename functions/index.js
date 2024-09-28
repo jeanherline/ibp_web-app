@@ -1,6 +1,6 @@
 const express = require('express');
 const { google } = require('googleapis');
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1'); // Explicitly using v1
 const app = express();
 
 // Middleware to parse JSON requests
@@ -62,5 +62,5 @@ app.post('/create-google-meet', async (req, res) => {
   }
 });
 
-// Correct usage of region
+// Correct usage of functions.region
 exports.createGoogleMeet = functions.region('us-central1').https.onRequest(app);
