@@ -62,5 +62,5 @@ app.post('/create-google-meet', async (req, res) => {
   }
 });
 
-// Correct region usage
+// Correct usage of region
 exports.createGoogleMeet = functions.region('us-central1').https.onRequest(app);
