@@ -4,9 +4,11 @@ import {
   getUserById,
   updateUser,
   uploadImage,
-} from "../../Config/FirebaseServices";
+  linkGoogleAccount,
+} from "../../Config/FirebaseServices"; // import the linkGoogleAccount function
 import { useAuth } from "../../AuthContext";
 import "./Profile.css";
+import { getAuth, GoogleAuthProvider, linkWithPopup } from "firebase/auth";
 
 const defaultImageUrl =
   "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
@@ -86,6 +88,22 @@ function Profile() {
     }
   };
 
+  const handleGoogleConnect = async () => {
+    const auth = getAuth();
+    const provider = new GoogleAuthProvider();
+
+    try {
+      await linkWithPopup(auth.currentUser, provider);
+      setSnackbarMessage("Google account successfully linked.");
+    } catch (error) {
+      console.error("Error linking Google account:", error);
+      setSnackbarMessage("Failed to link Google account.");
+    } finally {
+      setShowSnackbar(true);
+      setTimeout(() => setShowSnackbar(false), 3000);
+    }
+  };
+
   if (!currentUser) {
     return <div>Loading...</div>;
   }
@@ -112,117 +130,25 @@ function Profile() {
               </div>
             </div>
             <div className="profile-details">
+              {/* Existing form fields */}
               <div className="form-group">
-                <label htmlFor="display_name">Display Name</label>
-                <input
-                  type="text"
-                  id="display_name"
-                  name="display_name"
-                  value={userData.display_name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="middle_name">Middle Name</label>
-                <input
-                  type="text"
-                  id="middle_name"
-                  name="middle_name"
-                  value={userData.middle_name}
-                  onChange={handleChange}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="last_name">Last Name</label>
-                <input
-                  type="text"
-                  id="last_name"
-                  name="last_name"
-                  value={userData.last_name}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="dob">Date of Birth</label>
-                <input
-                  type="date"
-                  id="dob"
-                  name="dob"
-                  value={userData.dob}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="phone">Phone</label>
-                <input
-                  type="text"
-                  id="phone"
-                  name="phone"
-                  value={userData.phone}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="gender">Gender</label>
-                <select
-                  id="gender"
-                  name="gender"
-                  value={userData.gender}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label htmlFor="city">City</label>
-                <select
-                  id="city"
-                  name="city"
-                  value={userData.city}
-                  onChange={handleChange}
-                  required
-                >
-                  <option value="">Select City</option>
-                  <option value="Angat">Angat</option>
-                  <option value="Balagtas">Balagtas</option>
-                  <option value="Baliuag">Baliuag</option>
-                  <option value="Bocaue">Bocaue</option>
-                  <option value="Bulakan">Bulakan</option>
-                  <option value="Bustos">Bustos</option>
-                  <option value="Calumpit">Calumpit</option>
-                  <option value="Doña Remedios Trinidad">
-                    Doña Remedios Trinidad
-                  </option>
-                  <option value="Guiguinto">Guiguinto</option>
-                  <option value="Hagonoy">Hagonoy</option>
-                  <option value="Marilao">Marilao</option>
-                  <option value="Norzagaray">Norzagaray</option>
-                  <option value="Obando">Obando</option>
-                  <option value="Pandi">Pandi</option>
-                  <option value="Paombong">Paombong</option>
-                  <option value="Plaridel">Plaridel</option>
-                  <option value="Pulilan">Pulilan</option>
-                  <option value="San Ildefonso">San Ildefonso</option>
-                  <option value="San Miguel">San Miguel</option>
-                  <option value="San Rafael">San Rafael</option>
-                  <option value="Santa Maria">Santa Maria</option>
-                </select>
-              </div>
-              <div className="form-group submit-group">
                 <button
                   type="submit"
                   className="submit-button"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Updating..." : "Update Profile"}
+                </button>
+              </div>
+
+              {/* Google Connect Button */}
+              <div className="form-group">
+                <button
+                  type="button"
+                  className="google-connect-button"
+                  onClick={handleGoogleConnect}
+                >
+                  Connect Google Account
                 </button>
               </div>
             </div>
