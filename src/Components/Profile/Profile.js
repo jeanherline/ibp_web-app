@@ -41,24 +41,25 @@ function Profile() {
 
   useEffect(() => {
     const auth = getAuth();
-  
+
     // Use onAuthStateChanged to monitor authentication state
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         // Fetch user data from Firestore and check if Google is linked
-        const userData = await getUserById(user.uid);
-        setUserData(userData);
-        setImageUrl(userData.photo_url || defaultImageUrl);
+        const fetchedUserData = await getUserById(user.uid);
+        setUserData(fetchedUserData);
+        setImageUrl(fetchedUserData.photo_url || defaultImageUrl);
+        setIsGoogleLinked(fetchedUserData.isGoogleConnected); // Set Google connected status
         await checkGoogleLinked(user.email); // Check if Google account is linked
       } else {
         // Reset states when user logs out
         resetUserData();
       }
     });
-  
+
     return () => unsubscribe(); // Cleanup listener on component unmount
   }, []);
-  
+
   const resetUserData = () => {
     setUserData({
       display_name: "",
@@ -73,7 +74,7 @@ function Profile() {
     });
     setIsGoogleLinked(false);
   };
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData({ ...userData, [name]: value });
@@ -126,7 +127,7 @@ function Profile() {
     try {
       // Fetch sign-in methods for the user's email
       const signInMethods = await fetchSignInMethodsForEmail(email);
-  
+
       // If Google is one of the sign-in methods, set Google account as linked
       if (signInMethods.includes("google.com")) {
         setIsGoogleLinked(true); // Reflect in the UI
@@ -139,30 +140,30 @@ function Profile() {
       console.error("Error checking Google linked status:", error);
     }
   };
-  
-  
+
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-  
+
     try {
       const user = auth.currentUser;
-  
+
       // Link the Google account to the existing user
       const result = await linkWithPopup(user, provider);
       const googleEmail = result.user.email;
-  
+
       if (user.email !== googleEmail) {
-        await user.updateEmail(googleEmail);
-        setSnackbarMessage("Email successfully updated to Google account email.");
+        await user.updateEmail(googleEmail); // Update the email
       }
-  
+
+      // Update Firestore with the new email and mark Google as connected
       await updateUser(user.uid, {
         email: googleEmail,
         isGoogleConnected: true, // Mark as Google-connected
       });
-  
-      setIsGoogleLinked(true);
+
+      setIsGoogleLinked(true); // Update UI
+      setSnackbarMessage("Google account linked successfully.");
     } catch (error) {
       if (error.code === "auth/popup-closed-by-user") {
         setSnackbarMessage("Google sign-in popup was closed. Please try again.");
@@ -177,7 +178,6 @@ function Profile() {
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
-  
 
   const handleGoogleUnlink = async () => {
     const auth = getAuth();
@@ -332,6 +332,17 @@ function Profile() {
                   <option value="San Rafael">San Rafael</option>
                   <option value="Santa Maria">Santa Maria</option>
                 </select>
+              </div>
+              <div className="form-group">
+                <label htmlFor="email">Email</label> {/* Email Input for editing */}
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={userData.email}
+                  onChange={handleChange}
+                  required
+                />
               </div>
               <div className="form-group submit-group">
                 <button
