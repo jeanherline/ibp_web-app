@@ -120,34 +120,29 @@ function Profile() {
     } catch (error) {
       console.error("Error linking Google account:", error);
   
-      // Check if the error is related to email already in use
       if (error.code === "auth/email-already-in-use") {
-        // Get the existing email from the current user
+        // Email is already in use by another provider
         const email = auth.currentUser.email;
-  
-        // Check the sign-in methods for the existing email
         const existingSignInMethods = await fetchSignInMethodsForEmail(auth, email);
-        
+  
         if (existingSignInMethods.includes("password")) {
-          // If the email/password method exists, prompt the user for their password
-          const password = prompt("This email is already associated with an email/password account. Please enter your password to link Google account.");
+          // Prompt user for password and link accounts
+          const password = prompt("Email is already associated with an email/password account. Please enter your password to link Google account.");
   
           if (password) {
-            // Get credentials for email/password account
             const credential = EmailAuthProvider.credential(email, password);
   
             try {
-              // Link the existing email/password account with Google
               await linkWithCredential(auth.currentUser, credential);
-              setSnackbarMessage("Google account successfully linked to email/password account.");
+              setSnackbarMessage("Google account successfully linked with email/password account.");
               setIsGoogleLinked(true);
             } catch (linkError) {
               console.error("Error linking accounts:", linkError);
-              setSnackbarMessage("Failed to link Google account. Please try again.");
+              setSnackbarMessage("Failed to link Google account.");
             }
           }
         } else {
-          setSnackbarMessage("This Google account is already linked to another provider.");
+          setSnackbarMessage("Google account is already linked with another provider.");
         }
       } else {
         setSnackbarMessage("Failed to link Google account.");
