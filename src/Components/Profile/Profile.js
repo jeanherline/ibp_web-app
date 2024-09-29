@@ -6,7 +6,7 @@ import {
   uploadImage,
 } from "../../Config/FirebaseServices";
 import { useAuth } from "../../AuthContext";
-import { getAuth, GoogleAuthProvider, linkWithPopup, fetchSignInMethodsForEmail, unlink } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, linkWithPopup, fetchSignInMethodsForEmail, unlink, onAuthStateChanged } from "firebase/auth";
 import "./Profile.css";
 
 const defaultImageUrl =
@@ -33,17 +33,35 @@ function Profile() {
   const [isGoogleLinked, setIsGoogleLinked] = useState(false); // UI flag for Google account
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const user = await getUserById(currentUser.uid);
-      setUserData(user);
-      setImageUrl(user.photo_url || defaultImageUrl);
-      await checkGoogleLinked(); // Ensure async function finishes before setting UI state
-    };
+    const auth = getAuth();
+    
+    // Use onAuthStateChanged to monitor authentication state
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Fetch user data from Firestore and check if Google is linked
+        const userData = await getUserById(user.uid);
+        setUserData(userData);
+        setImageUrl(userData.photo_url || defaultImageUrl);
+        await checkGoogleLinked(user.email);  // Check if Google account is linked
+      } else {
+        // Reset states when user logs out
+        setUserData({
+          display_name: "",
+          middle_name: "",
+          last_name: "",
+          dob: "",
+          phone: "",
+          gender: "",
+          city: "",
+          email: "",
+          isGoogleConnected: false,
+        });
+        setIsGoogleLinked(false);
+      }
+    });
 
-    if (currentUser) {
-      fetchUserData();
-    }
-  }, [currentUser]);
+    return () => unsubscribe(); // Cleanup listener on component unmount
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -91,21 +109,21 @@ function Profile() {
     }
   };
 
-  const checkGoogleLinked = async () => {
-    const auth = getAuth(); // Make sure this is called before any authentication operation
+  const checkGoogleLinked = async (email) => {
+    const auth = getAuth();
     const user = auth.currentUser;
 
     if (user) {
       try {
-        // First check Firebase Authentication to see if Google is linked
-        const signInMethods = await fetchSignInMethodsForEmail(user.email);
+        // Check Firebase Authentication to see if Google is linked
+        const signInMethods = await fetchSignInMethodsForEmail(email);
 
         if (signInMethods.includes("google.com")) {
           setIsGoogleLinked(true); // Reflect in the UI
-          await updateUser(currentUser.uid, { isGoogleConnected: true }); // Also store it in Firestore
+          await updateUser(user.uid, { isGoogleConnected: true }); // Store it in Firestore
         } else {
           setIsGoogleLinked(false);
-          await updateUser(currentUser.uid, { isGoogleConnected: false });
+          await updateUser(user.uid, { isGoogleConnected: false });
         }
       } catch (error) {
         console.error("Error checking Google linked status:", error);
