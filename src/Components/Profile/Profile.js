@@ -20,7 +20,7 @@ const defaultImageUrl =
   "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
 
 function Profile() {
-  const { currentUser } = useAuth(); // Custom hook to get the current user
+  const { currentUser } = useAuth();
   const [userData, setUserData] = useState({
     display_name: "",
     middle_name: "",
@@ -30,34 +30,38 @@ function Profile() {
     gender: "",
     city: "",
     email: "",
-    isGoogleConnected: false, // Track if Google is connected
+    isGoogleConnected: false,
   });
   const [profileImage, setProfileImage] = useState(null);
   const [imageUrl, setImageUrl] = useState(defaultImageUrl);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
-  const [isGoogleLinked, setIsGoogleLinked] = useState(false); // UI flag for Google account
+  const [isGoogleLinked, setIsGoogleLinked] = useState(false);
 
   useEffect(() => {
     const auth = getAuth();
 
-    // Use onAuthStateChanged to monitor authentication state
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Fetch user data from Firestore and check if Google is linked
-        const fetchedUserData = await getUserById(user.uid);
-        setUserData(fetchedUserData);
-        setImageUrl(fetchedUserData.photo_url || defaultImageUrl);
-        setIsGoogleLinked(fetchedUserData.isGoogleConnected); // Set Google connected status
-        await checkGoogleLinked(user.email); // Check if Google account is linked
+        try {
+          // Fetch user data from Firestore
+          const fetchedUserData = await getUserById(user.uid);
+          if (fetchedUserData) {
+            setUserData(fetchedUserData);
+            setImageUrl(fetchedUserData.photo_url || defaultImageUrl);
+            setIsGoogleLinked(fetchedUserData.isGoogleConnected);
+          }
+          await checkGoogleLinked(user.email); // Verify Google link status
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
       } else {
-        // Reset states when user logs out
-        resetUserData();
+        resetUserData(); // Reset the state if no user is authenticated
       }
     });
 
-    return () => unsubscribe(); // Cleanup listener on component unmount
+    return () => unsubscribe(); // Cleanup on unmount
   }, []);
 
   const resetUserData = () => {
@@ -72,18 +76,20 @@ function Profile() {
       email: "",
       isGoogleConnected: false,
     });
+    setImageUrl(defaultImageUrl);
     setIsGoogleLinked(false);
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setUserData({ ...userData, [name]: value });
+    setUserData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleImageChange = (e) => {
     if (e.target.files[0]) {
-      setProfileImage(e.target.files[0]);
-      const objectUrl = URL.createObjectURL(e.target.files[0]);
+      const file = e.target.files[0];
+      setProfileImage(file);
+      const objectUrl = URL.createObjectURL(file);
       setImageUrl(objectUrl);
     }
   };
@@ -94,25 +100,22 @@ function Profile() {
 
     let updatedData = { ...userData };
 
-    // Remove any invalid keys from updatedData
+    // Remove any invalid keys before submitting
     Object.keys(updatedData).forEach((key) => {
       if (updatedData[key] === "") {
         delete updatedData[key];
       }
     });
 
-    if (profileImage) {
-      const imageUrl = await uploadImage(
-        profileImage,
-        `profile_images/${currentUser.uid}`
-      );
-      updatedData.photo_url = imageUrl;
-    }
-
     try {
+      if (profileImage) {
+        const imageUrl = await uploadImage(profileImage, `profile_images/${currentUser.uid}`);
+        updatedData.photo_url = imageUrl;
+      }
       await updateUser(currentUser.uid, updatedData);
-      setSnackbarMessage("Profile has been successfully updated.");
+      setSnackbarMessage("Profile updated successfully.");
     } catch (error) {
+      console.error("Error updating profile:", error);
       setSnackbarMessage("Failed to update profile. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -121,21 +124,15 @@ function Profile() {
     }
   };
 
-  // Check if Google is already linked for the current user
   const checkGoogleLinked = async (email) => {
     const auth = getAuth();
     try {
-      // Fetch sign-in methods for the user's email
       const signInMethods = await fetchSignInMethodsForEmail(email);
 
-      // If Google is one of the sign-in methods, set Google account as linked
-      if (signInMethods.includes("google.com")) {
-        setIsGoogleLinked(true); // Reflect in the UI
-        await updateUser(auth.currentUser.uid, { isGoogleConnected: true }); // Store it in Firestore
-      } else {
-        setIsGoogleLinked(false);
-        await updateUser(auth.currentUser.uid, { isGoogleConnected: false });
-      }
+      // If Google is one of the sign-in methods, mark Google as linked
+      const isGoogleLinked = signInMethods.includes("google.com");
+      setIsGoogleLinked(isGoogleLinked);
+      await updateUser(auth.currentUser.uid, { isGoogleConnected: isGoogleLinked });
     } catch (error) {
       console.error("Error checking Google linked status:", error);
     }
@@ -148,31 +145,20 @@ function Profile() {
     try {
       const user = auth.currentUser;
 
-      // Link the Google account to the existing user
-      const result = await linkWithPopup(user, provider);
-      const googleEmail = result.user.email;
+      if (!isGoogleLinked) {
+        const result = await linkWithPopup(user, provider);
+        const googleEmail = result.user.email;
 
-      if (user.email !== googleEmail) {
-        await user.updateEmail(googleEmail); // Update the email
+        if (user.email !== googleEmail) {
+          await user.updateEmail(googleEmail); // Update email if different
+        }
+
+        await updateUser(user.uid, { email: googleEmail, isGoogleConnected: true });
+        setIsGoogleLinked(true);
+        setSnackbarMessage("Google account linked successfully.");
       }
-
-      // Update Firestore with the new email and mark Google as connected
-      await updateUser(user.uid, {
-        email: googleEmail,
-        isGoogleConnected: true, // Mark as Google-connected
-      });
-
-      setIsGoogleLinked(true); // Update UI
-      setSnackbarMessage("Google account linked successfully.");
     } catch (error) {
-      if (error.code === "auth/popup-closed-by-user") {
-        setSnackbarMessage("Google sign-in popup was closed. Please try again.");
-      } else if (error.code === "auth/credential-already-in-use") {
-        setSnackbarMessage("This Google account is already linked to another user.");
-      } else {
-        console.error("Error linking Google account:", error);
-        setSnackbarMessage("Failed to link Google account. Please try again.");
-      }
+      handleAuthError(error, "Google");
     } finally {
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
@@ -184,22 +170,27 @@ function Profile() {
     const user = auth.currentUser;
 
     try {
-      // Unlink the Google provider from the user
       await unlink(user, "google.com");
-
-      // Update the user profile to reflect the disconnection
-      await updateUser(user.uid, {
-        isGoogleConnected: false,
-      });
-
+      await updateUser(user.uid, { isGoogleConnected: false });
       setIsGoogleLinked(false);
-      setSnackbarMessage("Google account has been successfully unlinked.");
+      setSnackbarMessage("Google account unlinked successfully.");
     } catch (error) {
       console.error("Error unlinking Google account:", error);
       setSnackbarMessage("Failed to unlink Google account. Please try again.");
     } finally {
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
+    }
+  };
+
+  const handleAuthError = (error, provider) => {
+    if (error.code === "auth/popup-closed-by-user") {
+      setSnackbarMessage(`${provider} sign-in popup was closed. Please try again.`);
+    } else if (error.code === "auth/credential-already-in-use") {
+      setSnackbarMessage(`This ${provider} account is already linked to another user.`);
+    } else {
+      console.error(`Error linking ${provider} account:`, error);
+      setSnackbarMessage(`Failed to link ${provider} account. Please try again.`);
     }
   };
 
@@ -211,22 +202,19 @@ function Profile() {
     <div className="dashboard-container">
       <SideNavBar />
       <div className="main-content">
-        <br />
         <h3>Edit Profile</h3>
         <form onSubmit={handleSubmit} className="edit-profile-form">
           <div className="profile-section">
             <div className="profile-image">
-              <div className="image-wrapper">
-                <label htmlFor="profileImage" className="image-label">
-                  <img src={imageUrl} alt="Profile" className="profile-pic" />
-                </label>
-                <input
-                  type="file"
-                  id="profileImage"
-                  onChange={handleImageChange}
-                  className="image-input"
-                />
-              </div>
+              <label htmlFor="profileImage" className="image-label">
+                <img src={imageUrl} alt="Profile" className="profile-pic" />
+              </label>
+              <input
+                type="file"
+                id="profileImage"
+                onChange={handleImageChange}
+                className="image-input"
+              />
             </div>
             <div className="profile-details">
               <div className="form-group">
@@ -334,7 +322,7 @@ function Profile() {
                 </select>
               </div>
               <div className="form-group">
-                <label htmlFor="email">Email</label> {/* Email Input for editing */}
+                <label htmlFor="email">Email</label>
                 <input
                   type="email"
                   id="email"
@@ -354,17 +342,14 @@ function Profile() {
                 </button>
               </div>
 
-              {/* Google Connect/Unlink Buttons */}
               <div className="form-group">
                 <button
                   type="button"
                   className="google-connect-button"
                   onClick={handleGoogleConnect}
-                  disabled={isGoogleLinked} // Disable the button if Google account is already linked
+                  disabled={isGoogleLinked}
                 >
-                  {isGoogleLinked
-                    ? "Google Account Linked"
-                    : "Connect Google Account"}
+                  {isGoogleLinked ? "Google Account Linked" : "Connect Google Account"}
                 </button>
               </div>
 
