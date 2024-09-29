@@ -109,18 +109,20 @@ function Profile() {
     }
   };
 
-  const checkGoogleLinked = async (email) => {
+  const checkGoogleLinked = async () => {
     const auth = getAuth();
     const user = auth.currentUser;
-
+  
     if (user) {
       try {
-        // Check Firebase Authentication to see if Google is linked
-        const signInMethods = await fetchSignInMethodsForEmail(email);
-
-        if (signInMethods.includes("google.com")) {
+        // Check user provider data to see if Google is linked
+        const isGoogleLinked = user.providerData.some(
+          (provider) => provider.providerId === "google.com"
+        );
+  
+        if (isGoogleLinked) {
           setIsGoogleLinked(true); // Reflect in the UI
-          await updateUser(user.uid, { isGoogleConnected: true }); // Store it in Firestore
+          await updateUser(user.uid, { isGoogleConnected: true }); // Also store it in Firestore
         } else {
           setIsGoogleLinked(false);
           await updateUser(user.uid, { isGoogleConnected: false });
@@ -130,6 +132,7 @@ function Profile() {
       }
     }
   };
+  
 
   const handleGoogleConnect = async () => {
     const auth = getAuth();
@@ -140,9 +143,10 @@ function Profile() {
   
       // Debugging logs
       console.log("Current user before linking:", auth.currentUser);
-  
+
       // Link the Google account to the existing user
       const result = await linkWithPopup(user, provider);
+      console.log("Provider data:", user.providerData);
   
       // Debugging log for the linking result
       console.log("Linking result:", result);
