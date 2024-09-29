@@ -120,22 +120,27 @@ function Profile() {
     try {
       const user = auth.currentUser;
   
-      // Check if the email is already linked with Google
-      const signInMethods = await fetchSignInMethodsForEmail(auth, user.email);
+      // Link the Google account to the existing user
+      const result = await linkWithPopup(user, provider);
   
-      if (!signInMethods.includes("google.com")) {
-        // Link the Google account if it's not already linked
-        await linkWithPopup(auth.currentUser, provider);
-        setSnackbarMessage("Google account successfully linked.");
-        setIsGoogleLinked(true);
+      // Get the Google account's email
+      const googleEmail = result.user.email;
   
-        // Update Firestore to set `isGoogleConnected: true`
-        await updateUser(currentUser.uid, {
+      // Check if the Google email is different from the currently authenticated email
+      if (user.email !== googleEmail) {
+        // Update the email in Firebase Auth
+        await user.updateEmail(googleEmail);
+        setSnackbarMessage("Email successfully updated to Google account email.");
+  
+        // Update the email in Firestore
+        await updateUser(user.uid, {
+          email: googleEmail,
           isGoogleConnected: true,
-          email: user.email, // Also update email to match Google email
         });
+  
+        setIsGoogleLinked(true);
       } else {
-        setSnackbarMessage("This Google account is already linked.");
+        setSnackbarMessage("Google account already linked with the same email.");
       }
     } catch (error) {
       if (error.code === "auth/credential-already-in-use") {
@@ -149,7 +154,6 @@ function Profile() {
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
-  
   
   if (!currentUser) {
     return <div>Loading...</div>;
