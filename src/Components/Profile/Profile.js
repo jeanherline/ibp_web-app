@@ -4,8 +4,7 @@ import {
   getUserById,
   updateUser,
   uploadImage,
-  linkGoogleAccount,
-} from "../../Config/FirebaseServices"; // import the linkGoogleAccount function
+} from "../../Config/FirebaseServices"; // No need to import linkGoogleAccount since we directly use Firebase SDK here
 import { useAuth } from "../../AuthContext";
 import "./Profile.css";
 import { getAuth, GoogleAuthProvider, linkWithPopup } from "firebase/auth";
@@ -29,17 +28,28 @@ function Profile() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
+  const [loading, setLoading] = useState(true); // New loading state
+  const [isGoogleLinked, setIsGoogleLinked] = useState(false); // Disable button after linking Google
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchUserData = async () => {
       const user = await getUserById(currentUser.uid);
-      setUserData(user);
-      setImageUrl(user.photo_url || defaultImageUrl);
+      if (isMounted) {
+        setUserData(user);
+        setImageUrl(user.photo_url || defaultImageUrl);
+        setLoading(false); // Data fetched, stop loading
+      }
     };
 
     if (currentUser) {
       fetchUserData();
     }
+
+    return () => {
+      isMounted = false; // Cleanup function to avoid memory leaks
+    };
   }, [currentUser]);
 
   const handleChange = (e) => {
@@ -49,9 +59,12 @@ function Profile() {
 
   const handleImageChange = (e) => {
     if (e.target.files[0]) {
-      setProfileImage(e.target.files[0]);
-      const objectUrl = URL.createObjectURL(e.target.files[0]);
+      const file = e.target.files[0];
+      setProfileImage(file);
+      const objectUrl = URL.createObjectURL(file);
       setImageUrl(objectUrl);
+
+      return () => URL.revokeObjectURL(objectUrl); // Revoke object URL after use
     }
   };
 
@@ -95,17 +108,22 @@ function Profile() {
     try {
       await linkWithPopup(auth.currentUser, provider);
       setSnackbarMessage("Google account successfully linked.");
+      setIsGoogleLinked(true);
     } catch (error) {
       console.error("Error linking Google account:", error);
-      setSnackbarMessage("Failed to link Google account.");
+      if (error.code === "auth/credential-already-in-use") {
+        setSnackbarMessage("This Google account is already linked to another account.");
+      } else {
+        setSnackbarMessage("Failed to link Google account.");
+      }
     } finally {
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
 
-  if (!currentUser) {
-    return <div>Loading...</div>;
+  if (loading) {
+    return <div>Loading...</div>; // Show loading indicator while fetching user data
   }
 
   return (
@@ -130,7 +148,71 @@ function Profile() {
               </div>
             </div>
             <div className="profile-details">
-              {/* Existing form fields */}
+              {/* Form fields */}
+              <div className="form-group">
+                <input
+                  type="text"
+                  name="display_name"
+                  value={userData.display_name}
+                  onChange={handleChange}
+                  placeholder="Display Name"
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="text"
+                  name="middle_name"
+                  value={userData.middle_name}
+                  onChange={handleChange}
+                  placeholder="Middle Name"
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="text"
+                  name="last_name"
+                  value={userData.last_name}
+                  onChange={handleChange}
+                  placeholder="Last Name"
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="date"
+                  name="dob"
+                  value={userData.dob}
+                  onChange={handleChange}
+                  placeholder="Date of Birth"
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="tel"
+                  name="phone"
+                  value={userData.phone}
+                  onChange={handleChange}
+                  placeholder="Phone Number"
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="text"
+                  name="gender"
+                  value={userData.gender}
+                  onChange={handleChange}
+                  placeholder="Gender"
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  type="text"
+                  name="city"
+                  value={userData.city}
+                  onChange={handleChange}
+                  placeholder="City"
+                />
+              </div>
+              {/* Submit Button */}
               <div className="form-group">
                 <button
                   type="submit"
@@ -147,8 +229,9 @@ function Profile() {
                   type="button"
                   className="google-connect-button"
                   onClick={handleGoogleConnect}
+                  disabled={isGoogleLinked} // Disable the button if the account is already linked
                 >
-                  Connect Google Account
+                  {isGoogleLinked ? "Google Account Linked" : "Connect Google Account"}
                 </button>
               </div>
             </div>
