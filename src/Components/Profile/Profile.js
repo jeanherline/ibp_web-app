@@ -7,7 +7,7 @@ import {
 } from "../../Config/FirebaseServices"; // No need to import linkGoogleAccount since we directly use Firebase SDK here
 import { useAuth } from "../../AuthContext";
 import "./Profile.css";
-import { getAuth, GoogleAuthProvider, linkWithPopup } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, linkWithPopup, fetchSignInMethodsForEmail, EmailAuthProvider } from "firebase/auth";
 
 const defaultImageUrl =
   "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
@@ -45,6 +45,14 @@ function Profile() {
 
     if (currentUser) {
       fetchUserData();
+
+      // Check if Google account is already linked
+      const googleProvider = currentUser.providerData.find(
+        (provider) => provider.providerId === "google.com"
+      );
+      if (googleProvider) {
+        setIsGoogleLinked(true); // Disable button if Google account is linked
+      }
     }
 
     return () => {
@@ -104,15 +112,43 @@ function Profile() {
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-
+  
     try {
       await linkWithPopup(auth.currentUser, provider);
       setSnackbarMessage("Google account successfully linked.");
-      setIsGoogleLinked(true);
+      setIsGoogleLinked(true); // Disable button after linking
     } catch (error) {
       console.error("Error linking Google account:", error);
-      if (error.code === "auth/credential-already-in-use") {
-        setSnackbarMessage("This Google account is already linked to another account.");
+  
+      // Check if the error is related to email already in use
+      if (error.code === "auth/email-already-in-use") {
+        // Get the existing email from the current user
+        const email = auth.currentUser.email;
+  
+        // Check the sign-in methods for the existing email
+        const existingSignInMethods = await fetchSignInMethodsForEmail(auth, email);
+        
+        if (existingSignInMethods.includes("password")) {
+          // If the email/password method exists, prompt the user for their password
+          const password = prompt("This email is already associated with an email/password account. Please enter your password to link Google account.");
+  
+          if (password) {
+            // Get credentials for email/password account
+            const credential = EmailAuthProvider.credential(email, password);
+  
+            try {
+              // Link the existing email/password account with Google
+              await linkWithCredential(auth.currentUser, credential);
+              setSnackbarMessage("Google account successfully linked to email/password account.");
+              setIsGoogleLinked(true);
+            } catch (linkError) {
+              console.error("Error linking accounts:", linkError);
+              setSnackbarMessage("Failed to link Google account. Please try again.");
+            }
+          }
+        } else {
+          setSnackbarMessage("This Google account is already linked to another provider.");
+        }
       } else {
         setSnackbarMessage("Failed to link Google account.");
       }
