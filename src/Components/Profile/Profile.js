@@ -141,7 +141,6 @@ function Profile() {
   };
   
   
-
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
