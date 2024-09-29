@@ -4,10 +4,10 @@ import {
   getUserById,
   updateUser,
   uploadImage,
-} from "../../Config/FirebaseServices"; // No need to import linkGoogleAccount since we directly use Firebase SDK here
+} from "../../Config/FirebaseServices";
 import { useAuth } from "../../AuthContext";
+import { getAuth, GoogleAuthProvider, linkWithPopup, fetchSignInMethodsForEmail } from "firebase/auth";
 import "./Profile.css";
-import { getAuth, GoogleAuthProvider, linkWithPopup, fetchSignInMethodsForEmail, EmailAuthProvider } from "firebase/auth";
 
 const defaultImageUrl =
   "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
@@ -28,36 +28,19 @@ function Profile() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
-  const [loading, setLoading] = useState(true); // New loading state
-  const [isGoogleLinked, setIsGoogleLinked] = useState(false); // Disable button after linking Google
+  const [isGoogleLinked, setIsGoogleLinked] = useState(false); // For Google Auth linking status
 
   useEffect(() => {
-    let isMounted = true;
-
     const fetchUserData = async () => {
       const user = await getUserById(currentUser.uid);
-      if (isMounted) {
-        setUserData(user);
-        setImageUrl(user.photo_url || defaultImageUrl);
-        setLoading(false); // Data fetched, stop loading
-      }
+      setUserData(user);
+      setImageUrl(user.photo_url || defaultImageUrl);
+      checkGoogleLinked(); // Check if Google account is already linked
     };
 
     if (currentUser) {
       fetchUserData();
-
-      // Check if Google account is already linked
-      const googleProvider = currentUser.providerData.find(
-        (provider) => provider.providerId === "google.com"
-      );
-      if (googleProvider) {
-        setIsGoogleLinked(true); // Disable button if Google account is linked
-      }
     }
-
-    return () => {
-      isMounted = false; // Cleanup function to avoid memory leaks
-    };
   }, [currentUser]);
 
   const handleChange = (e) => {
@@ -67,12 +50,9 @@ function Profile() {
 
   const handleImageChange = (e) => {
     if (e.target.files[0]) {
-      const file = e.target.files[0];
-      setProfileImage(file);
-      const objectUrl = URL.createObjectURL(file);
+      setProfileImage(e.target.files[0]);
+      const objectUrl = URL.createObjectURL(e.target.files[0]);
       setImageUrl(objectUrl);
-
-      return () => URL.revokeObjectURL(objectUrl); // Revoke object URL after use
     }
   };
 
@@ -109,52 +89,37 @@ function Profile() {
     }
   };
 
+  const checkGoogleLinked = async () => {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (user) {
+      const signInMethods = await fetchSignInMethodsForEmail(user.email);
+      if (signInMethods.includes("google.com")) {
+        setIsGoogleLinked(true);
+      }
+    }
+  };
+
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-  
+
     try {
       await linkWithPopup(auth.currentUser, provider);
       setSnackbarMessage("Google account successfully linked.");
       setIsGoogleLinked(true); // Disable button after linking
     } catch (error) {
       console.error("Error linking Google account:", error);
-  
-      if (error.code === "auth/email-already-in-use") {
-        // Email is already in use by another provider
-        const email = auth.currentUser.email;
-        const existingSignInMethods = await fetchSignInMethodsForEmail(auth, email);
-  
-        if (existingSignInMethods.includes("password")) {
-          // Prompt user for password and link accounts
-          const password = prompt("Email is already associated with an email/password account. Please enter your password to link Google account.");
-  
-          if (password) {
-            const credential = EmailAuthProvider.credential(email, password);
-  
-            try {
-              await linkWithCredential(auth.currentUser, credential);
-              setSnackbarMessage("Google account successfully linked with email/password account.");
-              setIsGoogleLinked(true);
-            } catch (linkError) {
-              console.error("Error linking accounts:", linkError);
-              setSnackbarMessage("Failed to link Google account.");
-            }
-          }
-        } else {
-          setSnackbarMessage("Google account is already linked with another provider.");
-        }
-      } else {
-        setSnackbarMessage("Failed to link Google account.");
-      }
+      setSnackbarMessage("Failed to link Google account. Please try again.");
     } finally {
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
 
-  if (loading) {
-    return <div>Loading...</div>; // Show loading indicator while fetching user data
+  if (!currentUser) {
+    return <div>Loading...</div>;
   }
 
   return (
@@ -179,72 +144,111 @@ function Profile() {
               </div>
             </div>
             <div className="profile-details">
-              {/* Form fields */}
               <div className="form-group">
+                <label htmlFor="display_name">Display Name</label>
                 <input
                   type="text"
+                  id="display_name"
                   name="display_name"
                   value={userData.display_name}
                   onChange={handleChange}
-                  placeholder="Display Name"
+                  required
                 />
               </div>
               <div className="form-group">
+                <label htmlFor="middle_name">Middle Name</label>
                 <input
                   type="text"
+                  id="middle_name"
                   name="middle_name"
                   value={userData.middle_name}
                   onChange={handleChange}
-                  placeholder="Middle Name"
                 />
               </div>
               <div className="form-group">
+                <label htmlFor="last_name">Last Name</label>
                 <input
                   type="text"
+                  id="last_name"
                   name="last_name"
                   value={userData.last_name}
                   onChange={handleChange}
-                  placeholder="Last Name"
+                  required
                 />
               </div>
               <div className="form-group">
+                <label htmlFor="dob">Date of Birth</label>
                 <input
                   type="date"
+                  id="dob"
                   name="dob"
                   value={userData.dob}
                   onChange={handleChange}
-                  placeholder="Date of Birth"
+                  required
                 />
               </div>
               <div className="form-group">
+                <label htmlFor="phone">Phone</label>
                 <input
-                  type="tel"
+                  type="text"
+                  id="phone"
                   name="phone"
                   value={userData.phone}
                   onChange={handleChange}
-                  placeholder="Phone Number"
+                  required
                 />
               </div>
               <div className="form-group">
-                <input
-                  type="text"
+                <label htmlFor="gender">Gender</label>
+                <select
+                  id="gender"
                   name="gender"
                   value={userData.gender}
                   onChange={handleChange}
-                  placeholder="Gender"
-                />
+                  required
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
               <div className="form-group">
-                <input
-                  type="text"
+                <label htmlFor="city">City</label>
+                <select
+                  id="city"
                   name="city"
                   value={userData.city}
                   onChange={handleChange}
-                  placeholder="City"
-                />
+                  required
+                >
+                  <option value="">Select City</option>
+                  <option value="Angat">Angat</option>
+                  <option value="Balagtas">Balagtas</option>
+                  <option value="Baliuag">Baliuag</option>
+                  <option value="Bocaue">Bocaue</option>
+                  <option value="Bulakan">Bulakan</option>
+                  <option value="Bustos">Bustos</option>
+                  <option value="Calumpit">Calumpit</option>
+                  <option value="Doña Remedios Trinidad">
+                    Doña Remedios Trinidad
+                  </option>
+                  <option value="Guiguinto">Guiguinto</option>
+                  <option value="Hagonoy">Hagonoy</option>
+                  <option value="Marilao">Marilao</option>
+                  <option value="Norzagaray">Norzagaray</option>
+                  <option value="Obando">Obando</option>
+                  <option value="Pandi">Pandi</option>
+                  <option value="Paombong">Paombong</option>
+                  <option value="Plaridel">Plaridel</option>
+                  <option value="Pulilan">Pulilan</option>
+                  <option value="San Ildefonso">San Ildefonso</option>
+                  <option value="San Miguel">San Miguel</option>
+                  <option value="San Rafael">San Rafael</option>
+                  <option value="Santa Maria">Santa Maria</option>
+                </select>
               </div>
-              {/* Submit Button */}
-              <div className="form-group">
+              <div className="form-group submit-group">
                 <button
                   type="submit"
                   className="submit-button"
@@ -260,7 +264,7 @@ function Profile() {
                   type="button"
                   className="google-connect-button"
                   onClick={handleGoogleConnect}
-                  disabled={isGoogleLinked} // Disable the button if the account is already linked
+                  disabled={isGoogleLinked} // Disable the button if Google account is already linked
                 >
                   {isGoogleLinked ? "Google Account Linked" : "Connect Google Account"}
                 </button>
