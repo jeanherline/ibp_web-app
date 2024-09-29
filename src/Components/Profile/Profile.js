@@ -41,7 +41,7 @@ function Profile() {
 
   useEffect(() => {
     const auth = getAuth();
-
+  
     // Use onAuthStateChanged to monitor authentication state
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -55,10 +55,10 @@ function Profile() {
         resetUserData();
       }
     });
-
+  
     return () => unsubscribe(); // Cleanup listener on component unmount
   }, []);
-
+  
   const resetUserData = () => {
     setUserData({
       display_name: "",
@@ -73,7 +73,7 @@ function Profile() {
     });
     setIsGoogleLinked(false);
   };
-
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData({ ...userData, [name]: value });
@@ -126,7 +126,7 @@ function Profile() {
     try {
       // Fetch sign-in methods for the user's email
       const signInMethods = await fetchSignInMethodsForEmail(email);
-
+  
       // If Google is one of the sign-in methods, set Google account as linked
       if (signInMethods.includes("google.com")) {
         setIsGoogleLinked(true); // Reflect in the UI
@@ -139,33 +139,35 @@ function Profile() {
       console.error("Error checking Google linked status:", error);
     }
   };
+  
+  
 
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-
+  
     try {
       const user = auth.currentUser;
-
+  
       // Link the Google account to the existing user
       const result = await linkWithPopup(user, provider);
       const googleEmail = result.user.email;
-
-      // Update the email in Firebase Auth if it's different
+  
       if (user.email !== googleEmail) {
         await user.updateEmail(googleEmail);
         setSnackbarMessage("Email successfully updated to Google account email.");
       }
-
-      // Update the email in Firestore to match the Google account
+  
       await updateUser(user.uid, {
         email: googleEmail,
         isGoogleConnected: true, // Mark as Google-connected
       });
-
+  
       setIsGoogleLinked(true);
     } catch (error) {
-      if (error.code === "auth/credential-already-in-use") {
+      if (error.code === "auth/popup-closed-by-user") {
+        setSnackbarMessage("Google sign-in popup was closed. Please try again.");
+      } else if (error.code === "auth/credential-already-in-use") {
         setSnackbarMessage("This Google account is already linked to another user.");
       } else {
         console.error("Error linking Google account:", error);
@@ -176,6 +178,7 @@ function Profile() {
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
+  
 
   const handleGoogleUnlink = async () => {
     const auth = getAuth();
