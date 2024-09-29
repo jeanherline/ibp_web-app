@@ -116,16 +116,16 @@ function Profile() {
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-
+  
     try {
       const user = auth.currentUser;
-
+  
       // Check if the emails match between Auth and Firestore
       if (user.email === userData.email) {
         await linkWithPopup(auth.currentUser, provider);
         setSnackbarMessage("Google account successfully linked.");
         setIsGoogleLinked(true); // Disable button after linking
-
+  
         // Update Firestore to set `isGoogleConnected: true`
         await updateUser(currentUser.uid, {
           isGoogleConnected: true,
@@ -136,7 +136,10 @@ function Profile() {
       }
     } catch (error) {
       if (error.code === "auth/credential-already-in-use") {
-        setSnackbarMessage("This Google account is already linked to another user.");
+        setSnackbarMessage(
+          "This Google account is already linked to another user. Please log in with Google instead."
+        );
+        // Optionally, you can provide logic here to let the user know they can log in with Google
       } else {
         console.error("Error linking Google account:", error);
         setSnackbarMessage("Failed to link Google account. Please try again.");
@@ -146,6 +149,7 @@ function Profile() {
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
+  
 
   if (!currentUser) {
     return <div>Loading...</div>;
