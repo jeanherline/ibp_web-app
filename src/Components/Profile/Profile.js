@@ -120,26 +120,34 @@ function Profile() {
     try {
       const user = auth.currentUser;
   
-      // Check if the emails match between Auth and Firestore
+      // Check if the emails match between Firebase Auth and Firestore
       if (user.email === userData.email) {
-        await linkWithPopup(auth.currentUser, provider);
-        setSnackbarMessage("Google account successfully linked.");
-        setIsGoogleLinked(true); // Disable button after linking
+        // Check if the email is already linked with Google
+        const signInMethods = await fetchSignInMethodsForEmail(auth, user.email);
+        
+        if (!signInMethods.includes("google.com")) {
+          // Link the Google account
+          await linkWithPopup(auth.currentUser, provider);
+          setSnackbarMessage("Google account successfully linked.");
+          setIsGoogleLinked(true); // Disable button after linking
   
-        // Update Firestore to set `isGoogleConnected: true`
-        await updateUser(currentUser.uid, {
-          isGoogleConnected: true,
-          email: user.email, // Also update email to match Google email
-        });
+          // Update Firestore to set `isGoogleConnected: true`
+          await updateUser(currentUser.uid, {
+            isGoogleConnected: true,
+            email: user.email, // Also update email to match Google email
+          });
+        } else {
+          setSnackbarMessage("This Google account is already linked.");
+        }
       } else {
         setSnackbarMessage("Email mismatch. Unable to link Google account.");
       }
     } catch (error) {
       if (error.code === "auth/credential-already-in-use") {
         setSnackbarMessage(
-          "This Google account is already linked to another user. Please log in with Google instead."
+          "This Google account is already linked to another user. Please log in with Google."
         );
-        // Optionally, you can provide logic here to let the user know they can log in with Google
+        // Optionally guide the user to log in with Google
       } else {
         console.error("Error linking Google account:", error);
         setSnackbarMessage("Failed to link Google account. Please try again.");
@@ -150,7 +158,6 @@ function Profile() {
     }
   };
   
-
   if (!currentUser) {
     return <div>Loading...</div>;
   }
