@@ -22,13 +22,15 @@ function Profile() {
     phone: "",
     gender: "",
     city: "",
+    email: "",
+    isGoogleConnected: false, // New field to track if Google is connected
   });
   const [profileImage, setProfileImage] = useState(null);
   const [imageUrl, setImageUrl] = useState(defaultImageUrl);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
-  const [isGoogleLinked, setIsGoogleLinked] = useState(false); // For Google Auth linking status
+  const [isGoogleLinked, setIsGoogleLinked] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -97,6 +99,10 @@ function Profile() {
       const signInMethods = await fetchSignInMethodsForEmail(user.email);
       if (signInMethods.includes("google.com")) {
         setIsGoogleLinked(true);
+        await updateUser(currentUser.uid, { isGoogleConnected: true });
+      } else {
+        setIsGoogleLinked(false);
+        await updateUser(currentUser.uid, { isGoogleConnected: false });
       }
     }
   };
@@ -106,12 +112,29 @@ function Profile() {
     const provider = new GoogleAuthProvider();
 
     try {
-      await linkWithPopup(auth.currentUser, provider);
-      setSnackbarMessage("Google account successfully linked.");
-      setIsGoogleLinked(true); // Disable button after linking
+      const user = auth.currentUser;
+
+      // Check if the emails match between Auth and Firestore
+      if (user.email === userData.email) {
+        await linkWithPopup(auth.currentUser, provider);
+        setSnackbarMessage("Google account successfully linked.");
+        setIsGoogleLinked(true); // Disable button after linking
+
+        // Update Firestore to set `isGoogleConnected: true`
+        await updateUser(currentUser.uid, {
+          isGoogleConnected: true,
+          email: user.email, // Also update email to match Google email
+        });
+      } else {
+        setSnackbarMessage("Email mismatch. Unable to link Google account.");
+      }
     } catch (error) {
-      console.error("Error linking Google account:", error);
-      setSnackbarMessage("Failed to link Google account. Please try again.");
+      if (error.code === "auth/credential-already-in-use") {
+        setSnackbarMessage("This Google account is already linked to another user.");
+      } else {
+        console.error("Error linking Google account:", error);
+        setSnackbarMessage("Failed to link Google account. Please try again.");
+      }
     } finally {
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
