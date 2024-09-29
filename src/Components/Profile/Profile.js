@@ -6,7 +6,14 @@ import {
   uploadImage,
 } from "../../Config/FirebaseServices";
 import { useAuth } from "../../AuthContext";
-import { getAuth, GoogleAuthProvider, linkWithPopup, fetchSignInMethodsForEmail, unlink, onAuthStateChanged } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  linkWithPopup,
+  fetchSignInMethodsForEmail,
+  unlink,
+  onAuthStateChanged,
+} from "firebase/auth";
 import "./Profile.css";
 
 const defaultImageUrl =
@@ -34,7 +41,7 @@ function Profile() {
 
   useEffect(() => {
     const auth = getAuth();
-  
+
     // Use onAuthStateChanged to monitor authentication state
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -42,27 +49,30 @@ function Profile() {
         const userData = await getUserById(user.uid);
         setUserData(userData);
         setImageUrl(userData.photo_url || defaultImageUrl);
-        await checkGoogleLinked();  // Check if Google account is linked
+        await checkGoogleLinked(user.email); // Check if Google account is linked
       } else {
         // Reset states when user logs out
-        setUserData({
-          display_name: "",
-          middle_name: "",
-          last_name: "",
-          dob: "",
-          phone: "",
-          gender: "",
-          city: "",
-          email: "",
-          isGoogleConnected: false,
-        });
-        setIsGoogleLinked(false);
+        resetUserData();
       }
     });
-  
-    return () => unsubscribe();  // Cleanup listener on component unmount
+
+    return () => unsubscribe(); // Cleanup listener on component unmount
   }, []);
-  
+
+  const resetUserData = () => {
+    setUserData({
+      display_name: "",
+      middle_name: "",
+      last_name: "",
+      dob: "",
+      phone: "",
+      gender: "",
+      city: "",
+      email: "",
+      isGoogleConnected: false,
+    });
+    setIsGoogleLinked(false);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -110,60 +120,54 @@ function Profile() {
     }
   };
 
-  const checkGoogleLinked = async () => {
+  const checkGoogleLinked = async (email) => {
     const auth = getAuth();
     const user = auth.currentUser;
-  
+
     if (user) {
-      // Check user.providerData for Google provider
-      const isGoogleLinked = user.providerData.some(
-        (provider) => provider.providerId === "google.com"
-      );
-  
-      if (isGoogleLinked) {
-        setIsGoogleLinked(true);  // Reflect in the UI
-        await updateUser(user.uid, { isGoogleConnected: true });  // Update Firestore
-      } else {
-        setIsGoogleLinked(false);
-        await updateUser(user.uid, { isGoogleConnected: false });
+      try {
+        // Check Firebase Authentication to see if Google is linked
+        const signInMethods = await fetchSignInMethodsForEmail(email);
+
+        if (signInMethods.includes("google.com")) {
+          setIsGoogleLinked(true); // Reflect in the UI
+          await updateUser(user.uid, { isGoogleConnected: true }); // Store it in Firestore
+        } else {
+          setIsGoogleLinked(false);
+          await updateUser(user.uid, { isGoogleConnected: false });
+        }
+      } catch (error) {
+        console.error("Error checking Google linked status:", error);
       }
     }
   };
-    
+
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-  
+
     try {
       const user = auth.currentUser;
-  
+
       // Link the Google account to the existing user
       const result = await linkWithPopup(user, provider);
-  
-      // Get the Google account's email
       const googleEmail = result.user.email;
-  
+
       // Update the email in Firebase Auth if it's different
       if (user.email !== googleEmail) {
-        console.log("Updating Firebase Auth email to Google email:", googleEmail);
-  
-        // Update the email in Firebase Authentication
         await user.updateEmail(googleEmail);
         setSnackbarMessage("Email successfully updated to Google account email.");
-      } else {
-        setSnackbarMessage("Google account already linked with the same email.");
       }
-  
-      // Update the email and isGoogleConnected in Firestore
+
+      // Update the email in Firestore to match the Google account
       await updateUser(user.uid, {
         email: googleEmail,
-        isGoogleConnected: true,  // Mark as Google-connected
+        isGoogleConnected: true, // Mark as Google-connected
       });
-  
-      setIsGoogleLinked(true);  // Update the UI
+
+      setIsGoogleLinked(true);
     } catch (error) {
       if (error.code === "auth/credential-already-in-use") {
-        // This Google account is already linked with another Firebase account
         setSnackbarMessage("This Google account is already linked to another user.");
       } else {
         console.error("Error linking Google account:", error);
@@ -174,7 +178,6 @@ function Profile() {
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
-  
 
   const handleGoogleUnlink = async () => {
     const auth = getAuth();
@@ -183,7 +186,7 @@ function Profile() {
     try {
       // Unlink the Google provider from the user
       await unlink(user, "google.com");
-      
+
       // Update the user profile to reflect the disconnection
       await updateUser(user.uid, {
         isGoogleConnected: false,
@@ -348,7 +351,9 @@ function Profile() {
                   onClick={handleGoogleConnect}
                   disabled={isGoogleLinked} // Disable the button if Google account is already linked
                 >
-                  {isGoogleLinked ? "Google Account Linked" : "Connect Google Account"}
+                  {isGoogleLinked
+                    ? "Google Account Linked"
+                    : "Connect Google Account"}
                 </button>
               </div>
 
