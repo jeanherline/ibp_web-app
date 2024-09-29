@@ -9,11 +9,11 @@
     "rewrites": [
       {
         "source": "/api/**",
-        "function": "createGoogleMeet"  
+        "function": "api"  // Use 'api' if you have named the exported function as 'api'
       },
       {
         "source": "**",
-        "destination": "/index.html" 
+        "destination": "/index.html"
       }
     ]
   },
@@ -23,13 +23,21 @@
       "node_modules",
       ".git",
       "firebase-debug.log",
-      "*.local"
+      "*.local",
+      ".env",
+      "firebase-debug.*"
     ],
-    "runtime": "nodejs18"
+    "runtime": "nodejs18",
+    "region": "us-central1"
   },
   "emulators": {
     "functions": {
-      "port": 8081 
+      "port": 5001, 
+      "host": "localhost"
+    },
+    "hosting": {
+      "port": 5000,
+      "host": "localhost"
     }
   }
 }

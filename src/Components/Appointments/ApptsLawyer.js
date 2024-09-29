@@ -609,50 +609,52 @@ function ApptsLawyer() {
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!appointmentDate) {
       setSnackbarMessage("Appointment date is required.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-  
+
     if (!appointmentType) {
       setSnackbarMessage("Please select appointment type.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-  
+
     let googleMeetLink = null;
-  
+
     if (appointmentType === 'online') {
       try {
-        const response = await axios.post('/api/create-google-meet', {
+        // Correct endpoint for the Firebase Cloud Function
+        const response = await axios.post('https://api-4n4atauzwq-uc.a.run.app/create-google-meet', {
           appointmentDate: appointmentDate.toISOString(),
           clientEmail: selectedAppointment.applicantProfile?.email,
         });
-        googleMeetLink = response.data.hangoutLink;
+        googleMeetLink = response.data.hangoutLink; // Capture the Google Meet link from the response
       } catch (error) {
-        console.error('Error creating Google Meet event:', error);
+        console.error('Error creating Google Meet event:', error.response?.data || error.message);
         setSnackbarMessage('Failed to create Google Meet event.');
         setShowSnackbar(true);
         setTimeout(() => setShowSnackbar(false), 3000);
-        return;
+        return; // Exit if the Google Meet event creation fails
       }
     }
-  
+
+    // Continue with saving appointment details
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",
       "appointmentDetails.apptType": appointmentType,
       ...(googleMeetLink && {
-        "appointmentDetails.googleMeetLink": googleMeetLink,
+        "appointmentDetails.googleMeetLink": googleMeetLink, // Add Google Meet link if applicable
       }),
     };
-  
+
     await updateAppointment(selectedAppointment.id, updatedData);
-  
+
     setSnackbarMessage('Appointment has been successfully scheduled.');
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
@@ -661,75 +663,55 @@ function ApptsLawyer() {
   
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!rescheduleDate) {
       setSnackbarMessage("Reschedule date is required.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-  
+
     if (!rescheduleAppointmentType) {
       setSnackbarMessage("Please select appointment type.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-  
+
     let googleMeetLink = selectedAppointment.appointmentDetails?.googleMeetLink || null;
-  
-    // If the reschedule type is "online" and there's no existing Google Meet link, create a new one
+
     if (rescheduleAppointmentType === "online" && !googleMeetLink) {
       try {
-        const response = await axios.post('/api/create-google-meet', {
+        // Correct endpoint for the Firebase Cloud Function
+        const response = await axios.post('https://api-4n4atauzwq-uc.a.run.app/create-google-meet', {
           appointmentDate: rescheduleDate.toISOString(),
           clientEmail: selectedAppointment.applicantProfile?.email,
         });
-  
-        googleMeetLink = response.data.hangoutLink; // Capture the new Google Meet link
+        googleMeetLink = response.data.hangoutLink; // Capture the Google Meet link from the response
       } catch (error) {
         console.error("Error creating Google Meet event:", error.response?.data || error.message);
         setSnackbarMessage("Failed to create Google Meet event.");
         setShowSnackbar(true);
         setTimeout(() => setShowSnackbar(false), 3000);
-        return;
+        return; // Exit if the Google Meet event creation fails
       }
     }
-  
-    // Save the updated appointment details, including the new Google Meet link (if applicable)
+
+    // Continue with updating the rescheduled appointment details
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
       "appointmentDetails.rescheduleReason": rescheduleReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-      "appointmentDetails.apptType": rescheduleAppointmentType, // Update appointment type
-      ...(googleMeetLink && { "appointmentDetails.googleMeetLink": googleMeetLink }), // Only add link if created or exists
+      "appointmentDetails.apptType": rescheduleAppointmentType,
+      ...(googleMeetLink && { "appointmentDetails.googleMeetLink": googleMeetLink }),
     };
-  
+
     await updateAppointment(selectedAppointment.id, updatedData);
-  
-    // Clear form and reload appointments
-    setSelectedAppointment(null);
-    setRescheduleDate(null);
-    setRescheduleReason("");
-    setRescheduleAppointmentType(""); // Clear the state after submitting
-    setShowRescheduleForm(false);
-  
-    const { data, total } = await getLawyerAppointments(
-      filter,
-      lastVisible,
-      pageSize,
-      searchText,
-      natureOfLegalAssistanceFilter,
-      currentUser
-    );
-    setAppointments(data);
-    setTotalPages(Math.ceil(total / pageSize));
-  
+
     setSnackbarMessage("Appointment has been successfully rescheduled.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
-  
 
   const getFormattedDate = (timestamp, includeTime = false) => {
     if (!timestamp) return "N/A";
