@@ -6,7 +6,13 @@ import {
   uploadImage,
 } from "../../Config/FirebaseServices";
 import { useAuth } from "../../AuthContext";
-import { getAuth, GoogleAuthProvider, linkWithPopup, fetchSignInMethodsForEmail, unlink } from "firebase/auth";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  linkWithPopup,
+  fetchSignInMethodsForEmail,
+  unlink,
+} from "firebase/auth";
 import "./Profile.css";
 
 const defaultImageUrl =
@@ -116,44 +122,53 @@ function Profile() {
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-  
+
     try {
       const user = auth.currentUser;
-  
+
       // Debugging logs
       console.log("Current user before linking:", auth.currentUser);
-  
+
       // Link the Google account to the existing user
       const result = await linkWithPopup(user, provider);
-  
+
       // Debugging log for the linking result
       console.log("Linking result:", result);
-  
+
       // Get the Google account's email
       const googleEmail = result.user.email;
-  
+
       // Update the email in Firebase Auth if it's different
       if (user.email !== googleEmail) {
-        console.log("Email mismatch. Updating Firebase Auth email to Google email:", googleEmail);
-  
+        console.log(
+          "Email mismatch. Updating Firebase Auth email to Google email:",
+          googleEmail
+        );
+
         // Update the email in Firebase Authentication
         await user.updateEmail(googleEmail);
-        setSnackbarMessage("Email successfully updated to Google account email.");
+        setSnackbarMessage(
+          "Email successfully updated to Google account email."
+        );
       } else {
         console.log("Google account already linked with the same email.");
-        setSnackbarMessage("Google account already linked with the same email.");
+        setSnackbarMessage(
+          "Google account already linked with the same email."
+        );
       }
-  
+
       // Update the email in Firestore to match the Google account
       await updateUser(user.uid, {
         email: googleEmail,
-        isGoogleConnected: true,  // Mark as Google-connected
+        isGoogleConnected: true, // Mark as Google-connected
       });
-  
+
       setIsGoogleLinked(true);
     } catch (error) {
       if (error.code === "auth/credential-already-in-use") {
-        setSnackbarMessage("This Google account is already linked to another user.");
+        setSnackbarMessage(
+          "This Google account is already linked to another user."
+        );
       } else {
         console.error("Error linking Google account:", error);
         setSnackbarMessage("Failed to link Google account. Please trWy again.");
@@ -163,7 +178,6 @@ function Profile() {
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
-  
 
   const handleGoogleUnlink = async () => {
     const auth = getAuth();
@@ -172,7 +186,7 @@ function Profile() {
     try {
       // Unlink the Google provider from the user
       await unlink(user, "google.com");
-      
+
       // Update the user profile to reflect the disconnection
       await updateUser(user.uid, {
         isGoogleConnected: false,
@@ -337,19 +351,21 @@ function Profile() {
                   onClick={handleGoogleConnect}
                   disabled={isGoogleLinked} // Disable the button if Google account is already linked
                 >
-                  {isGoogleLinked ? "Google Account Linked" : "Connect Google Account"}
+                  {isGoogleLinked
+                    ? "Google Account Linked"
+                    : "Connect Google Account"}
                 </button>
               </div>
 
-                <div className="form-group">
-                  <button
-                    type="button"
-                    className="google-unlink-button"
-                    onClick={handleGoogleUnlink}
-                  >
-                    Remove Google Authentication
-                  </button>
-                </div>
+              <div className="form-group">
+                <button
+                  type="button"
+                  className="google-unlink-button"
+                  onClick={handleGoogleUnlink}
+                >
+                  Remove Google Authentication
+                </button>
+              </div>
             </div>
           </div>
         </form>
