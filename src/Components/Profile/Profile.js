@@ -96,13 +96,20 @@ function Profile() {
     const user = auth.currentUser;
 
     if (user) {
-      const signInMethods = await fetchSignInMethodsForEmail(user.email);
-      if (signInMethods.includes("google.com")) {
+      // First check Firestore for the `isGoogleConnected` field
+      const firestoreUser = await getUserById(currentUser.uid);
+
+      if (firestoreUser?.isGoogleConnected) {
+        // If already marked in Firestore, mark as linked
         setIsGoogleLinked(true);
-        await updateUser(currentUser.uid, { isGoogleConnected: true });
       } else {
-        setIsGoogleLinked(false);
-        await updateUser(currentUser.uid, { isGoogleConnected: false });
+        // If not marked in Firestore, check via Firebase Auth
+        const signInMethods = await fetchSignInMethodsForEmail(user.email);
+        if (signInMethods.includes("google.com")) {
+          setIsGoogleLinked(true);
+          // Update Firestore to set `isGoogleConnected: true`
+          await updateUser(currentUser.uid, { isGoogleConnected: true });
+        }
       }
     }
   };
