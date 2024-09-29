@@ -23,21 +23,21 @@ function Profile() {
     gender: "",
     city: "",
     email: "",
-    isGoogleConnected: false, // New field to track if Google is connected
+    isGoogleConnected: false, // Track if Google is connected
   });
   const [profileImage, setProfileImage] = useState(null);
   const [imageUrl, setImageUrl] = useState(defaultImageUrl);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
-  const [isGoogleLinked, setIsGoogleLinked] = useState(false);
+  const [isGoogleLinked, setIsGoogleLinked] = useState(false); // UI flag for Google account
 
   useEffect(() => {
     const fetchUserData = async () => {
       const user = await getUserById(currentUser.uid);
       setUserData(user);
       setImageUrl(user.photo_url || defaultImageUrl);
-      checkGoogleLinked(); // Check if Google account is already linked
+      await checkGoogleLinked(); // Ensure async function finishes before setting UI state
     };
 
     if (currentUser) {
@@ -96,20 +96,19 @@ function Profile() {
     const user = auth.currentUser;
 
     if (user) {
-      // First check Firestore for the `isGoogleConnected` field
-      const firestoreUser = await getUserById(currentUser.uid);
-
-      if (firestoreUser?.isGoogleConnected) {
-        // If already marked in Firestore, mark as linked
-        setIsGoogleLinked(true);
-      } else {
-        // If not marked in Firestore, check via Firebase Auth
+      try {
+        // First check Firebase Authentication to see if Google is linked
         const signInMethods = await fetchSignInMethodsForEmail(user.email);
+
         if (signInMethods.includes("google.com")) {
-          setIsGoogleLinked(true);
-          // Update Firestore to set `isGoogleConnected: true`
-          await updateUser(currentUser.uid, { isGoogleConnected: true });
+          setIsGoogleLinked(true); // Reflect in the UI
+          await updateUser(currentUser.uid, { isGoogleConnected: true }); // Also store it in Firestore
+        } else {
+          setIsGoogleLinked(false);
+          await updateUser(currentUser.uid, { isGoogleConnected: false });
         }
+      } catch (error) {
+        console.error("Error checking Google linked status:", error);
       }
     }
   };
