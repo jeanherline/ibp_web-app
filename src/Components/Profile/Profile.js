@@ -341,7 +341,6 @@ function Profile() {
                 </button>
               </div>
 
-              {isGoogleLinked && (
                 <div className="form-group">
                   <button
                     type="button"
@@ -351,7 +350,6 @@ function Profile() {
                     Remove Google Authentication
                   </button>
                 </div>
-              )}
             </div>
           </div>
         </form>
