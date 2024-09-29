@@ -20,7 +20,7 @@ const defaultImageUrl =
   "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
 
 function Profile() {
-  const { currentUser } = useAuth();
+  const { currentUser } = useAuth(); // Custom hook to get the current user
   const [userData, setUserData] = useState({
     display_name: "",
     middle_name: "",
@@ -120,25 +120,23 @@ function Profile() {
     }
   };
 
+  // Check if Google is already linked for the current user
   const checkGoogleLinked = async (email) => {
     const auth = getAuth();
-    const user = auth.currentUser;
+    try {
+      // Fetch sign-in methods for the user's email
+      const signInMethods = await fetchSignInMethodsForEmail(email);
 
-    if (user) {
-      try {
-        // Check Firebase Authentication to see if Google is linked
-        const signInMethods = await fetchSignInMethodsForEmail(email);
-
-        if (signInMethods.includes("google.com")) {
-          setIsGoogleLinked(true); // Reflect in the UI
-          await updateUser(user.uid, { isGoogleConnected: true }); // Store it in Firestore
-        } else {
-          setIsGoogleLinked(false);
-          await updateUser(user.uid, { isGoogleConnected: false });
-        }
-      } catch (error) {
-        console.error("Error checking Google linked status:", error);
+      // If Google is one of the sign-in methods, set Google account as linked
+      if (signInMethods.includes("google.com")) {
+        setIsGoogleLinked(true); // Reflect in the UI
+        await updateUser(auth.currentUser.uid, { isGoogleConnected: true }); // Store it in Firestore
+      } else {
+        setIsGoogleLinked(false);
+        await updateUser(auth.currentUser.uid, { isGoogleConnected: false });
       }
+    } catch (error) {
+      console.error("Error checking Google linked status:", error);
     }
   };
 
