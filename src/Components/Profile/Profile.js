@@ -17,7 +17,7 @@ import {
 import "./Profile.css";
 
 const defaultImageUrl =
-  "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
+  "https://firebasestorage.googleapis.com/v0/b/lawyer-app-ed056.appspot.com/o/DefaultUserImage.jpg?alt=media&token=3ba45526-99d8-4d30-9cb5-505a5e23eda1";
 
 function Profile() {
   const { currentUser } = useAuth();
@@ -39,9 +39,9 @@ function Profile() {
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
 
-  // Fetch user data and check Google linked status
   useEffect(() => {
     const auth = getAuth();
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -50,13 +50,11 @@ function Profile() {
           if (fetchedUserData) {
             setUserData(fetchedUserData);
             setImageUrl(fetchedUserData.photo_url || defaultImageUrl);
-
-            // Check if Google is linked by checking Firestore
-            const googleLinkedStatus = fetchedUserData.isGoogleConnected || false;
-            setIsGoogleLinked(googleLinkedStatus);
+            setIsGoogleLinked(fetchedUserData.isGoogleConnected);
           }
+          await checkGoogleLinked(user.email); // Verify Google link status
         } catch (error) {
-          console.error("Error fetching user data or checking Google linked status:", error);
+          console.error("Error fetching user data:", error);
         }
       } else {
         resetUserData(); // Reset the state if no user is authenticated
@@ -134,8 +132,6 @@ function Profile() {
       // If Google is one of the sign-in methods, mark Google as linked
       const isGoogleLinked = signInMethods.includes("google.com");
       setIsGoogleLinked(isGoogleLinked);
-
-      // Update Firestore with the Google linked status
       await updateUser(auth.currentUser.uid, { isGoogleConnected: isGoogleLinked });
     } catch (error) {
       console.error("Error checking Google linked status:", error);
@@ -145,49 +141,34 @@ function Profile() {
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-  
     try {
       const user = auth.currentUser;
-  
       if (!isGoogleLinked) {
         const result = await linkWithPopup(user, provider);
         const googleEmail = result.user.email;
-  
-        // Log Google account linking step
-        console.log("Google account linked, updating Firestore...");
-  
-        // Check if the user has the isGoogleConnected field in Firestore
-        const fetchedUserData = await getUserById(user.uid);
-  
-        if (!fetchedUserData?.isGoogleConnected) {
-          // Field does not exist, add it
-          console.log("Adding isGoogleConnected field in Firestore...");
-          await updateUser(user.uid, {
-            email: googleEmail,
-            isGoogleConnected: true,  // Adding the field
-          });
-        } else {
-          // Field exists, simply update it
-          console.log("Updating isGoogleConnected to true in Firestore...");
-          await updateUser(user.uid, { isGoogleConnected: true });
+        if (user.email !== googleEmail) {
+          await user.updateEmail(googleEmail);
         }
-  
-        // Log successful Firestore update
-        console.log("isGoogleConnected successfully updated in Firestore.");
-  
-        // Update local state
+        await updateUser(user.uid, {
+          email: googleEmail,
+          isGoogleConnected: true,
+        });
         setIsGoogleLinked(true);
         setSnackbarMessage("Google account linked successfully.");
       }
     } catch (error) {
-      handleAuthError(error, "Google");
+      if (error.code === "auth/popup-closed-by-user") {
+        setSnackbarMessage("Google sign-in popup was closed. Please try again.");
+      } else if (error.code === "auth/cancelled-popup-request") {
+        setSnackbarMessage("Popup request cancelled. Please try again.");
+      } else {
+        handleAuthError(error, "Google");
+      }
     } finally {
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
-  
-  
 
   const handleGoogleUnlink = async () => {
     const auth = getAuth();
@@ -195,10 +176,7 @@ function Profile() {
 
     try {
       await unlink(user, "google.com");
-
-      // Update Firestore to mark Google as unlinked
       await updateUser(user.uid, { isGoogleConnected: false });
-
       setIsGoogleLinked(false);
       setSnackbarMessage("Google account unlinked successfully.");
     } catch (error) {
@@ -324,7 +302,28 @@ function Profile() {
                 >
                   <option value="">Select City</option>
                   <option value="Angat">Angat</option>
-                  {/* Add other cities */}
+                  <option value="Balagtas">Balagtas</option>
+                  <option value="Baliuag">Baliuag</option>
+                  <option value="Bocaue">Bocaue</option>
+                  <option value="Bulakan">Bulakan</option>
+                  <option value="Bustos">Bustos</option>
+                  <option value="Calumpit">Calumpit</option>
+                  <option value="Doña Remedios Trinidad">
+                    Doña Remedios Trinidad
+                  </option>
+                  <option value="Guiguinto">Guiguinto</option>
+                  <option value="Hagonoy">Hagonoy</option>
+                  <option value="Marilao">Marilao</option>
+                  <option value="Norzagaray">Norzagaray</option>
+                  <option value="Obando">Obando</option>
+                  <option value="Pandi">Pandi</option>
+                  <option value="Paombong">Paombong</option>
+                  <option value="Plaridel">Plaridel</option>
+                  <option value="Pulilan">Pulilan</option>
+                  <option value="San Ildefonso">San Ildefonso</option>
+                  <option value="San Miguel">San Miguel</option>
+                  <option value="San Rafael">San Rafael</option>
+                  <option value="Santa Maria">Santa Maria</option>
                 </select>
               </div>
               <div className="form-group">
@@ -348,7 +347,6 @@ function Profile() {
                 </button>
               </div>
 
-              {/* Google Connect/Unlink Buttons */}
               <div className="form-group">
                 <button
                   type="button"
