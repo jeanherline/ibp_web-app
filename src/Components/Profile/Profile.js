@@ -297,28 +297,7 @@ function Profile() {
                 >
                   <option value="">Select City</option>
                   <option value="Angat">Angat</option>
-                  <option value="Balagtas">Balagtas</option>
-                  <option value="Baliuag">Baliuag</option>
-                  <option value="Bocaue">Bocaue</option>
-                  <option value="Bulakan">Bulakan</option>
-                  <option value="Bustos">Bustos</option>
-                  <option value="Calumpit">Calumpit</option>
-                  <option value="Doña Remedios Trinidad">
-                    Doña Remedios Trinidad
-                  </option>
-                  <option value="Guiguinto">Guiguinto</option>
-                  <option value="Hagonoy">Hagonoy</option>
-                  <option value="Marilao">Marilao</option>
-                  <option value="Norzagaray">Norzagaray</option>
-                  <option value="Obando">Obando</option>
-                  <option value="Pandi">Pandi</option>
-                  <option value="Paombong">Paombong</option>
-                  <option value="Plaridel">Plaridel</option>
-                  <option value="Pulilan">Pulilan</option>
-                  <option value="San Ildefonso">San Ildefonso</option>
-                  <option value="San Miguel">San Miguel</option>
-                  <option value="San Rafael">San Rafael</option>
-                  <option value="Santa Maria">Santa Maria</option>
+                  {/* Add other cities */}
                 </select>
               </div>
               <div className="form-group">
