@@ -17,7 +17,7 @@ import {
 import "./Profile.css";
 
 const defaultImageUrl =
-  "https://firebasestorage.googleapis.com/v0/b/lawyer-app-ed056.appspot.com/o/DefaultUserImage.jpg?alt=media&token=3ba45526-99d8-4d30-9cb5-505a5e23eda1";
+  "https://firebasestorage.googleapis.com/v0/b/lawyer-app-ed056.appspot.com/o/DefaultUserImage.jpg?alt=media&token=732f4963-f27f-4270-8b7d-9beeb10e6862";
 
 function Profile() {
   const { currentUser } = useAuth();
@@ -39,6 +39,7 @@ function Profile() {
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
 
+  // Fetch current user and update UI
   useEffect(() => {
     const auth = getAuth();
 
@@ -90,7 +91,7 @@ function Profile() {
       const file = e.target.files[0];
       setProfileImage(file);
       const objectUrl = URL.createObjectURL(file);
-      setImageUrl(objectUrl);
+      setImageUrl(objectUrl); // Preview the selected image
     }
   };
 
