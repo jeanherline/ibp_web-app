@@ -789,7 +789,7 @@ const getUsersCount = async (
 const updateUser = async (id, userData) => {
   try {
     const userRef = doc(fs, "users", id);
-    await updateDoc(userRef, userData);
+    await updateDoc(userRef, userData); // userData should include isGoogleConnected if updating
   } catch (error) {
     console.error("Failed to update user:", error);
     throw error;
@@ -888,7 +888,7 @@ export const getUserById = async (userId) => {
   const userRef = doc(fs, "users", userId);
   const userDoc = await getDoc(userRef);
   if (userDoc.exists()) {
-    return userDoc.data();
+    return userDoc.data(); // This should include 'isGoogleConnected' if it exists in Firestore
   } else {
     return null;
   }

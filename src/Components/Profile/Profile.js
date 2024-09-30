@@ -39,9 +39,9 @@ function Profile() {
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [isGoogleLinked, setIsGoogleLinked] = useState(false);
 
+  // Fetch user data and check Google linked status
   useEffect(() => {
     const auth = getAuth();
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
@@ -50,11 +50,13 @@ function Profile() {
           if (fetchedUserData) {
             setUserData(fetchedUserData);
             setImageUrl(fetchedUserData.photo_url || defaultImageUrl);
-            setIsGoogleLinked(fetchedUserData.isGoogleConnected);
+
+            // Check if Google is linked by checking Firestore
+            const googleLinkedStatus = fetchedUserData.isGoogleConnected || false;
+            setIsGoogleLinked(googleLinkedStatus);
           }
-          await checkGoogleLinked(user.email); // Verify Google link status
         } catch (error) {
-          console.error("Error fetching user data:", error);
+          console.error("Error fetching user data or checking Google linked status:", error);
         }
       } else {
         resetUserData(); // Reset the state if no user is authenticated
@@ -132,6 +134,8 @@ function Profile() {
       // If Google is one of the sign-in methods, mark Google as linked
       const isGoogleLinked = signInMethods.includes("google.com");
       setIsGoogleLinked(isGoogleLinked);
+
+      // Update Firestore with the Google linked status
       await updateUser(auth.currentUser.uid, { isGoogleConnected: isGoogleLinked });
     } catch (error) {
       console.error("Error checking Google linked status:", error);
@@ -145,15 +149,23 @@ function Profile() {
     try {
       const user = auth.currentUser;
 
+      // Proceed only if Google is not yet linked
       if (!isGoogleLinked) {
         const result = await linkWithPopup(user, provider);
         const googleEmail = result.user.email;
 
+        // If the user's email is different, update it
         if (user.email !== googleEmail) {
           await user.updateEmail(googleEmail); // Update email if different
         }
 
-        await updateUser(user.uid, { email: googleEmail, isGoogleConnected: true });
+        // Update Firestore with the new email and mark Google as connected
+        await updateUser(user.uid, {
+          email: googleEmail,
+          isGoogleConnected: true,  // Ensure this gets saved in Firestore
+        });
+
+        // Update local state
         setIsGoogleLinked(true);
         setSnackbarMessage("Google account linked successfully.");
       }
@@ -171,7 +183,10 @@ function Profile() {
 
     try {
       await unlink(user, "google.com");
+
+      // Update Firestore to mark Google as unlinked
       await updateUser(user.uid, { isGoogleConnected: false });
+
       setIsGoogleLinked(false);
       setSnackbarMessage("Google account unlinked successfully.");
     } catch (error) {
@@ -321,6 +336,7 @@ function Profile() {
                 </button>
               </div>
 
+              {/* Google Connect/Unlink Buttons */}
               <div className="form-group">
                 <button
                   type="button"
