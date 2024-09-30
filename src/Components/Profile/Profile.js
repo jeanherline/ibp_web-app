@@ -145,26 +145,38 @@ function Profile() {
   const handleGoogleConnect = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
-
+  
     try {
       const user = auth.currentUser;
-
+  
       // Proceed only if Google is not yet linked
       if (!isGoogleLinked) {
         const result = await linkWithPopup(user, provider);
         const googleEmail = result.user.email;
-
-        // If the user's email is different, update it
+  
         if (user.email !== googleEmail) {
           await user.updateEmail(googleEmail); // Update email if different
         }
-
-        // Update Firestore with the new email and mark Google as connected
-        await updateUser(user.uid, {
-          email: googleEmail,
-          isGoogleConnected: true,  // Ensure this gets saved in Firestore
-        });
-
+  
+        // Check if isGoogleConnected field exists in Firestore, and add if it doesn't
+        const fetchedUserData = await getUserById(user.uid);
+  
+        // If isGoogleConnected field does not exist, we add it
+        if (!fetchedUserData?.isGoogleConnected) {
+          await updateUser(user.uid, {
+            email: googleEmail,
+            isGoogleConnected: true,  // Add the field if it's not in Firestore
+          });
+        } else {
+          // If already exists, just update
+          await updateUser(user.uid, {
+            isGoogleConnected: true,
+          });
+        }
+  
+        // Log to verify if it's being called
+        console.log("isGoogleConnected set to true and added to Firestore");
+  
         // Update local state
         setIsGoogleLinked(true);
         setSnackbarMessage("Google account linked successfully.");
@@ -176,6 +188,7 @@ function Profile() {
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
+  
 
   const handleGoogleUnlink = async () => {
     const auth = getAuth();
