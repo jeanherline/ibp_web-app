@@ -149,33 +149,31 @@ function Profile() {
     try {
       const user = auth.currentUser;
   
-      // Proceed only if Google is not yet linked
       if (!isGoogleLinked) {
         const result = await linkWithPopup(user, provider);
         const googleEmail = result.user.email;
   
-        if (user.email !== googleEmail) {
-          await user.updateEmail(googleEmail); // Update email if different
-        }
+        // Log Google account linking step
+        console.log("Google account linked, updating Firestore...");
   
-        // Check if isGoogleConnected field exists in Firestore, and add if it doesn't
+        // Check if the user has the isGoogleConnected field in Firestore
         const fetchedUserData = await getUserById(user.uid);
   
-        // If isGoogleConnected field does not exist, we add it
         if (!fetchedUserData?.isGoogleConnected) {
+          // Field does not exist, add it
+          console.log("Adding isGoogleConnected field in Firestore...");
           await updateUser(user.uid, {
             email: googleEmail,
-            isGoogleConnected: true,  // Add the field if it's not in Firestore
+            isGoogleConnected: true,  // Adding the field
           });
         } else {
-          // If already exists, just update
-          await updateUser(user.uid, {
-            isGoogleConnected: true,
-          });
+          // Field exists, simply update it
+          console.log("Updating isGoogleConnected to true in Firestore...");
+          await updateUser(user.uid, { isGoogleConnected: true });
         }
   
-        // Log to verify if it's being called
-        console.log("isGoogleConnected set to true and added to Firestore");
+        // Log successful Firestore update
+        console.log("isGoogleConnected successfully updated in Firestore.");
   
         // Update local state
         setIsGoogleLinked(true);
@@ -188,6 +186,7 @@ function Profile() {
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
+  
   
 
   const handleGoogleUnlink = async () => {
