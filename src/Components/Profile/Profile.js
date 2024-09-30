@@ -86,14 +86,23 @@ function Profile() {
     setUserData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     if (e.target.files[0]) {
       const file = e.target.files[0];
-      setProfileImage(file);
       const objectUrl = URL.createObjectURL(file);
-      setImageUrl(objectUrl); // Preview the selected image
+      setImageUrl(objectUrl); // Preview the image immediately
+  
+      try {
+        const imageUrl = await uploadImage(file, `profile_images/${currentUser.uid}`);
+        setProfileImage(imageUrl); // Store the uploaded image URL
+        await updateUser(currentUser.uid, { photo_url: imageUrl });
+      } catch (error) {
+        console.error("Error uploading image: ", error);
+        setSnackbarMessage("Failed to upload profile image.");
+      }
     }
   };
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -170,6 +179,7 @@ function Profile() {
       setTimeout(() => setShowSnackbar(false), 3000);
     }
   };
+  
 
   const handleGoogleUnlink = async () => {
     const auth = getAuth();
