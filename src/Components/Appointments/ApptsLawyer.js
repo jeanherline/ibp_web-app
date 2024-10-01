@@ -661,33 +661,17 @@ function ApptsLawyer() {
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!appointmentDate) {
-      setSnackbarMessage("Appointment date is required.");
-      setShowSnackbar(true);
-      setTimeout(() => setShowSnackbar(false), 3000);
-      return;
-    }
-
-    if (!appointmentType) {
-      setSnackbarMessage("Please select appointment type.");
-      setShowSnackbar(true);
-      setTimeout(() => setShowSnackbar(false), 3000);
-      return;
-    }
-
-    let googleMeetLink = null;
-
+  
     try {
-      // If the appointment type is online, trigger Google Sign-In and Meet creation
+      // If the appointment type is online, initiate Google sign-in and Meet creation
       if (appointmentType === "online") {
-        const { token } = await signInWithGoogle(); // Fetch OAuth 2.0 token from Google sign-in
+        const { token } = await signInWithGoogle(); // Retrieve OAuth 2.0 token
         googleMeetLink = await createGoogleMeet(
           appointmentDate,
           selectedAppointment.applicantProfile?.email,
           token
         );
-
+  
         if (!googleMeetLink) {
           setSnackbarMessage("Failed to create Google Meet link.");
           setShowSnackbar(true);
@@ -696,31 +680,32 @@ function ApptsLawyer() {
         }
       }
     } catch (error) {
-      console.error("Error during Google Meet creation or sign-in:", error);
-      setSnackbarMessage(
-        "Error occurred while creating Google Meet. Please try again."
-      );
+      if (error.code === 'auth/popup-closed-by-user') {
+        setSnackbarMessage("Sign-in process was closed. Please try again.");
+      } else {
+        console.error("Error during Google Meet creation or sign-in:", error);
+        setSnackbarMessage("Error occurred while creating Google Meet.");
+      }
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-
-    // Proceed with scheduling the appointment if successful
+  
+    // Proceed with scheduling the appointment
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",
       "appointmentDetails.apptType": appointmentType,
-      ...(googleMeetLink && {
-        "appointmentDetails.googleMeetLink": googleMeetLink,
-      }),
+      ...(googleMeetLink && { "appointmentDetails.googleMeetLink": googleMeetLink }),
     };
-
+  
     await updateAppointment(selectedAppointment.id, updatedData);
-
+  
     setSnackbarMessage("Appointment has been successfully scheduled.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
+  
 
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
