@@ -14,7 +14,12 @@ import {
 } from "../../Config/FirebaseServices";
 import { useAuth } from "../../AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { fs, auth, createGoogleMeet } from "../../Config/Firebase";
+import {
+  fs,
+  auth,
+  createGoogleMeet,
+  signInWithGoogle,
+} from "../../Config/Firebase";
 import { addDoc, collection, Timestamp } from "firebase/firestore";
 import {
   faEye,
@@ -673,17 +678,32 @@ function ApptsLawyer() {
 
     let googleMeetLink = null;
 
-    // Ensure applicant email is correctly fetched
-    const clientEmail = selectedAppointment.applicantProfile?.email;
+    try {
+      // If the appointment type is online, initiate Google sign-in and retrieve token
+      if (appointmentType === "online") {
+        const { token } = await signInWithGoogle(); // Retrieve OAuth 2.0 token
+        googleMeetLink = await createGoogleMeet(
+          appointmentDate,
+          selectedAppointment.applicantProfile?.email,
+          token
+        );
 
-    if (appointmentType === "online") {
-      // Call your function that creates the Google Meet, passing in formatted date
-      googleMeetLink = await createGoogleMeet(appointmentDate, clientEmail);
-      if (!googleMeetLink) {
-        return; // If Google Meet creation fails, stop the process
+        if (!googleMeetLink) {
+          setSnackbarMessage("Failed to create Google Meet link.");
+          setShowSnackbar(true);
+          setTimeout(() => setShowSnackbar(false), 3000);
+          return; // Stop the process if Google Meet creation fails
+        }
       }
+    } catch (error) {
+      console.error("Error during Google Meet creation or sign-in:", error);
+      setSnackbarMessage("Error occurred while creating Google Meet.");
+      setShowSnackbar(true);
+      setTimeout(() => setShowSnackbar(false), 3000);
+      return; // Stop the process if there's an error
     }
 
+    // Proceed with scheduling the appointment
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",

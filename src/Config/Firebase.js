@@ -82,16 +82,21 @@ const signInWithGoogle = async () => {
   }
 };
 
-const createGoogleMeet = async (appointmentDate, clientEmail) => {
+const createGoogleMeet = async (appointmentDate, clientEmail, accessToken) => {
   try {
-    // Format the appointmentDate to an ISO string
     const formattedDate = appointmentDate.toISOString();
-    
+
+    // Make sure you pass the OAuth token in the Authorization header
     const response = await axios.post(
       "https://api-4n4atauzwq-uc.a.run.app/create-google-meet",
       {
-        appointmentDate: formattedDate,  // Pass the formatted date
-        clientEmail                      // Ensure this is a valid email
+        appointmentDate: formattedDate,
+        clientEmail
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}` // Pass the OAuth 2.0 access token
+        }
       }
     );
     return response.data.googleMeetLink;
