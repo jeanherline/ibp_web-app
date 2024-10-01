@@ -18,7 +18,7 @@ import {
   fs,
   auth,
   createGoogleMeet,
-  signInWithGoogle, 
+  signInWithGoogle,
 } from "../../Config/Firebase";
 import { addDoc, collection, Timestamp } from "firebase/firestore";
 import {
@@ -679,9 +679,9 @@ function ApptsLawyer() {
     let googleMeetLink = null;
 
     try {
-      // If the appointment type is online, initiate Google sign-in and retrieve token
+      // If the appointment type is online, trigger Google Sign-In and Meet creation
       if (appointmentType === "online") {
-        const { token } = await signInWithGoogle(); // Retrieve OAuth 2.0 token
+        const { token } = await signInWithGoogle(); // Fetch OAuth 2.0 token from Google sign-in
         googleMeetLink = await createGoogleMeet(
           appointmentDate,
           selectedAppointment.applicantProfile?.email,
@@ -692,18 +692,20 @@ function ApptsLawyer() {
           setSnackbarMessage("Failed to create Google Meet link.");
           setShowSnackbar(true);
           setTimeout(() => setShowSnackbar(false), 3000);
-          return; // Stop the process if Google Meet creation fails
+          return;
         }
       }
     } catch (error) {
       console.error("Error during Google Meet creation or sign-in:", error);
-      setSnackbarMessage("Error occurred while creating Google Meet.");
+      setSnackbarMessage(
+        "Error occurred while creating Google Meet. Please try again."
+      );
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
-      return; // Stop the process if there's an error
+      return;
     }
 
-    // Proceed with scheduling the appointment
+    // Proceed with scheduling the appointment if successful
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",

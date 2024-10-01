@@ -54,17 +54,22 @@ googleProvider.addScope('https://www.googleapis.com/auth/calendar');
 // Sign in with Google function
 const signInWithGoogle = async () => {
   try {
+    // Trigger Google Sign-In
     const result = await signInWithPopup(auth, googleProvider);
+
+    // Extract credentials
     const credential = GoogleAuthProvider.credentialFromResult(result);
     if (!credential) throw new Error("No credential found");
 
+    // Access the token and user details
     const token = credential.accessToken;
     const user = result.user;
     if (!user) throw new Error("No user found in the result");
 
+    // Log user sign-in details
     console.log('User signed in:', user);
 
-    // Save user info to Firestore
+    // Save user info to Firestore (you can modify fields as needed)
     const userDocRef = doc(fs, 'users', user.uid);
     await setDoc(userDocRef, {
       uid: user.uid,
@@ -72,11 +77,14 @@ const signInWithGoogle = async () => {
       email: user.email,
       photoURL: user.photoURL,
       lastLogin: serverTimestamp(),
-      accessToken: token,
+      accessToken: token, // Store the token in Firestore if needed
     }, { merge: true });
 
+    // Return both user and token to be used elsewhere (for Google Meet creation, etc.)
     return { user, token };
+
   } catch (error) {
+    // Handle specific error cases, especially popup-closed-by-user
     if (error.code === 'auth/popup-closed-by-user') {
       alert("It seems you closed the popup. Please try again.");
     } else {
@@ -84,10 +92,9 @@ const signInWithGoogle = async () => {
       alert('Error during Google sign-in: ' + error.message);
     }
 
-    throw error;
+    throw error; // Ensure that the error is thrown for further handling
   }
 };
-
 
 // Function to create a Google Meet using the accessToken
 const createGoogleMeet = async (appointmentDate, clientEmail, accessToken) => {
