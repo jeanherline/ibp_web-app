@@ -82,21 +82,24 @@ const signInWithGoogle = async () => {
   }
 };
 
-
 const createGoogleMeet = async (appointmentDate, clientEmail) => {
   try {
-    const response = await axios.post("https://api-4n4atauzwq-uc.a.run.app/create-google-meet", {
-      appointmentDate: appointmentDate.toISOString(), // Ensure the date is passed in ISO format
-      clientEmail
-    });
-    return response.data.meetLink; // Assuming your API returns the link in this field
+    // Format the appointmentDate to an ISO string
+    const formattedDate = appointmentDate.toISOString();
+    
+    const response = await axios.post(
+      "https://api-4n4atauzwq-uc.a.run.app/create-google-meet",
+      {
+        appointmentDate: formattedDate,  // Pass the formatted date
+        clientEmail                      // Ensure this is a valid email
+      }
+    );
+    return response.data.googleMeetLink;
   } catch (error) {
-    console.error("Error creating Google Meet event:", error.response?.data || error.message);
+    console.error("Error creating Google Meet event:", error.response?.data || error);
     return null;
   }
 };
-
-
 
 // Sign-out function
 const logout = async () => {

@@ -106,7 +106,9 @@ function ApptsLawyer() {
     );
 
     if (!isGoogleAuthenticated) {
-      alert("Please connect your Google account to schedule an online meeting.");
+      alert(
+        "Please connect your Google account to schedule an online meeting."
+      );
       return false;
     }
     return true;
@@ -239,7 +241,13 @@ function ApptsLawyer() {
       setTotalFilteredItems(total);
     };
     fetchAppointments();
-  }, [filter, lastVisible, searchText, natureOfLegalAssistanceFilter, currentUser]);
+  }, [
+    filter,
+    lastVisible,
+    searchText,
+    natureOfLegalAssistanceFilter,
+    currentUser,
+  ]);
 
   useEffect(() => {
     const unsubscribe = getBookedSlots((slots) => {
@@ -590,16 +598,17 @@ function ApptsLawyer() {
       setAppointments(data);
       setTotalPages(Math.ceil(total / pageSize));
 
-      const formattedDate = selectedAppointment.appointmentDetails.appointmentDate
-        .toDate()
-        .toLocaleString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "numeric",
-          minute: "numeric",
-          hour12: true,
-        });
+      const formattedDate =
+        selectedAppointment.appointmentDetails.appointmentDate
+          .toDate()
+          .toLocaleString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "numeric",
+            minute: "numeric",
+            hour12: true,
+          });
 
       const statusMessage =
         clientAttend === "yes"
@@ -647,60 +656,49 @@ function ApptsLawyer() {
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!appointmentDate) {
       setSnackbarMessage("Appointment date is required.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-  
+
     if (!appointmentType) {
       setSnackbarMessage("Please select appointment type.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
-  
-    // Check if email is available
-    const clientEmail = selectedAppointment.applicantProfile?.email;
-    if (!clientEmail) {
-      setSnackbarMessage("Client email is required.");
-      setShowSnackbar(true);
-      return;
-    }
-  
+
     let googleMeetLink = null;
-  
+
+    // Ensure applicant email is correctly fetched
+    const clientEmail = selectedAppointment.applicantProfile?.email;
+
     if (appointmentType === "online") {
-      try {
-        googleMeetLink = await createGoogleMeet(appointmentDate, selectedAppointment.applicantProfile?.email);
-        if (!googleMeetLink) {
-          return; // If Google Meet creation fails, stop the process
-        }
-      } catch (error) {
-        console.error("Error creating Google Meet event:", error);
-        setSnackbarMessage("Failed to create Google Meet link.");
-        setShowSnackbar(true);
-        return;
+      // Call your function that creates the Google Meet, passing in formatted date
+      googleMeetLink = await createGoogleMeet(appointmentDate, clientEmail);
+      if (!googleMeetLink) {
+        return; // If Google Meet creation fails, stop the process
       }
     }
-  
-    // Proceed with the rest of the form submission
+
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",
       "appointmentDetails.apptType": appointmentType,
-      ...(googleMeetLink && { "appointmentDetails.googleMeetLink": googleMeetLink }),
+      ...(googleMeetLink && {
+        "appointmentDetails.googleMeetLink": googleMeetLink,
+      }),
     };
-  
+
     await updateAppointment(selectedAppointment.id, updatedData);
-  
+
     setSnackbarMessage("Appointment has been successfully scheduled.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
-  
 
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
@@ -749,7 +747,9 @@ function ApptsLawyer() {
       "appointmentDetails.rescheduleReason": rescheduleReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
       "appointmentDetails.apptType": rescheduleAppointmentType,
-      ...(googleMeetLink && { "appointmentDetails.googleMeetLink": googleMeetLink }),
+      ...(googleMeetLink && {
+        "appointmentDetails.googleMeetLink": googleMeetLink,
+      }),
     };
 
     try {
