@@ -78,11 +78,21 @@ const signInWithGoogle = async () => {
 
     // Return the user object and the OAuth token
     return { user, token };
+
   } catch (error) {
-    console.error('Error during Google sign-in:', error.message);
+    // Check if the error is related to the popup being closed by the user
+    if (error.code === 'auth/popup-closed-by-user') {
+      alert("Sign-in process was closed. Please try again.");
+    } else {
+      console.error('Error during Google sign-in:', error.message);
+      alert('Error during Google sign-in: ' + error.message);
+    }
+
+    // Throw the error again to allow handling in the calling function
     throw error;
   }
 };
+
 
 // Function to create a Google Meet using the accessToken
 const createGoogleMeet = async (appointmentDate, clientEmail, accessToken) => {
