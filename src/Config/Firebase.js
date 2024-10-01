@@ -56,10 +56,9 @@ const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
-    
     if (!credential) throw new Error("No credential found");
 
-    const token = credential.accessToken;  // OAuth token
+    const token = credential.accessToken;
     const user = result.user;
     if (!user) throw new Error("No user found in the result");
 
@@ -73,22 +72,18 @@ const signInWithGoogle = async () => {
       email: user.email,
       photoURL: user.photoURL,
       lastLogin: serverTimestamp(),
-      accessToken: token,  // Optionally store token if needed
+      accessToken: token,
     }, { merge: true });
 
-    // Return the user object and the OAuth token
     return { user, token };
-
   } catch (error) {
-    // Check if the error is related to the popup being closed by the user
     if (error.code === 'auth/popup-closed-by-user') {
-      alert("Sign-in process was closed. Please try again.");
+      alert("It seems you closed the popup. Please try again.");
     } else {
       console.error('Error during Google sign-in:', error.message);
       alert('Error during Google sign-in: ' + error.message);
     }
 
-    // Throw the error again to allow handling in the calling function
     throw error;
   }
 };
