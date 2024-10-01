@@ -119,6 +119,19 @@ function ApptsLawyer() {
     return true;
   };
 
+  const generateJitsiLink = (controlNumber) => {
+    // Use the control number if provided, or create a random unique room name
+    const roomName = controlNumber ? controlNumber : `room-${Date.now()}`;
+
+    // Generate a random password for the Jitsi meeting
+    const password = Math.random().toString(36).substring(2, 8); // Generates a 6-character random password
+
+    return {
+      link: `https://meet.jit.si/${roomName}`,
+      password: password,
+    };
+  };
+
   const handlePrint = () => {
     if (!selectedAppointment) {
       alert("No appointment selected");
@@ -328,24 +341,22 @@ function ApptsLawyer() {
 
   const isSlotBooked = (dateTime, slots = bookedSlots) => {
     return slots.some(
-      (bookedDate) =>
-        dateTime.toISOString() === bookedDate.toISOString()
+      (bookedDate) => dateTime.toISOString() === bookedDate.toISOString()
     );
   };
-  
+
   const filterDate = (date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-  
+
     const isHoliday = holidays.some(
-      (holiday) =>
-        holiday.toDateString() === date.toDateString()
+      (holiday) => holiday.toDateString() === date.toDateString()
     );
-  
-    const isFullyBooked = bookedSlots.filter(
-      (slot) => slot.toDateString() === date.toDateString()
-    ).length === 4;
-  
+
+    const isFullyBooked =
+      bookedSlots.filter((slot) => slot.toDateString() === date.toDateString())
+        .length === 4;
+
     return !isHoliday && isWeekday(date) && date >= today && !isFullyBooked;
   };
 
@@ -366,7 +377,12 @@ function ApptsLawyer() {
   const handleNext = async () => {
     if (currentPage < totalPages) {
       const { data, lastDoc } = await getLawyerAppointments(
-        filter, lastVisible, pageSize, searchText, natureOfLegalAssistanceFilter, currentUser
+        filter,
+        lastVisible,
+        pageSize,
+        searchText,
+        natureOfLegalAssistanceFilter,
+        currentUser
       );
       setAppointments(data);
       setLastVisible(lastDoc);
@@ -495,18 +511,19 @@ function ApptsLawyer() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (isSubmitting) return;
     setIsSubmitting(true);
-  
+
     try {
       const updatedData = {
         "clientEligibility.eligibility": clientEligibility.eligibility,
-        "appointmentDetails.appointmentStatus": clientEligibility.eligibility === "yes" ? "approved" : "denied",
+        "appointmentDetails.appointmentStatus":
+          clientEligibility.eligibility === "yes" ? "approved" : "denied",
         "clientEligibility.denialReason": clientEligibility.denialReason,
         "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
       };
-  
+
       await updateAppointment(selectedAppointment.id, updatedData);
       setSnackbarMessage("Form has been successfully submitted.");
       setSelectedAppointment(null);
@@ -521,20 +538,22 @@ function ApptsLawyer() {
 
   const handleSubmitProceedingNotes = async (e) => {
     e.preventDefault();
-  
+
     if (isSubmitting) return;
     setIsSubmitting(true);
-  
+
     try {
       const updatedData = {
         "appointmentDetails.proceedingNotes": proceedingNotes,
-        "appointmentDetails.ibpParalegalStaff": clientEligibility.ibpParalegalStaff,
-        "appointmentDetails.assistingCounsel": clientEligibility.assistingCounsel,
+        "appointmentDetails.ibpParalegalStaff":
+          clientEligibility.ibpParalegalStaff,
+        "appointmentDetails.assistingCounsel":
+          clientEligibility.assistingCounsel,
         "appointmentDetails.appointmentStatus": "done",
         "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
         "appointmentDetails.clientAttend": clientAttend,
       };
-  
+
       await updateAppointment(selectedAppointment.id, updatedData);
       setSnackbarMessage("Remarks have been successfully submitted.");
     } catch (error) {
@@ -545,7 +564,6 @@ function ApptsLawyer() {
       setIsSubmitting(false);
     }
   };
-  
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
@@ -565,11 +583,16 @@ function ApptsLawyer() {
     }
 
     let jitsiMeetLink = null;
+    let jitsiMeetPassword = null;
 
     try {
-      // If the appointment type is online, generate a Jitsi Meet link
+      // If the appointment type is online, generate a Jitsi Meet link and password
       if (appointmentType === "online") {
-        jitsiMeetLink = generateJitsiLink(selectedAppointment.controlNumber);
+        const { link, password } = generateJitsiLink(
+          selectedAppointment.controlNumber
+        );
+        jitsiMeetLink = link;
+        jitsiMeetPassword = password;
       }
     } catch (error) {
       console.error("Error during Jitsi Meet link creation:", error);
@@ -585,7 +608,8 @@ function ApptsLawyer() {
       "appointmentDetails.appointmentStatus": "scheduled",
       "appointmentDetails.apptType": appointmentType,
       ...(jitsiMeetLink && {
-        "appointmentDetails.jitsiMeetLink": jitsiMeetLink, // Only add this if Jitsi Meet link is available
+        "appointmentDetails.jitsiMeetLink": jitsiMeetLink, // Save Jitsi link
+        "appointmentDetails.jitsiMeetPassword": jitsiMeetPassword, // Save Jitsi password
       }),
     };
 
@@ -598,10 +622,10 @@ function ApptsLawyer() {
 
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (isSubmitting) return; // Prevent duplicate submissions
     setIsSubmitting(true);
-
+  
     if (!rescheduleDate) {
       setSnackbarMessage("Reschedule date is required.");
       setShowSnackbar(true);
@@ -609,7 +633,7 @@ function ApptsLawyer() {
       setIsSubmitting(false);
       return;
     }
-
+  
     if (!rescheduleAppointmentType) {
       setSnackbarMessage("Please select appointment type.");
       setShowSnackbar(true);
@@ -617,38 +641,40 @@ function ApptsLawyer() {
       setIsSubmitting(false);
       return;
     }
-
-    let googleMeetLink =
-      selectedAppointment.appointmentDetails?.googleMeetLink || null;
-
-    if (rescheduleAppointmentType === "online" && !googleMeetLink) {
-      const isGoogleAuthenticated = await ensureGoogleAuth();
-      if (!isGoogleAuthenticated) {
-        setIsSubmitting(false);
-        return; // Stop if Google authentication is missing
+  
+    let jitsiMeetLink = selectedAppointment.appointmentDetails?.jitsiMeetLink || null;
+    let jitsiMeetPassword = selectedAppointment.appointmentDetails?.jitsiMeetPassword || null;
+  
+    try {
+      // If the rescheduled appointment type is online and no Jitsi link exists or needs to be updated
+      if (rescheduleAppointmentType === "online") {
+        const { link, password } = generateJitsiLink(selectedAppointment.controlNumber);
+        jitsiMeetLink = link;
+        jitsiMeetPassword = password;
       }
-
-      googleMeetLink = await createGoogleMeet(
-        rescheduleDate,
-        selectedAppointment.applicantProfile?.email
-      );
-      if (!googleMeetLink) {
-        setIsSubmitting(false);
-        return; // If Google Meet creation fails, stop the process
-      }
+    } catch (error) {
+      console.error("Error during Jitsi Meet link creation:", error);
+      setSnackbarMessage("Error occurred while creating Jitsi Meet link.");
+      setShowSnackbar(true);
+      setTimeout(() => setShowSnackbar(false), 3000);
+      setIsSubmitting(false);
+      return;
     }
-
+  
+    // Prepare the updated data for Firestore
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
       "appointmentDetails.rescheduleReason": rescheduleReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
       "appointmentDetails.apptType": rescheduleAppointmentType,
-      ...(googleMeetLink && {
-        "appointmentDetails.googleMeetLink": googleMeetLink,
+      ...(jitsiMeetLink && {
+        "appointmentDetails.jitsiMeetLink": jitsiMeetLink, // Save Jitsi link
+        "appointmentDetails.jitsiMeetPassword": jitsiMeetPassword, // Save Jitsi password
       }),
     };
-
+  
     try {
+      // Update the Firestore document with the rescheduled appointment
       await updateAppointment(selectedAppointment.id, updatedData);
       setSnackbarMessage("Appointment has been successfully rescheduled.");
     } catch (error) {
@@ -860,12 +886,14 @@ function ApptsLawyer() {
                         >
                           Join Jitsi Meet
                         </a>
+                        <br />
+                        <strong>Password:</strong>{" "}
+                        {appointment.appointmentDetails.jitsiMeetPassword}
                       </>
                     ) : (
                       "N/A"
                     )}
                   </td>
-
                   <td>
                     <button
                       onClick={() => toggleDetails(appointment)}
@@ -1083,21 +1111,25 @@ function ApptsLawyer() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      {selectedAppointment.appointmentDetails
-                        ?.appointmentType === "online" && (
+                      {selectedAppointment.appointmentDetails?.apptType ===
+                        "online" && (
                         <tr>
-                          <th>Google Meet Link:</th>
+                          <th>Jitsi Meet Link:</th>
                           <td>
                             <a
                               href={
                                 selectedAppointment.appointmentDetails
-                                  ?.googleMeetLink
+                                  ?.jitsiMeetLink
                               }
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              Join Google Meet
+                              Join Jitsi Meet
                             </a>
+                            <br />
+                            <strong>Password:</strong>{" "}
+                            {selectedAppointment.appointmentDetails
+                              ?.jitsiMeetPassword || "N/A"}
                           </td>
                         </tr>
                       )}
