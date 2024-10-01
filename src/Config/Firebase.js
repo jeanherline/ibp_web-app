@@ -48,7 +48,7 @@ const storage = getStorage(app);
 
 // Google Sign-In provider configuration
 const googleProvider = new GoogleAuthProvider();
-// Add Google Calendar scope if you need access to calendar API
+// Add Google Calendar scope to access calendar API
 googleProvider.addScope('https://www.googleapis.com/auth/calendar');
 
 // Sign in with Google function
@@ -56,9 +56,10 @@ const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
+    
     if (!credential) throw new Error("No credential found");
 
-    const token = credential.accessToken;
+    const token = credential.accessToken;  // OAuth token
     const user = result.user;
     if (!user) throw new Error("No user found in the result");
 
@@ -75,6 +76,7 @@ const signInWithGoogle = async () => {
       accessToken: token,  // Optionally store token if needed
     }, { merge: true });
 
+    // Return the user object and the OAuth token
     return { user, token };
   } catch (error) {
     console.error('Error during Google sign-in:', error.message);
@@ -82,9 +84,10 @@ const signInWithGoogle = async () => {
   }
 };
 
+// Function to create a Google Meet using the accessToken
 const createGoogleMeet = async (appointmentDate, clientEmail, accessToken) => {
   try {
-    const formattedDate = appointmentDate.toISOString();
+    const formattedDate = appointmentDate.toISOString();  // Ensure the date is properly formatted
 
     // Make sure you pass the OAuth token in the Authorization header
     const response = await axios.post(
@@ -95,10 +98,12 @@ const createGoogleMeet = async (appointmentDate, clientEmail, accessToken) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${accessToken}` // Pass the OAuth 2.0 access token
+          Authorization: `Bearer ${accessToken}`  // Pass the OAuth 2.0 access token
         }
       }
     );
+
+    // Return the Google Meet link from the response
     return response.data.googleMeetLink;
   } catch (error) {
     console.error("Error creating Google Meet event:", error.response?.data || error);
@@ -117,6 +122,7 @@ const logout = async () => {
   }
 };
 
+// Export all the necessary functions and Firebase services
 export { 
   app, 
   auth, 
