@@ -14,7 +14,7 @@ import {
 } from "../../Config/FirebaseServices";
 import { useAuth } from "../../AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { fs, auth } from "../../Config/Firebase";
+import { fs, auth, createGoogleMeet } from "../../Config/Firebase";
 import { addDoc, collection, Timestamp } from "firebase/firestore";
 import {
   faEye,
