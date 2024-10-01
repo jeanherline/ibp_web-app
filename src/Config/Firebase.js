@@ -56,12 +56,15 @@ const signInWithGoogle = async () => {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     const credential = GoogleAuthProvider.credentialFromResult(result);
+    if (!credential) throw new Error("No credential found");
+
     const token = credential.accessToken;
     const user = result.user;
-    
+    if (!user) throw new Error("No user found in the result");
+
     console.log('User signed in:', user);
-    
-    // Additional logic if you want to save user info to Firestore
+
+    // Save user info to Firestore
     const userDocRef = doc(fs, 'users', user.uid);
     await setDoc(userDocRef, {
       uid: user.uid,
@@ -69,10 +72,9 @@ const signInWithGoogle = async () => {
       email: user.email,
       photoURL: user.photoURL,
       lastLogin: serverTimestamp(),
-      // Optionally store token if needed
-      accessToken: token,
+      accessToken: token,  // Optionally store token if needed
     }, { merge: true });
-    
+
     return { user, token };
   } catch (error) {
     console.error('Error during Google sign-in:', error.message);
@@ -80,33 +82,20 @@ const signInWithGoogle = async () => {
   }
 };
 
-// Create Google Meet link function
+
 const createGoogleMeet = async (appointmentDate, clientEmail) => {
   try {
-    // Check if the lawyer is authenticated before creating a Google Meet link
-    const token = await auth.currentUser.getIdToken();
-
-    const response = await axios.post('/api/create-google-meet', {
-      appointmentDate: appointmentDate.toISOString(),
-      clientEmail,
-    }, {
-      headers: {
-        Authorization: `Bearer ${token}`, // Pass the Firebase token for authentication
-      },
+    const response = await axios.post("https://api-4n4atauzwq-uc.a.run.app/create-google-meet", {
+      appointmentDate: appointmentDate.toISOString(), // Ensure the date is passed in ISO format
+      clientEmail
     });
-
-    return response.data.hangoutLink;
+    return response.data.meetLink; // Assuming your API returns the link in this field
   } catch (error) {
-    // If an authentication error occurs, handle it
-    if (error.response && error.response.status === 401) {
-      // Redirect the lawyer to Google login if not authenticated
-      window.location.href = '/google-login'; // Ensure you have a route to handle this
-    } else {
-      console.error('Error creating Google Meet link:', error);
-      throw error;
-    }
+    console.error("Error creating Google Meet event:", error.response?.data || error.message);
+    return null;
   }
 };
+
 
 
 // Sign-out function
@@ -146,4 +135,5 @@ export {
   signInWithGoogle, // Export Google sign-in function
   createGoogleMeet, // Export Google Meet creation function
   logout,           // Export logout function
+  analytics,
 };

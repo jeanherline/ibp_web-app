@@ -21,6 +21,14 @@
           {
             "key": "Access-Control-Allow-Origin",
             "value": "*"
+          },
+          {
+            "key": "Access-Control-Allow-Headers",
+            "value": "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+          },
+          {
+            "key": "Access-Control-Allow-Methods",
+            "value": "GET, POST, PUT, DELETE, OPTIONS"
           }
         ]
       }
@@ -46,11 +54,15 @@
       ".env",
       "firebase-debug.*"
     ],
-    "runtime": "nodejs18",
+    "runtime": "nodejs18", 
     "region": "us-central1",
     "env": {
       "NODE_ENV": "production"
-    }
+    },
+    "concurrency": 80,
+    "cpu": 1,         
+    "memory": "512MB",
+    "timeoutSeconds": 300 
   },
   "emulators": {
     "functions": {
