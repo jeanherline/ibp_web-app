@@ -37,6 +37,9 @@ app.get("/", (req, res) => {
 
 // Route to create Google Meet
 app.post("/create-google-meet", async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "https://lawyer-app-ed056.web.app");
+  res.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   const { appointmentDate, clientEmail } = req.body;
 
   // Validate the request
@@ -89,11 +92,9 @@ app.post("/create-google-meet", async (req, res) => {
         details: error.errors,
       });
     }
-    return res
-      .status(500)
-      .json({
-        error: "Failed to create Google Meet event. Please try again later.",
-      });
+    return res.status(500).json({
+      error: "Failed to create Google Meet event. Please try again later.",
+    });
   }
 });
 
