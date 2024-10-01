@@ -326,39 +326,26 @@ function ApptsLawyer() {
     return day === 2 || day === 4;
   };
 
-  const isSlotBooked = (dateTime) => {
-    return bookedSlots.some(
+  const isSlotBooked = (dateTime, slots = bookedSlots) => {
+    return slots.some(
       (bookedDate) =>
-        dateTime.getDate() === bookedDate.getDate() &&
-        dateTime.getMonth() === bookedDate.getMonth() &&
-        dateTime.getFullYear() === bookedDate.getFullYear() &&
-        dateTime.getHours() === bookedDate.getHours() &&
-        dateTime.getMinutes() === bookedDate.getMinutes()
+        dateTime.toISOString() === bookedDate.toISOString()
     );
   };
-
+  
   const filterDate = (date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    // Check if the date is a holiday
+  
     const isHoliday = holidays.some(
       (holiday) =>
-        holiday.getFullYear() === date.getFullYear() &&
-        holiday.getMonth() === date.getMonth() &&
-        holiday.getDate() === date.getDate()
+        holiday.toDateString() === date.toDateString()
     );
-
-    const isFullyBooked =
-      bookedSlots.filter(
-        (slot) =>
-          slot.getDate() === date.getDate() &&
-          slot.getMonth() === date.getMonth() &&
-          slot.getFullYear() === date.getFullYear() &&
-          slot.getHours() >= 13 &&
-          slot.getHours() < 17
-      ).length === 4;
-
+  
+    const isFullyBooked = bookedSlots.filter(
+      (slot) => slot.toDateString() === date.toDateString()
+    ).length === 4;
+  
     return !isHoliday && isWeekday(date) && date >= today && !isFullyBooked;
   };
 
@@ -379,16 +366,11 @@ function ApptsLawyer() {
   const handleNext = async () => {
     if (currentPage < totalPages) {
       const { data, lastDoc } = await getLawyerAppointments(
-        filter,
-        lastVisible,
-        pageSize,
-        searchText,
-        natureOfLegalAssistanceFilter,
-        currentUser
+        filter, lastVisible, pageSize, searchText, natureOfLegalAssistanceFilter, currentUser
       );
       setAppointments(data);
       setLastVisible(lastDoc);
-      setCurrentPage((prevPage) => prevPage + 1);
+      setCurrentPage(currentPage + 1);
     }
   };
 
@@ -513,142 +495,47 @@ function ApptsLawyer() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (isSubmitting) return; // Prevent duplicate submissions
+  
+    if (isSubmitting) return;
     setIsSubmitting(true);
-
-    let status = "pending";
-    if (clientEligibility.eligibility === "yes") {
-      status = "approved";
-    } else if (clientEligibility.eligibility === "no") {
-      status = "denied";
-    }
-
-    const updatedData = {
-      "clientEligibility.eligibility": clientEligibility.eligibility,
-      "clientEligibility.notes": clientEligibility.notes,
-      "appointmentDetails.appointmentStatus": status,
-      "appointmentDetails.assignedLawyer": clientEligibility.assistingCounsel,
-      "clientEligibility.denialReason": clientEligibility.denialReason,
-      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-    };
-
+  
     try {
+      const updatedData = {
+        "clientEligibility.eligibility": clientEligibility.eligibility,
+        "appointmentDetails.appointmentStatus": clientEligibility.eligibility === "yes" ? "approved" : "denied",
+        "clientEligibility.denialReason": clientEligibility.denialReason,
+        "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+      };
+  
       await updateAppointment(selectedAppointment.id, updatedData);
-
-      setSelectedAppointment(null);
-      setClientEligibility({
-        eligibility: "",
-        denialReason: "",
-        notes: "",
-        ibpParalegalStaff: "",
-        assistingCounsel: "",
-      });
-      setShowProceedingNotesForm(false);
-      setShowRescheduleForm(false);
-      setShowScheduleForm(false);
-
-      const { data, total } = await getLawyerAppointments(
-        filter,
-        lastVisible,
-        pageSize,
-        searchText,
-        natureOfLegalAssistanceFilter,
-        currentUser
-      );
-      setAppointments(data);
-      setTotalPages(Math.ceil(total / pageSize));
-
       setSnackbarMessage("Form has been successfully submitted.");
+      setSelectedAppointment(null);
     } catch (error) {
       setSnackbarMessage("Error submitting form, please try again.");
     } finally {
+      setIsSubmitting(false);
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
-      setIsSubmitting(false);
     }
   };
 
   const handleSubmitProceedingNotes = async (e) => {
     e.preventDefault();
-
-    if (isSubmitting) return; // Prevent duplicate submissions
+  
+    if (isSubmitting) return;
     setIsSubmitting(true);
-
-    const updatedData = {
-      "appointmentDetails.proceedingNotes": proceedingNotes,
-      "appointmentDetails.ibpParalegalStaff":
-        clientEligibility.ibpParalegalStaff,
-      "appointmentDetails.assistingCounsel": clientEligibility.assistingCounsel,
-      "appointmentDetails.appointmentStatus": "done",
-      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-      "appointmentDetails.clientAttend": clientAttend,
-    };
-
+  
     try {
+      const updatedData = {
+        "appointmentDetails.proceedingNotes": proceedingNotes,
+        "appointmentDetails.ibpParalegalStaff": clientEligibility.ibpParalegalStaff,
+        "appointmentDetails.assistingCounsel": clientEligibility.assistingCounsel,
+        "appointmentDetails.appointmentStatus": "done",
+        "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+        "appointmentDetails.clientAttend": clientAttend,
+      };
+  
       await updateAppointment(selectedAppointment.id, updatedData);
-
-      setSelectedAppointment(null);
-      setProceedingNotes("");
-      setShowProceedingNotesForm(false);
-
-      const { data, total } = await getLawyerAppointments(
-        filter,
-        lastVisible,
-        pageSize,
-        searchText,
-        natureOfLegalAssistanceFilter,
-        currentUser
-      );
-      setAppointments(data);
-      setTotalPages(Math.ceil(total / pageSize));
-
-      const formattedDate =
-        selectedAppointment.appointmentDetails.appointmentDate
-          .toDate()
-          .toLocaleString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-            hour: "numeric",
-            minute: "numeric",
-            hour12: true,
-          });
-
-      const statusMessage =
-        clientAttend === "yes"
-          ? `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been completed on ${formattedDate}.`
-          : `You did not attend your appointment with Ticket Number ${selectedAppointment.controlNumber} scheduled on ${formattedDate}.`;
-
-      if (selectedAppointment?.applicantProfile?.uid) {
-        await addDoc(collection(fs, "notifications"), {
-          uid: selectedAppointment.applicantProfile.uid,
-          message: statusMessage,
-          type: "appointment",
-          read: false,
-          timestamp: Timestamp.fromDate(new Date()),
-        });
-      } else {
-        console.error("Applicant UID is undefined");
-      }
-
-      if (currentUser?.uid) {
-        const lawyerMessage =
-          clientAttend === "yes"
-            ? `You have marked the appointment for Ticket Number ${selectedAppointment.controlNumber} as completed on ${formattedDate}.`
-            : `You have marked the appointment for Ticket Number ${selectedAppointment.controlNumber} as not attended on ${formattedDate}.`;
-
-        await addDoc(collection(fs, "notifications"), {
-          uid: currentUser.uid,
-          message: lawyerMessage,
-          type: "appointment",
-          read: false,
-          timestamp: Timestamp.fromDate(new Date()),
-        });
-      } else {
-        console.error("Current User UID is undefined");
-      }
-
       setSnackbarMessage("Remarks have been successfully submitted.");
     } catch (error) {
       setSnackbarMessage("Error submitting remarks, please try again.");
@@ -658,6 +545,7 @@ function ApptsLawyer() {
       setIsSubmitting(false);
     }
   };
+  
 
   const handleScheduleSubmit = async (e) => {
     e.preventDefault();
@@ -676,31 +564,19 @@ function ApptsLawyer() {
       return;
     }
 
-    let googleMeetLink = null; // Declare and initialize googleMeetLink
+    let jitsiMeetLink = null;
 
     try {
-      // If the appointment type is online, initiate Google sign-in and retrieve token
+      // If the appointment type is online, generate a Jitsi Meet link
       if (appointmentType === "online") {
-        const { token } = await signInWithGoogle(); // Retrieve OAuth 2.0 token
-        googleMeetLink = await createGoogleMeet(
-          appointmentDate,
-          selectedAppointment.applicantProfile?.email,
-          token
-        );
-
-        if (!googleMeetLink) {
-          setSnackbarMessage("Failed to create Google Meet link.");
-          setShowSnackbar(true);
-          setTimeout(() => setShowSnackbar(false), 3000);
-          return; // Stop the process if Google Meet creation fails
-        }
+        jitsiMeetLink = generateJitsiLink(selectedAppointment.controlNumber);
       }
     } catch (error) {
-      console.error("Error during Google Meet creation or sign-in:", error);
-      setSnackbarMessage("Error occurred while creating Google Meet.");
+      console.error("Error during Jitsi Meet link creation:", error);
+      setSnackbarMessage("Error occurred while creating Jitsi Meet link.");
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
-      return; // Stop the process if there's an error
+      return;
     }
 
     // Proceed with scheduling the appointment
@@ -708,8 +584,8 @@ function ApptsLawyer() {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
       "appointmentDetails.appointmentStatus": "scheduled",
       "appointmentDetails.apptType": appointmentType,
-      ...(googleMeetLink && {
-        "appointmentDetails.googleMeetLink": googleMeetLink, // Only add this if Google Meet link is available
+      ...(jitsiMeetLink && {
+        "appointmentDetails.jitsiMeetLink": jitsiMeetLink, // Only add this if Jitsi Meet link is available
       }),
     };
 
@@ -974,22 +850,22 @@ function ApptsLawyer() {
                     {capitalizeFirstLetter(appointment.appointmentStatus)}
                   </td>
                   <td>
-                    {/* Show the Google Meet link if the appointment is online */}
                     {appointment.appointmentDetails?.apptType === "online" &&
-                    appointment.appointmentDetails?.googleMeetLink ? (
+                    appointment.appointmentDetails?.jitsiMeetLink ? (
                       <>
                         <a
-                          href={appointment.appointmentDetails.googleMeetLink}
+                          href={appointment.appointmentDetails.jitsiMeetLink}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          Join Google Meet
+                          Join Jitsi Meet
                         </a>
                       </>
                     ) : (
                       "N/A"
                     )}
                   </td>
+
                   <td>
                     <button
                       onClick={() => toggleDetails(appointment)}
