@@ -1,22 +1,18 @@
 {
-  "name": "functions",
-  "description": "Cloud Functions for Firebase",
-  "scripts": {
-    "serve": "firebase emulators:start --only functions",
-    "shell": "firebase functions:shell",
-    "start": "firebase serve",
-    "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
-  },
+  "main": "index.js",
   "engines": {
     "node": "18"
   },
-  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "firebase deploy --only functions",
+    "lint": "eslint ."
+  },
   "dependencies": {
     "express": "^4.21.0",
-    "firebase-admin": "^12.5.0",
+    "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.0.1",
-    "googleapis": "^39.2.0"
+    "googleapis": "^98.0.0"
   },
   "devDependencies": {
     "firebase-functions-test": "^3.3.0"

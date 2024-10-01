@@ -1,16 +1,17 @@
 const express = require('express');
 const { google } = require('googleapis');
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v2'); // Using v2 for Gen 2 functions
+const cors = require('cors');
 
 // Initialize Express app
 const app = express();
 
-// Middleware to parse JSON requests
-app.use(express.json());
+// Enable CORS for all origins or restrict to specific origin
+app.use(cors({ origin: 'https://lawyer-app-ed056.web.app/' })); // Allow only your frontend app
 
 // Initialize Google OAuth2 client using environment variables
 const oAuth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID, // Access environment variables
+  process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET
 );
 
@@ -88,5 +89,5 @@ app.post('/create-google-meet', async (req, res) => {
   }
 });
 
-// Export the Express app as a Firebase Cloud Function
+// Export the Express app as a Firebase Cloud Function using Gen 2 Functions
 exports.api = functions.https.onRequest(app);
