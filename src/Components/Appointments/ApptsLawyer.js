@@ -839,7 +839,7 @@
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            Join Jitsi Meet
+                            Join Meeting
                           </a>
                           <br />
                           <strong>Password:</strong>{" "}
