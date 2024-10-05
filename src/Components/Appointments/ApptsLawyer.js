@@ -14,7 +14,7 @@ import {
 } from "../../Config/FirebaseServices";
 import { useAuth } from "../../AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { fs, auth } from "../../Config/Firebase";
+import { fs, auth, signInWithGoogle } from "../../Config/Firebase";
 import { addDoc, collection, Timestamp } from "firebase/firestore";
 import {
   faEye,
@@ -25,7 +25,7 @@ import { Tooltip, OverlayTrigger } from "react-bootstrap";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
 import axios from "axios"; // Import axios for Google Meet API requests
 
-function AppsLawyer() {
+function ApptsLawyer() {
   const [appointments, setAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -45,12 +45,13 @@ function AppsLawyer() {
   const [appointmentDate, setAppointmentDate] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState(null);
   const [rescheduleReason, setRescheduleReason] = useState("");
-  const [appointmentType, setAppointmentType] = useState(""); // New State for Appointment Type (In-person or Online)
+  const [appointmentType, setAppointmentType] = useState(""); // Appointment Type (In-person or Online)
   const [rescheduleAppointmentType, setRescheduleAppointmentType] =
-    useState(""); // New state for rescheduled appointment type
+    useState(""); // Rescheduled appointment type
   const [bookedSlots, setBookedSlots] = useState([]);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // New state to prevent duplicate submissions
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState("");
   const { currentUser } = useAuth();
@@ -98,6 +99,149 @@ function AppsLawyer() {
     loadHolidays();
   }, []);
 
+  const generateJitsiLink = (controlNumber) => {
+    const roomName = controlNumber ? controlNumber : `room-${Date.now()}`;
+    const password = Math.random().toString(36).substring(2, 8); // Random password
+
+    return {
+      link: `https://meet.jit.si/${roomName}`,
+      password: password,
+    };
+  };
+
+  const handleScheduleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!appointmentDate || !appointmentType) {
+      setSnackbarMessage("Appointment date and type are required.");
+      setShowSnackbar(true);
+      return;
+    }
+
+    let meetingLink = null;
+    let meetingPass = null;
+
+    if (appointmentType === "Online") {
+      const { link, password } = generateJitsiLink(
+        selectedAppointment.controlNumber
+      );
+      meetingLink = link;
+      meetingPass = password;
+    }
+
+    const updatedData = {
+      "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
+      "appointmentDetails.appointmentStatus": "scheduled",
+      "appointmentDetails.apptType": appointmentType,
+      ...(meetingLink && {
+        "appointmentDetails.meetingLink": meetingLink,
+        "appointmentDetails.meetingPass": meetingPass,
+      }),
+    };
+
+    await updateAppointment(selectedAppointment.id, updatedData);
+  };
+
+  const handlePrint = () => {
+    if (!selectedAppointment) {
+      alert("No appointment selected");
+      return;
+    }
+
+    // Get the contents of the appointment details section
+    const printContents = document.getElementById(
+      "appointment-details-section"
+    ).innerHTML;
+
+    // Create a temporary div to modify the contents for printing
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = printContents;
+
+    // Remove any elements you don't want to print (with class 'no-print')
+    const noPrintSection = tempDiv.querySelectorAll(".no-print");
+    noPrintSection.forEach((section) => section.remove());
+
+    const modifiedPrintContents = tempDiv.innerHTML;
+
+    // Open a new window for printing
+    const printWindow = window.open("", "", "height=500, width=500");
+    printWindow.document.write(
+      "<html><head><title>Appointment Details</title></head><body>"
+    );
+
+    // Add custom styles for the print layout
+    printWindow.document.write("<style>");
+    printWindow.document.write(`
+      @media print {
+        .page-break { page-break-before: always; }
+        .print-section { page-break-inside: avoid; }
+        .print-image { width: 100%; height: auto; object-fit: cover; }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        table, th, td {
+          border: 1px solid black;
+        }
+        th, td {
+          padding: 8px;
+          text-align: left;
+        }
+        th {
+          background-color: #f2f2f2;
+        }
+        .section-title {
+          color: #a34bc9;
+          font-size: 16px;
+        }
+        .no-print {
+          display: none;
+        }
+        .print-only {
+          display: block;
+        }
+      }
+    `);
+    printWindow.document.write("</style>");
+
+    // Add the IBP logo and QR code to the print layout
+    printWindow.document.write(`
+      <div style="text-align: center;">
+        <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
+        <h2>Integrated Bar of the Philippines - Malolos</h2>
+        ${
+          selectedAppointment.appointmentDetails.qrCode
+            ? `<img src="${selectedAppointment.appointmentDetails.qrCode}" alt="QR Code" style="width: 100px; display: block; margin: 0 auto;" />`
+            : ""
+        }
+      </div>
+      <hr />
+    `);
+
+    // Insert the modified contents
+    printWindow.document.write(modifiedPrintContents);
+
+    // Include any relevant images for printing
+    const images = document.querySelectorAll(".img-thumbnail");
+    images.forEach((image) => {
+      if (!image.classList.contains("qr-code-image")) {
+        printWindow.document.write("<div class='page-break'></div>");
+        printWindow.document.write(
+          `<img src='${image.src}' class='print-image' />`
+        );
+      }
+    });
+
+    // Close and trigger the print dialog
+    printWindow.document.write("</body></html>");
+    printWindow.document.close();
+    printWindow.focus(); // Focus the window to ensure it shows up
+    printWindow.print(); // Trigger print
+
+    // Close the print window after printing
+    printWindow.onafterprint = () => printWindow.close();
+  };
+
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (!user) {
@@ -132,89 +276,6 @@ function AppsLawyer() {
     natureOfLegalAssistanceFilter,
     currentUser,
   ]);
-
-  const handlePrint = () => {
-    if (!selectedAppointment) {
-      alert("No appointment selected");
-      return;
-    }
-
-    const printContents = document.getElementById(
-      "appointment-details-section"
-    ).innerHTML;
-
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = printContents;
-    const noPrintSection = tempDiv.querySelector(".no-print");
-    if (noPrintSection) {
-      noPrintSection.remove();
-    }
-    const modifiedPrintContents = tempDiv.innerHTML;
-
-    const printWindow = window.open("", "", "height=500, width=500");
-    printWindow.document.write(
-      "<html><head><title>Appointment Details</title></head><body>"
-    );
-    printWindow.document.write("<style>");
-    printWindow.document.write(`
-      @media print {
-        .page-break { page-break-before: always; }
-        .print-section { page-break-inside: avoid; }
-        .print-image { width: 100%; height: 100%; object-fit: cover; }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        table, th, td {
-          border: 1px solid black;
-        }
-        th, td {
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #f2f2f2;
-        }
-        .section-title {
-          color: #a34bc9;
-          font-size: 16px;
-        }
-        .no-print {
-          display: none;
-        }
-        .print-only {
-          display: block;
-        }
-      }
-    `);
-    printWindow.document.write("</style>");
-    printWindow.document.write(` 
-      <div style="text-align: center;">
-        <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
-        <h2>Integrated Bar of the Philippines - Malolos</h2>
-        <img src="${selectedAppointment.appointmentDetails.qrCode}" alt="QR Code" style="width: 100px; display: block; margin: 0 auto;" />
-      </div>
-      <hr />
-    `);
-    printWindow.document.write(modifiedPrintContents);
-
-    const images = document.querySelectorAll(".img-thumbnail");
-    images.forEach((image) => {
-      if (!image.classList.contains("qr-code-image")) {
-        printWindow.document.write("<div class='page-break'></div>");
-        printWindow.document.write(
-          `<img src='${image.src}' class='print-image' />`
-        );
-      }
-    });
-
-    printWindow.document.write("</body></html>");
-    printWindow.document.close();
-    printWindow.print();
-    printWindow.close();
-
-    window.location.reload();
-  };
 
   useEffect(() => {
     const unsubscribe = getBookedSlots((slots) => {
@@ -288,14 +349,9 @@ function AppsLawyer() {
     return day === 2 || day === 4;
   };
 
-  const isSlotBooked = (dateTime) => {
-    return bookedSlots.some(
-      (bookedDate) =>
-        dateTime.getDate() === bookedDate.getDate() &&
-        dateTime.getMonth() === bookedDate.getMonth() &&
-        dateTime.getFullYear() === bookedDate.getFullYear() &&
-        dateTime.getHours() === bookedDate.getHours() &&
-        dateTime.getMinutes() === bookedDate.getMinutes()
+  const isSlotBooked = (dateTime, slots = bookedSlots) => {
+    return slots.some(
+      (bookedDate) => dateTime.toISOString() === bookedDate.toISOString()
     );
   };
 
@@ -303,23 +359,13 @@ function AppsLawyer() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Check if the date is a holiday
     const isHoliday = holidays.some(
-      (holiday) =>
-        holiday.getFullYear() === date.getFullYear() &&
-        holiday.getMonth() === date.getMonth() &&
-        holiday.getDate() === date.getDate()
+      (holiday) => holiday.toDateString() === date.toDateString()
     );
 
     const isFullyBooked =
-      bookedSlots.filter(
-        (slot) =>
-          slot.getDate() === date.getDate() &&
-          slot.getMonth() === date.getMonth() &&
-          slot.getFullYear() === date.getFullYear() &&
-          slot.getHours() >= 13 &&
-          slot.getHours() < 17
-      ).length === 4;
+      bookedSlots.filter((slot) => slot.toDateString() === date.toDateString())
+        .length === 4;
 
     return !isHoliday && isWeekday(date) && date >= today && !isFullyBooked;
   };
@@ -338,14 +384,6 @@ function AppsLawyer() {
     return !isSlotBookedByAssignedLawyer(dateTime);
   };
 
-  const isTimeSlotAssignedToCurrentLawyer = (dateTime) => {
-    return appointments.some(
-      (appointment) =>
-        appointment.assignedLawyer === currentUser.uid &&
-        appointment.appointmentDate.toDate().getTime() === dateTime.getTime()
-    );
-  };
-
   const handleNext = async () => {
     if (currentPage < totalPages) {
       const { data, lastDoc } = await getLawyerAppointments(
@@ -358,7 +396,7 @@ function AppsLawyer() {
       );
       setAppointments(data);
       setLastVisible(lastDoc);
-      setCurrentPage((prevPage) => prevPage + 1);
+      setCurrentPage(currentPage + 1);
     }
   };
 
@@ -484,273 +522,114 @@ function AppsLawyer() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    let status = "pending";
-    if (clientEligibility.eligibility === "yes") {
-      status = "approved";
-    } else if (clientEligibility.eligibility === "no") {
-      status = "denied";
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const updatedData = {
+        "clientEligibility.eligibility": clientEligibility.eligibility,
+        "appointmentDetails.appointmentStatus":
+          clientEligibility.eligibility === "yes" ? "approved" : "denied",
+        "clientEligibility.denialReason": clientEligibility.denialReason,
+        "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+      };
+
+      await updateAppointment(selectedAppointment.id, updatedData);
+      setSnackbarMessage("Form has been successfully submitted.");
+      setSelectedAppointment(null);
+    } catch (error) {
+      setSnackbarMessage("Error submitting form, please try again.");
+    } finally {
+      setIsSubmitting(false);
+      setShowSnackbar(true);
+      setTimeout(() => setShowSnackbar(false), 3000);
     }
-
-    const updatedData = {
-      "clientEligibility.eligibility": clientEligibility.eligibility,
-      "clientEligibility.notes": clientEligibility.notes,
-      "appointmentDetails.appointmentStatus": status,
-      "appointmentDetails.assignedLawyer": clientEligibility.assistingCounsel,
-      "clientEligibility.denialReason": clientEligibility.denialReason,
-      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-    };
-
-    await updateAppointment(selectedAppointment.id, updatedData);
-
-    setSelectedAppointment(null);
-    setClientEligibility({
-      eligibility: "",
-      denialReason: "",
-      notes: "",
-      ibpParalegalStaff: "",
-      assistingCounsel: "",
-    });
-    setShowProceedingNotesForm(false);
-    setShowRescheduleForm(false);
-    setShowScheduleForm(false);
-
-    const { data, total } = await getLawyerAppointments(
-      filter,
-      lastVisible,
-      pageSize,
-      searchText,
-      natureOfLegalAssistanceFilter,
-      currentUser
-    );
-    setAppointments(data);
-    setTotalPages(Math.ceil(total / pageSize));
-
-    setSnackbarMessage("Form has been successfully submitted.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
   };
 
   const handleSubmitProceedingNotes = async (e) => {
     e.preventDefault();
 
-    const updatedData = {
-      "appointmentDetails.proceedingNotes": proceedingNotes,
-      "appointmentDetails.ibpParalegalStaff":
-        clientEligibility.ibpParalegalStaff,
-      "appointmentDetails.assistingCounsel": clientEligibility.assistingCounsel,
-      "appointmentDetails.appointmentStatus": "done",
-      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-      "appointmentDetails.clientAttend": clientAttend,
-    };
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-    await updateAppointment(selectedAppointment.id, updatedData);
+    try {
+      const updatedData = {
+        "appointmentDetails.proceedingNotes": proceedingNotes,
+        "appointmentDetails.ibpParalegalStaff":
+          clientEligibility.ibpParalegalStaff,
+        "appointmentDetails.assistingCounsel":
+          clientEligibility.assistingCounsel,
+        "appointmentDetails.appointmentStatus": "done",
+        "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+        "appointmentDetails.clientAttend": clientAttend,
+      };
 
-    setSelectedAppointment(null);
-    setProceedingNotes("");
-    setShowProceedingNotesForm(false);
-
-    const { data, total } = await getLawyerAppointments(
-      filter,
-      lastVisible,
-      pageSize,
-      searchText,
-      natureOfLegalAssistanceFilter,
-      currentUser
-    );
-    setAppointments(data);
-    setTotalPages(Math.ceil(total / pageSize));
-
-    const formattedDate = selectedAppointment.appointmentDetails.appointmentDate
-      .toDate()
-      .toLocaleString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "numeric",
-        minute: "numeric",
-        hour12: true,
-      });
-
-    const statusMessage =
-      clientAttend === "yes"
-        ? `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been completed on ${formattedDate}.`
-        : `You did not attend your appointment with Ticket Number ${selectedAppointment.controlNumber} scheduled on ${formattedDate}.`;
-
-    if (selectedAppointment?.applicantProfile?.uid) {
-      await addDoc(collection(fs, "notifications"), {
-        uid: selectedAppointment.applicantProfile.uid,
-        message: statusMessage,
-        type: "appointment",
-        read: false,
-        timestamp: Timestamp.fromDate(new Date()),
-      });
-    } else {
-      console.error("Applicant UID is undefined");
-    }
-
-    if (currentUser?.uid) {
-      const lawyerMessage =
-        clientAttend === "yes"
-          ? `You have marked the appointment for Ticket Number ${selectedAppointment.controlNumber} as completed on ${formattedDate}.`
-          : `You have marked the appointment for Ticket Number ${selectedAppointment.controlNumber} as not attended on ${formattedDate}.`;
-
-      await addDoc(collection(fs, "notifications"), {
-        uid: currentUser.uid,
-        message: lawyerMessage,
-        type: "appointment",
-        read: false,
-        timestamp: Timestamp.fromDate(new Date()),
-      });
-    } else {
-      console.error("Current User UID is undefined");
-    }
-
-    setSnackbarMessage("Remarks have been successfully submitted.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
-  };
-
-  const handleScheduleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!appointmentDate) {
-      setSnackbarMessage("Appointment date is required.");
+      await updateAppointment(selectedAppointment.id, updatedData);
+      setSnackbarMessage("Remarks have been successfully submitted.");
+    } catch (error) {
+      setSnackbarMessage("Error submitting remarks, please try again.");
+    } finally {
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
-      return;
+      setIsSubmitting(false);
     }
-
-    let googleMeetLink =
-      selectedAppointment.appointmentDetails?.googleMeetLink || null; // Check if link already exists
-
-    if (appointmentType === "online" && !googleMeetLink) {
-      // Only create link if it's an online appointment and the link doesn't exist
-      try {
-        // Call your backend API to create Google Meet event
-        const response = await axios.post("/api/create-google-meet", {
-          appointmentDate: appointmentDate.toISOString(),
-          clientEmail: selectedAppointment.applicantProfile?.email,
-        });
-
-        googleMeetLink = response.data.hangoutLink; // Capture the new Google Meet link
-        console.log("Google Meet API response:", response.data); // Debugging response
-      } catch (error) {
-        console.error(
-          "Error creating Google Meet event:",
-          error.response?.data || error.message
-        );
-        setSnackbarMessage("Failed to create Google Meet event.");
-        setShowSnackbar(true);
-        setTimeout(() => setShowSnackbar(false), 3000);
-        return;
-      }
-    }
-
-    // Save the new Google Meet link (if created) or update existing appointment details
-    const updatedData = {
-      "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
-      "appointmentDetails.appointmentStatus": "scheduled",
-      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-      ...(googleMeetLink && {
-        "appointmentDetails.googleMeetLink": googleMeetLink,
-      }),
-    };
-
-    await updateAppointment(selectedAppointment.id, updatedData);
-
-    setSelectedAppointment(null);
-    setAppointmentDate(null);
-    setShowScheduleForm(false);
-
-    // Reload appointments to reflect changes
-    const { data, total } = await getLawyerAppointments(
-      filter,
-      lastVisible,
-      pageSize,
-      searchText,
-      natureOfLegalAssistanceFilter,
-      currentUser
-    );
-    setAppointments(data);
-    setTotalPages(Math.ceil(total / pageSize));
-
-    setSnackbarMessage("Appointment has been successfully scheduled.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
   };
 
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!rescheduleDate) {
-      setSnackbarMessage("Reschedule date is required.");
+    // Check if reschedule date and type are provided
+    if (!rescheduleDate || !rescheduleAppointmentType) {
+      setSnackbarMessage("Reschedule date and type are required.");
       setShowSnackbar(true);
-      setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
 
-    if (!rescheduleAppointmentType) {
-      setSnackbarMessage("Please select appointment type.");
-      setShowSnackbar(true);
-      setTimeout(() => setShowSnackbar(false), 3000);
-      return;
+    let meetingLink =
+      selectedAppointment.appointmentDetails?.meetingLink || null;
+    let meetingPass =
+      selectedAppointment.appointmentDetails?.meetingPass || null;
+
+    // If the reschedule type is Online, generate new Jitsi meeting link and password
+    if (rescheduleAppointmentType === "Online") {
+      const { link, password } = generateJitsiLink(
+        selectedAppointment.controlNumber
+      );
+      meetingLink = link;
+      meetingPass = password;
     }
 
-    let googleMeetLink =
-      selectedAppointment.appointmentDetails?.googleMeetLink || null;
+    // Log the rescheduleDate for debugging
+    console.log("Rescheduling to:", rescheduleDate);
 
-    if (rescheduleAppointmentType === "online" && !googleMeetLink) {
-      try {
-        const response = await axios.post("/api/create-google-meet", {
-          appointmentDate: rescheduleDate.toISOString(),
-          clientEmail: selectedAppointment.applicantProfile?.email,
-        });
-
-        googleMeetLink = response.data.hangoutLink;
-      } catch (error) {
-        console.error(
-          "Error creating Google Meet event:",
-          error.response?.data || error.message
-        );
-        setSnackbarMessage("Failed to create Google Meet event.");
-        setShowSnackbar(true);
-        setTimeout(() => setShowSnackbar(false), 3000);
-        return;
-      }
-    }
-
+    // Prepare the data for updating the appointment
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
       "appointmentDetails.rescheduleReason": rescheduleReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
       "appointmentDetails.apptType": rescheduleAppointmentType,
-      ...(googleMeetLink && {
-        "appointmentDetails.googleMeetLink": googleMeetLink,
+      ...(meetingLink && {
+        "appointmentDetails.meetingLink": meetingLink,
+        "appointmentDetails.meetingPass": meetingPass,
       }),
     };
 
-    await updateAppointment(selectedAppointment.id, updatedData);
+    try {
+      // Update the appointment in Firestore
+      await updateAppointment(selectedAppointment.id, updatedData);
+      setSnackbarMessage("Appointment successfully rescheduled.");
+      setShowSnackbar(true);
 
-    setSelectedAppointment(null);
-    setRescheduleDate(null);
-    setRescheduleReason("");
-    setRescheduleAppointmentType(""); // Clear the state after submitting
-    setShowRescheduleForm(false);
-
-    const { data, total } = await getLawyerAppointments(
-      filter,
-      lastVisible,
-      pageSize,
-      searchText,
-      natureOfLegalAssistanceFilter,
-      currentUser
-    );
-    setAppointments(data);
-    setTotalPages(Math.ceil(total / pageSize));
-
-    setSnackbarMessage("Appointment has been successfully rescheduled.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
+      // Optionally close the modal or reset the form after successful submission
+      setTimeout(() => {
+        setShowSnackbar(false);
+        setSelectedAppointment(null);
+      }, 3000);
+    } catch (error) {
+      console.error("Error rescheduling appointment:", error);
+      setSnackbarMessage("Error rescheduling appointment, please try again.");
+      setShowSnackbar(true);
+    }
   };
 
   const getFormattedDate = (timestamp, includeTime = false) => {
@@ -789,24 +668,23 @@ function AppsLawyer() {
   };
 
   const getTimeClassName = (time) => {
-    const dateTime = new Date(appointmentDate);
-    dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
-  
     const hours = time.getHours();
-  
+
     // Hide times outside of 1:00 PM to 4:00 PM
     if (hours < 13 || hours > 16) {
       return "hidden-time"; // Apply the hidden-time class to hide these times
     }
-  
-    // Keep current logic for checking booked slots
+
+    const dateTime = new Date(appointmentDate);
+    dateTime.setHours(hours, time.getMinutes(), 0, 0);
+
+    // Check if the slot is already booked
     if (isSlotBookedByAssignedLawyer(dateTime)) {
-      return "booked-time disabled-time"; // Apply class for booked slots
+      return "booked-time disabled-time"; // Mark the slot as booked and disable it
     }
-  
-    return "";
+
+    return ""; // Return no class if the time slot is valid
   };
-  
 
   const filterRescheduleTime = (time) => {
     if (!(time instanceof Date)) return false;
@@ -826,6 +704,7 @@ function AppsLawyer() {
     return appointments.some((appointment) => {
       const appointmentDate = appointment.appointmentDetails?.appointmentDate;
       const assignedLawyer = appointment.appointmentDetails?.assignedLawyer;
+
       return (
         assignedLawyer ===
           selectedAppointment?.appointmentDetails?.assignedLawyer &&
@@ -847,14 +726,22 @@ function AppsLawyer() {
   };
 
   const getTimeRescheduleClassName = (time) => {
-    const dateTime = new Date(rescheduleDate);
-    dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    const hours = time.getHours();
 
-    if (isSlotBookedByAssignedLawyer(dateTime)) {
-      return "booked-time disabled-time";
+    // Hide times outside of 1:00 PM to 4:00 PM
+    if (hours < 13 || hours > 16) {
+      return "hidden-time"; // Apply the hidden-time class
     }
 
-    return "";
+    const dateTime = new Date(rescheduleDate);
+    dateTime.setHours(hours, time.getMinutes(), 0, 0);
+
+    // Check if the slot is booked by the assigned lawyer
+    if (isSlotBookedByAssignedLawyer(dateTime)) {
+      return "booked-time disabled-time"; // Apply class for booked slots
+    }
+
+    return ""; // Default return if slot is valid
   };
 
   const resetFilters = () => {
@@ -944,17 +831,19 @@ function AppsLawyer() {
                     {capitalizeFirstLetter(appointment.appointmentStatus)}
                   </td>
                   <td>
-                    {/* Show the Google Meet link if the appointment is online */}
-                    {appointment.appointmentDetails?.apptType === "online" &&
-                    appointment.appointmentDetails?.googleMeetLink ? (
+                    {appointment.appointmentDetails?.apptType === "Online" &&
+                    appointment.appointmentDetails?.meetingLink ? (
                       <>
                         <a
-                          href={appointment.appointmentDetails.googleMeetLink}
+                          href={`/meeting/${appointment.id}`} // Link to MeetingPage with appointment ID
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          Join Google Meet
+                          Join Jitsi Meet
                         </a>
+                        <br />
+                        <strong>Password:</strong>{" "}
+                        {appointment.appointmentDetails.meetingPass}
                       </>
                     ) : (
                       "N/A"
@@ -1165,15 +1054,6 @@ function AppsLawyer() {
                   ×
                 </button>
               </div>
-              <div style={{ position: "relative" }}>
-                <button
-                  onClick={handleCloseModal}
-                  className="close-button"
-                  style={{ position: "absolute", top: "15px", right: "15px" }}
-                >
-                  ×
-                </button>
-              </div>
               <br />
 
               <h2>Appointment Details</h2>
@@ -1186,21 +1066,25 @@ function AppsLawyer() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      {selectedAppointment.appointmentDetails
-                        ?.appointmentType === "online" && (
+                      {selectedAppointment.appointmentDetails?.apptType ===
+                        "Online" && (
                         <tr>
-                          <th>Google Meet Link:</th>
+                          <th>Jitsi Meet Link:</th>
                           <td>
                             <a
                               href={
                                 selectedAppointment.appointmentDetails
-                                  ?.googleMeetLink
+                                  ?.meetingLink
                               }
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              Join Google Meet
+                              Join Jitsi Meet
                             </a>
+                            <br />
+                            <strong>Password:</strong>{" "}
+                            {selectedAppointment.appointmentDetails
+                              ?.meetingPass || "N/A"}
                           </td>
                         </tr>
                       )}
@@ -1778,7 +1662,7 @@ function AppsLawyer() {
                     required
                   ></textarea>
                 </div>
-                <button>Submit</button>
+                <button disabled={isSubmitting}>Submit</button>
               </form>
             </div>
           )}
@@ -1858,7 +1742,7 @@ function AppsLawyer() {
                   onChange={handleChange}
                 />
               </div>
-              <button>Submit</button>
+              <button disabled={isSubmitting}>Submit</button>
             </form>
           </div>
         )}
@@ -1905,14 +1789,14 @@ function AppsLawyer() {
                   onChange={(date) => setRescheduleDate(date)}
                   showTimeSelect
                   filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterRescheduleTime(time)}
+                  filterTime={(time) => filterRescheduleTime(time)} // Apply the correct filter
                   dateFormat="MM/dd/yy h:mm aa"
                   inline
                   timeIntervals={60}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
+                  minTime={new Date(new Date().setHours(13, 0, 0))} // Starting from 1:00 PM
+                  maxTime={new Date(new Date().setHours(17, 0, 0))} // Ending at 5:00 PM
                   dayClassName={(date) => getDayClassName(date)}
-                  timeClassName={(time) => getTimeRescheduleClassName(time)}
+                  timeClassName={(time) => getTimeRescheduleClassName(time)} // Ensure className application
                 />
               </div>
               <br />
@@ -1929,12 +1813,12 @@ function AppsLawyer() {
                   <option value="" disabled>
                     Select Type
                   </option>
-                  <option value="in-person">In-person Consultation</option>
-                  <option value="online">Online Video Consultation</option>
+                  <option value="In-person">In-person Consultation</option>
+                  <option value="Online">Online Video Consultation</option>
                 </select>
               </div>
               <br />
-              <button>Submit</button>
+              <button disabled={isSubmitting}>Submit</button>
             </form>
           </div>
         )}
@@ -1957,18 +1841,18 @@ function AppsLawyer() {
                 </b>
                 <br />
                 <ReactDatePicker
-                  selected={rescheduleDate}
-                  onChange={(date) => setRescheduleDate(date)}
+                  selected={appointmentDate} // Correct state for scheduling
+                  onChange={(date) => setAppointmentDate(date)} // Ensure it updates appointmentDate
                   showTimeSelect
                   filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterRescheduleTime(time)}
+                  filterTime={(time) => filterTime(time)} // Apply correct filtering for valid times
                   dateFormat="MM/dd/yy h:mm aa"
                   inline
                   timeIntervals={60} // Set to 60 minutes for 1-hour intervals
                   minTime={new Date(new Date().setHours(13, 0, 0))} // Starting from 1:00 PM
                   maxTime={new Date(new Date().setHours(17, 0, 0))} // Ending at 5:00 PM
-                  dayClassName={(date) => getDayClassName(date)}
-                  timeClassName={(time) => getTimeRescheduleClassName(time)}
+                  dayClassName={(date) => getDayClassName(date)} // Add class for fully booked days
+                  timeClassName={(time) => getTimeClassName(time)} // Ensure className application for time
                 />
               </div>
               <br />
@@ -1985,12 +1869,12 @@ function AppsLawyer() {
                   <option value="" disabled>
                     Select Type
                   </option>
-                  <option value="in-person">In-person Consultation</option>
-                  <option value="online">Online Video Consultation</option>
+                  <option value="In-person">In-person Consultation</option>
+                  <option value="Online">Online Video Consultation</option>
                 </select>
               </div>
               <br />
-              <button>Submit</button>
+              <button disabled={isSubmitting}>Submit</button>
             </form>
           </div>
         )}
@@ -2005,4 +1889,4 @@ function AppsLawyer() {
   );
 }
 
-export default AppsLawyer;
+export default ApptsLawyer;

@@ -421,28 +421,28 @@ function AppsHead() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!selectedAppointment) {
       console.error("Selected appointment is not available.");
       alert("Selected appointment is not available.");
       return;
     }
-  
+
     console.log("Selected Appointment:", selectedAppointment);
-  
+
     if (!selectedAppointment.uid) {
       console.error("Applicant UID is not available.", selectedAppointment);
       alert("Applicant UID is not available.");
       return;
     }
-  
+
     let status = "pending";
     if (clientEligibility.eligibility === "yes") {
       status = "approved";
     } else if (clientEligibility.eligibility === "no") {
       status = "denied";
     }
-  
+
     const updatedData = {
       "clientEligibility.eligibility": clientEligibility.eligibility,
       "clientEligibility.notes": clientEligibility.notes,
@@ -451,15 +451,15 @@ function AppsHead() {
       "clientEligibility.denialReason": clientEligibility.denialReason,
       "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
     };
-  
+
     await updateAppointment(selectedAppointment.id, updatedData);
-  
+
     // Notify the user
     const userMessage =
       clientEligibility.eligibility === "yes"
         ? `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been approved. Please wait for the specific date of appointment.`
         : `Your appointment with Ticket Number ${selectedAppointment.controlNumber} has been denied. Reason: ${clientEligibility.denialReason}.`;
-  
+
     await addDoc(collection(fs, "notifications"), {
       uid: selectedAppointment.uid,
       message: userMessage,
@@ -467,14 +467,14 @@ function AppsHead() {
       read: false,
       timestamp: Timestamp.fromDate(new Date()),
     });
-  
+
     // Notify the assigned lawyer
     if (
       clientEligibility.eligibility === "yes" &&
       clientEligibility.assistingCounsel
     ) {
       const lawyerMessage = `An appointment request with Ticket Number ${selectedAppointment.controlNumber} has been approved. Please schedule the appointment for the client assigned to you.`;
-  
+
       await addDoc(collection(fs, "notifications"), {
         uid: clientEligibility.assistingCounsel,
         message: lawyerMessage,
@@ -483,13 +483,13 @@ function AppsHead() {
         timestamp: Timestamp.fromDate(new Date()),
       });
     }
-  
+
     // Notify the current authenticated user
     const authUserMessage =
       clientEligibility.eligibility === "yes"
         ? `You have successfully approved the appointment request with Ticket Number ${selectedAppointment.controlNumber}.`
         : `You have successfully denied the appointment request with Ticket Number ${selectedAppointment.controlNumber}.`;
-  
+
     await addDoc(collection(fs, "notifications"), {
       uid: currentUser.uid,
       message: authUserMessage,
@@ -497,7 +497,7 @@ function AppsHead() {
       read: false,
       timestamp: Timestamp.fromDate(new Date()),
     });
-  
+
     setSelectedAppointment(null);
     setClientEligibility({
       eligibility: "",
@@ -509,7 +509,7 @@ function AppsHead() {
     setShowProceedingNotesForm(false);
     setShowRescheduleForm(false);
     setShowScheduleForm(false);
-  
+
     const { data, total } = await getAdminAppointments(
       filter,
       lastVisible,
@@ -520,12 +520,11 @@ function AppsHead() {
     );
     setAppointments(data);
     setTotalPages(Math.ceil(total / pageSize));
-  
+
     setSnackbarMessage("Form has been successfully submitted.");
     setShowSnackbar(true);
     setTimeout(() => setShowSnackbar(false), 3000);
   };
-  
 
   const handleSubmitProceedingNotes = async (e) => {
     e.preventDefault();
@@ -675,15 +674,22 @@ function AppsHead() {
   };
 
   const getTimeClassName = (time) => {
-    const dateTime = new Date(appointmentDate);
-    dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    const hours = time.getHours();
 
-    // Check if the time slot is booked by the assigned lawyer
-    if (isSlotBookedByAssignedLawyer(dateTime)) {
-      return "booked-time disabled-time";
+    // Hide times outside of 1:00 PM to 4:00 PM
+    if (hours < 13 || hours > 16) {
+      return "hidden-time"; // Apply the hidden-time class to hide these times
     }
 
-    return "";
+    const dateTime = new Date(appointmentDate);
+    dateTime.setHours(hours, time.getMinutes(), 0, 0);
+
+    // Check if the slot is already booked
+    if (isSlotBookedByAssignedLawyer(dateTime)) {
+      return "booked-time disabled-time"; // Mark the slot as booked and disable it
+    }
+
+    return ""; // Return no class if the time slot is valid
   };
 
   const filterRescheduleTime = (time) => {
@@ -702,13 +708,16 @@ function AppsHead() {
   };
 
   const isSlotBookedByAssignedLawyer = (dateTime) => {
-    return appointments.some(
-      (appointment) =>
-        appointment.appointmentDetails.assignedLawyer ===
-          selectedAppointment.appointmentDetails.assignedLawyer &&
-        appointment.appointmentDetails.appointmentDate.toDate().getTime() ===
-          dateTime.getTime()
-    );
+    return appointments.some((appointment) => {
+      const appointmentDate = appointment.appointmentDetails?.appointmentDate;
+      const assignedLawyer = appointment.appointmentDetails?.assignedLawyer;
+
+      return (
+        assignedLawyer ===
+          selectedAppointment?.appointmentDetails?.assignedLawyer &&
+        appointmentDate?.toDate().getTime() === dateTime.getTime()
+      );
+    });
   };
 
   const isSlotBookedByCurrentUser = (dateTime) => {
@@ -724,15 +733,22 @@ function AppsHead() {
   };
 
   const getTimeRescheduleClassName = (time) => {
-    const dateTime = new Date(rescheduleDate);
-    dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    const hours = time.getHours();
 
-    // Check if the time slot is booked by the assigned lawyer
-    if (isSlotBookedByAssignedLawyer(dateTime)) {
-      return "booked-time disabled-time";
+    // Hide times outside of 1:00 PM to 4:00 PM
+    if (hours < 13 || hours > 16) {
+      return "hidden-time"; // Apply the hidden-time class
     }
 
-    return "";
+    const dateTime = new Date(rescheduleDate);
+    dateTime.setHours(hours, time.getMinutes(), 0, 0);
+
+    // Check if the slot is booked by the assigned lawyer
+    if (isSlotBookedByAssignedLawyer(dateTime)) {
+      return "booked-time disabled-time"; // Apply class for booked slots
+    }
+
+    return ""; // Default return if slot is valid
   };
 
   const resetFilters = () => {
@@ -1622,17 +1638,14 @@ function AppsHead() {
                   onChange={(date) => setRescheduleDate(date)}
                   showTimeSelect
                   filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterRescheduleTime(time)}
-                  dateFormat="MMMM d, yyyy h:mm aa"
+                  filterTime={(time) => filterRescheduleTime(time)} // Apply the correct filter
+                  dateFormat="MM/dd/yy h:mm aa"
                   inline
-                  timeIntervals={30}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
-                  dayClassName={(date) =>
-                    getDayClassName(date) +
-                    (new Date() > date ? " disabled-day" : "")
-                  }
-                  timeClassName={(time) => getTimeRescheduleClassName(time)}
+                  timeIntervals={60}
+                  minTime={new Date(new Date().setHours(13, 0, 0))} // Starting from 1:00 PM
+                  maxTime={new Date(new Date().setHours(17, 0, 0))} // Ending at 5:00 PM
+                  dayClassName={(date) => getDayClassName(date)}
+                  timeClassName={(time) => getTimeRescheduleClassName(time)} // Ensure className application
                 />
               </div>
               <div>
@@ -1667,21 +1680,18 @@ function AppsHead() {
             <form onSubmit={handleScheduleSubmit}>
               <div>
                 <ReactDatePicker
-                  selected={appointmentDate}
-                  onChange={(date) => setAppointmentDate(date)}
+                  selected={appointmentDate} // Correct state for scheduling
+                  onChange={(date) => setAppointmentDate(date)} // Ensure it updates appointmentDate
                   showTimeSelect
                   filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterTime(time)}
-                  dateFormat="MMMM d, yyyy h:mm aa"
+                  filterTime={(time) => filterTime(time)} // Apply correct filtering for valid times
+                  dateFormat="MM/dd/yy h:mm aa"
                   inline
-                  timeIntervals={30}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
-                  dayClassName={(date) =>
-                    getDayClassName(date) +
-                    (new Date() > date ? " disabled-day" : "")
-                  }
-                  timeClassName={(time) => getTimeClassName(time)}
+                  timeIntervals={60} // Set to 60 minutes for 1-hour intervals
+                  minTime={new Date(new Date().setHours(13, 0, 0))} // Starting from 1:00 PM
+                  maxTime={new Date(new Date().setHours(17, 0, 0))} // Ending at 5:00 PM
+                  dayClassName={(date) => getDayClassName(date)} // Add class for fully booked days
+                  timeClassName={(time) => getTimeClassName(time)} // Ensure className application for time
                 />
               </div>
               <button>Submit</button>

@@ -18,6 +18,7 @@ import Welcome from './Components/QRCode/Welcome';
 import AuditLogs from './Components/Audit/AuditLogs';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import MeetingPage from './Components/Appointments/MeetingPage';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
           <Route path="/ratings" element={<Ratings />} />
           <Route path="/auditLogs" element={<AuditLogs />}/>
           <Route path="/appointment/:controlNumber" element={<AppointmentDetails />} /> {/* Fix route declaration */}
+          <Route path="/meeting/id" element={<MeetingPage />} /> {/* Fix route declaration */}
         </Routes>
     </Router>
   );

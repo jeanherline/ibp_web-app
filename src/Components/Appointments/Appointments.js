@@ -315,7 +315,7 @@ function Appointments() {
       setCurrentPage((prevPage) => prevPage + 1);
     }
   };
-  
+
   const handlePrevious = async () => {
     if (currentPage > 1) {
       const { data, firstDoc } = await getAdminAppointments(
@@ -332,7 +332,7 @@ function Appointments() {
       setCurrentPage((prevPage) => prevPage - 1);
     }
   };
-  
+
   const handleFirst = async () => {
     const { data, firstDoc } = await getAdminAppointments(
       filter,
@@ -346,7 +346,7 @@ function Appointments() {
     setLastVisible(firstDoc);
     setCurrentPage(1);
   };
-  
+
   const handleLast = async () => {
     const { data, lastDoc } = await getAdminAppointments(
       filter,
@@ -362,7 +362,6 @@ function Appointments() {
     setLastVisible(lastDoc);
     setCurrentPage(totalPages);
   };
-  
 
   const toggleDetails = (appointment) => {
     setSelectedAppointment(
@@ -611,15 +610,22 @@ function Appointments() {
   };
 
   const getTimeClassName = (time) => {
-    const dateTime = new Date(appointmentDate);
-    dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    const hours = time.getHours();
 
-    // Check if the time slot is booked by the assigned lawyer
-    if (isSlotBookedByAssignedLawyer(dateTime)) {
-      return "booked-time disabled-time";
+    // Hide times outside of 1:00 PM to 4:00 PM
+    if (hours < 13 || hours > 16) {
+      return "hidden-time"; // Apply the hidden-time class to hide these times
     }
 
-    return "";
+    const dateTime = new Date(appointmentDate);
+    dateTime.setHours(hours, time.getMinutes(), 0, 0);
+
+    // Check if the slot is already booked
+    if (isSlotBookedByAssignedLawyer(dateTime)) {
+      return "booked-time disabled-time"; // Mark the slot as booked and disable it
+    }
+
+    return ""; // Return no class if the time slot is valid
   };
 
   const filterRescheduleTime = (time) => {
@@ -641,12 +647,11 @@ function Appointments() {
     return appointments.some((appointment) => {
       const appointmentDate = appointment.appointmentDetails?.appointmentDate;
       const assignedLawyer = appointment.appointmentDetails?.assignedLawyer;
+
       return (
-        assignedLawyer &&
-        appointmentDate &&
         assignedLawyer ===
           selectedAppointment?.appointmentDetails?.assignedLawyer &&
-        appointmentDate.toDate().getTime() === dateTime.getTime()
+        appointmentDate?.toDate().getTime() === dateTime.getTime()
       );
     });
   };
@@ -664,15 +669,22 @@ function Appointments() {
   };
 
   const getTimeRescheduleClassName = (time) => {
-    const dateTime = new Date(rescheduleDate);
-    dateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    const hours = time.getHours();
 
-    // Check if the time slot is booked by the assigned lawyer
-    if (isSlotBookedByAssignedLawyer(dateTime)) {
-      return "booked-time disabled-time";
+    // Hide times outside of 1:00 PM to 4:00 PM
+    if (hours < 13 || hours > 16) {
+      return "hidden-time"; // Apply the hidden-time class
     }
 
-    return "";
+    const dateTime = new Date(rescheduleDate);
+    dateTime.setHours(hours, time.getMinutes(), 0, 0);
+
+    // Check if the slot is booked by the assigned lawyer
+    if (isSlotBookedByAssignedLawyer(dateTime)) {
+      return "booked-time disabled-time"; // Apply class for booked slots
+    }
+
+    return ""; // Default return if slot is valid
   };
 
   const resetFilters = () => {
@@ -987,35 +999,33 @@ function Appointments() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                        <tr className="no-print">
-                          <th>QR Code:</th>
-                          <td>
-                            {selectedAppointment.appointmentDetails ? (
-                              <a
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  openImageModal(
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  );
-                                }}
-                              >
-                                <img
-                                  src={
-                                    selectedAppointment.appointmentDetails
-                                      .qrCode
-                                  }
-                                  alt="QR Code"
-                                  className="img-thumbnail qr-code-image"
-                                  style={{ width: "100px", cursor: "pointer" }}
-                                />
-                              </a>
-                            ) : (
-                              "Not Available"
-                            )}
-                          </td>
-                        </tr>
+                      <tr className="no-print">
+                        <th>QR Code:</th>
+                        <td>
+                          {selectedAppointment.appointmentDetails ? (
+                            <a
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openImageModal(
+                                  selectedAppointment.appointmentDetails.qrCode
+                                );
+                              }}
+                            >
+                              <img
+                                src={
+                                  selectedAppointment.appointmentDetails.qrCode
+                                }
+                                alt="QR Code"
+                                className="img-thumbnail qr-code-image"
+                                style={{ width: "100px", cursor: "pointer" }}
+                              />
+                            </a>
+                          ) : (
+                            "Not Available"
+                          )}
+                        </td>
+                      </tr>
 
                       <tr>
                         <th>Control Number:</th>
@@ -1127,7 +1137,7 @@ function Appointments() {
                         )}
                         {selectedAppointment.appointmentStatus === "done" && (
                           <>
-                          <tr>
+                            <tr>
                               <th>Appointment Date:</th>
                               <td>
                                 {getFormattedDate(
@@ -1254,96 +1264,93 @@ function Appointments() {
                             "Not Available"}
                         </td>
                       </tr>
-                        <>
-                          <tr>
-                            <th>Address:</th>
-                            <td>
-                              {selectedAppointment?.address || "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Gender:</th>
-                            <td>
-                              {selectedAppointment?.selectedGender ||
-                                "Not Specified"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Name:</th>
-                            <td>
-                              {selectedAppointment.spouseName ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Spouse Occupation:</th>
-                            <td>
-                              {selectedAppointment.spouseOccupation ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Children Names and Ages:</th>
-                            <td>
-                              {selectedAppointment.childrenNamesAges ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                        </>
-                    </tbody>
-                  </table>
-                </section>
-
-                  <section className="mb-4 print-section">
-                    <h2>
-                      <em
-                        style={{
-                          color: "#a34bc9",
-                          fontSize: "16px",
-                        }}
-                      >
-                        Employment Profile
-                      </em>
-                    </h2>
-                    <table className="table table-striped table-bordered">
-                      <tbody>
+                      <>
                         <tr>
-                          <th>Occupation:</th>
+                          <th>Address:</th>
                           <td>
-                            {selectedAppointment.occupation || "Not Available"}
+                            {selectedAppointment?.address || "Not Available"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Type of Employment:</th>
+                          <th>Gender:</th>
                           <td>
-                            {selectedAppointment?.kindOfEmployment ||
+                            {selectedAppointment?.selectedGender ||
                               "Not Specified"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Employer Name:</th>
+                          <th>Spouse Name:</th>
                           <td>
-                            {selectedAppointment?.employerName ||
+                            {selectedAppointment.spouseName || "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Spouse Occupation:</th>
+                          <td>
+                            {selectedAppointment.spouseOccupation ||
                               "Not Available"}
                           </td>
                         </tr>
                         <tr>
-                          <th>Employer Address:</th>
+                          <th>Children Names and Ages:</th>
                           <td>
-                            {selectedAppointment.employerAddress ||
+                            {selectedAppointment.childrenNamesAges ||
                               "Not Available"}
                           </td>
                         </tr>
-                        <tr>
-                          <th>Monthly Income:</th>
-                          <td>
-                            {selectedAppointment.monthlyIncome ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </section>
+                      </>
+                    </tbody>
+                  </table>
+                </section>
+
+                <section className="mb-4 print-section">
+                  <h2>
+                    <em
+                      style={{
+                        color: "#a34bc9",
+                        fontSize: "16px",
+                      }}
+                    >
+                      Employment Profile
+                    </em>
+                  </h2>
+                  <table className="table table-striped table-bordered">
+                    <tbody>
+                      <tr>
+                        <th>Occupation:</th>
+                        <td>
+                          {selectedAppointment.occupation || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Type of Employment:</th>
+                        <td>
+                          {selectedAppointment?.kindOfEmployment ||
+                            "Not Specified"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Employer Name:</th>
+                        <td>
+                          {selectedAppointment?.employerName || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Employer Address:</th>
+                        <td>
+                          {selectedAppointment.employerAddress ||
+                            "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Monthly Income:</th>
+                        <td>
+                          {selectedAppointment.monthlyIncome || "Not Available"}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </section>
 
                 <section className="mb-4 print-section">
                   <h2>
@@ -1365,28 +1372,28 @@ function Appointments() {
                             "Not Specified"}
                         </td>
                       </tr>
-                        <>
-                          <tr>
-                            <th>Problem:</th>
-                            <td>
-                              {selectedAppointment.problems || "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Reason for Problem:</th>
-                            <td>
-                              {selectedAppointment.problemReason ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Desired Solutions:</th>
-                            <td>
-                              {selectedAppointment.desiredSolutions ||
-                                "Not Available"}
-                            </td>
-                          </tr>
-                        </>
+                      <>
+                        <tr>
+                          <th>Problem:</th>
+                          <td>
+                            {selectedAppointment.problems || "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Reason for Problem:</th>
+                          <td>
+                            {selectedAppointment.problemReason ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th>Desired Solutions:</th>
+                          <td>
+                            {selectedAppointment.desiredSolutions ||
+                              "Not Available"}
+                          </td>
+                        </tr>
+                      </>
                     </tbody>
                   </table>
                 </section>
@@ -1643,7 +1650,7 @@ function Appointments() {
                   <b>
                     <label>Notes:</label>
                   </b>
-                                    <textarea
+                  <textarea
                     name="notes"
                     rows="4"
                     placeholder="Enter any relevant notes here..."
@@ -1741,17 +1748,14 @@ function Appointments() {
                   onChange={(date) => setRescheduleDate(date)}
                   showTimeSelect
                   filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterRescheduleTime(time)}
-                  dateFormat="MMMM d, yyyy h:mm aa"
+                  filterTime={(time) => filterRescheduleTime(time)} // Apply the correct filter
+                  dateFormat="MM/dd/yy h:mm aa"
                   inline
-                  timeIntervals={30}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
-                  dayClassName={(date) =>
-                    getDayClassName(date) +
-                    (new Date() > date ? " disabled-day" : "")
-                  }
-                  timeClassName={(time) => getTimeRescheduleClassName(time)}
+                  timeIntervals={60}
+                  minTime={new Date(new Date().setHours(13, 0, 0))} // Starting from 1:00 PM
+                  maxTime={new Date(new Date().setHours(17, 0, 0))} // Ending at 5:00 PM
+                  dayClassName={(date) => getDayClassName(date)}
+                  timeClassName={(time) => getTimeRescheduleClassName(time)} // Ensure className application
                 />
               </div>
               <div>
@@ -1786,21 +1790,18 @@ function Appointments() {
             <form onSubmit={handleScheduleSubmit}>
               <div>
                 <ReactDatePicker
-                  selected={appointmentDate}
-                  onChange={(date) => setAppointmentDate(date)}
+                  selected={appointmentDate} // Correct state for scheduling
+                  onChange={(date) => setAppointmentDate(date)} // Ensure it updates appointmentDate
                   showTimeSelect
                   filterDate={(date) => filterDate(date) && date > new Date()}
-                  filterTime={(time) => filterTime(time)}
-                  dateFormat="MMMM d, yyyy h:mm aa"
+                  filterTime={(time) => filterTime(time)} // Apply correct filtering for valid times
+                  dateFormat="MM/dd/yy h:mm aa"
                   inline
-                  timeIntervals={30}
-                  minTime={new Date(new Date().setHours(13, 0, 0))}
-                  maxTime={new Date(new Date().setHours(17, 0, 0))}
-                  dayClassName={(date) =>
-                    getDayClassName(date) +
-                    (new Date() > date ? " disabled-day" : "")
-                  }
-                  timeClassName={(time) => getTimeClassName(time)}
+                  timeIntervals={60} // Set to 60 minutes for 1-hour intervals
+                  minTime={new Date(new Date().setHours(13, 0, 0))} // Starting from 1:00 PM
+                  maxTime={new Date(new Date().setHours(17, 0, 0))} // Ending at 5:00 PM
+                  dayClassName={(date) => getDayClassName(date)} // Add class for fully booked days
+                  timeClassName={(time) => getTimeClassName(time)} // Ensure className application for time
                 />
               </div>
               <button>Submit</button>
