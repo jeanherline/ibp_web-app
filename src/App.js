@@ -39,8 +39,8 @@ function App() {
           <Route path="/lawyer" element={<ApptsLawyer />} />
           <Route path="/ratings" element={<Ratings />} />
           <Route path="/auditLogs" element={<AuditLogs />}/>
-          <Route path="/appointment/:controlNumber" element={<AppointmentDetails />} /> {/* Fix route declaration */}
-          <Route path="/meeting/id" element={<MeetingPage />} /> {/* Fix route declaration */}
+          <Route path="/appointment/:controlNumber" element={<AppointmentDetails />} /> 
+          <Route path="/meeting/:id" element={<MeetingPage />} /> 
         </Routes>
     </Router>
   );
