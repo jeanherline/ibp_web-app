@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom"; // Import useNavigate
+import { useParams, useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { fs } from "../../Config/Firebase";
@@ -15,6 +15,7 @@ const MeetingPage = () => {
   const jitsiApiRef = useRef(null); // Ref to store the Jitsi API instance
   const navigate = useNavigate(); // Hook to navigate to the /lawyer page
 
+  // Fetch meeting details from Firestore
   useEffect(() => {
     const fetchMeetingDetails = async () => {
       try {
@@ -35,6 +36,7 @@ const MeetingPage = () => {
     fetchMeetingDetails();
   }, [id]);
 
+  // Fetch lawyer data
   useEffect(() => {
     const fetchLawyerData = async () => {
       const auth = getAuth();
@@ -60,13 +62,14 @@ const MeetingPage = () => {
     fetchLawyerData();
   }, []);
 
+  // Get display name for the lawyer
   const getDisplayName = () => {
     if (!lawyerData) return "Lawyer";
-
     const title = lawyerData.gender === "Male" ? "Mr." : "Ms.";
     return `${title} ${lawyerData.display_name} ${lawyerData.last_name}`;
   };
 
+  // Start Jitsi meeting
   const startJitsiMeeting = useCallback(() => {
     if (!window.JitsiMeetExternalAPI) {
       console.error("JitsiMeetExternalAPI not loaded.");
@@ -81,6 +84,12 @@ const MeetingPage = () => {
     try {
       const domain = "8x8.vc";
       const roomName = meetingData.appointmentDetails?.meetingLink.split("/").pop();
+
+      if (!roomName) {
+        console.error("Room name is missing or invalid");
+        return;
+      }
+
       const options = {
         roomName: `vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/${roomName}`,
         parentNode: document.querySelector('#jaas-container'),
@@ -100,7 +109,11 @@ const MeetingPage = () => {
 
       const api = new window.JitsiMeetExternalAPI(domain, options);
 
-      // Event listener for when the user leaves the meeting
+      // Add event listeners to monitor the meeting
+      api.on("participantJoined", (participant) => {
+        console.log("Participant joined:", participant);
+      });
+
       api.on("videoConferenceLeft", () => {
         console.log("User left the meeting. Navigating back to /lawyer...");
         navigate("/lawyer"); // Navigate to the /lawyer page
@@ -114,10 +127,10 @@ const MeetingPage = () => {
     } catch (error) {
       console.error("Error initializing Jitsi meeting:", error);
     }
-  }, [meetingData, getDisplayName, navigate]); // Include necessary dependencies
+  }, [meetingData, getDisplayName, navigate]);
 
+  // Load Jitsi API script and start the meeting
   useEffect(() => {
-    // Check if the external Jitsi script is loaded
     if (!window.JitsiMeetExternalAPI) {
       const script = document.createElement('script');
       script.src = 'https://8x8.vc/vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/external_api.js';
@@ -139,7 +152,7 @@ const MeetingPage = () => {
     } else if (meetingData) {
       startJitsiMeeting(); // Start meeting if script is already loaded
     }
-  }, [meetingData, startJitsiMeeting]); // Trigger meeting start when meetingData is available
+  }, [meetingData, startJitsiMeeting]);
 
   if (loading) {
     return <div>Loading meeting...</div>;

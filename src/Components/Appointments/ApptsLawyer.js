@@ -104,7 +104,7 @@
       const password = Math.random().toString(36).substring(2, 8); // Random password
 
       return {
-        link: `https://meet.jit.si/${roomName}`,
+        link: `https://8x8.vc/vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/${roomName}`,
         password: password,
       };
     };
