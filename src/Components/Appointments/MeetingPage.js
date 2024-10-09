@@ -173,8 +173,7 @@ const MeetingPage = () => {
         <br />
         <h3>Meeting Details</h3>
         <br />
-        {/* Jitsi Meeting */}
-        <div id="jaas-container" style={{ height: "700px", width: "100%" }}></div>
+        <div id="jaas-container" style={{ height: "800px", width: "100%" }}></div>
       </div>
     </div>
   );

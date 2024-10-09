@@ -30,7 +30,7 @@ import {
 import { Tooltip, OverlayTrigger } from "react-bootstrap";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
 
-function AppsHead() {
+function ApptsHead() {
   const [appointments, setAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -65,6 +65,11 @@ function AppsHead() {
   const [totalFilteredItems, setTotalFilteredItems] = useState(0);
   const [lawyers, setLawyers] = useState([]);
   const [assignedLawyerDetails, setAssignedLawyerDetails] = useState(null);
+  const [isRescheduleHistoryOpen, setIsRescheduleHistoryOpen] = useState(false);
+
+  const toggleRescheduleHistory = () => {
+    setIsRescheduleHistoryOpen((prevState) => !prevState);
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -80,18 +85,44 @@ function AppsHead() {
     if (!currentUser) return;
 
     const fetchAppointments = async () => {
+      // Fetch a large number of appointments instead of null for the limit
       const { data, total } = await getAdminAppointments(
         filter,
-        lastVisible,
-        pageSize,
+        null, // No lastVisible, fetch all appointments
+        1000, // Set a large limit instead of null
         searchText,
         natureOfLegalAssistanceFilter,
         currentUser
       );
-      setAppointments(data);
+
+      // Sort appointments to have pending first
+      const sortedAppointments = data.sort((a, b) => {
+        if (
+          a.appointmentStatus === "pending" &&
+          b.appointmentStatus !== "pending"
+        ) {
+          return -1; // "pending" comes first
+        }
+        if (
+          a.appointmentStatus !== "pending" &&
+          b.appointmentStatus === "pending"
+        ) {
+          return 1; // "pending" comes first
+        }
+        return 0; // Keep order for other statuses
+      });
+
+      // Set total pages based on sorted data and pageSize
+      const paginatedAppointments = sortedAppointments.slice(
+        (currentPage - 1) * pageSize,
+        currentPage * pageSize
+      );
+
+      setAppointments(paginatedAppointments);
       setTotalPages(Math.ceil(total / pageSize));
       setTotalFilteredItems(total);
     };
+
     fetchAppointments();
   }, [
     filter,
@@ -99,6 +130,7 @@ function AppsHead() {
     searchText,
     natureOfLegalAssistanceFilter,
     currentUser,
+    currentPage, // Make sure it re-fetches when page changes
   ]);
 
   const handlePrint = () => {
@@ -107,66 +139,131 @@ function AppsHead() {
       return;
     }
 
+    // Get the contents of the appointment details section
     const printContents = document.getElementById(
       "appointment-details-section"
     ).innerHTML;
 
-    // Exclude the uploaded images section from the print
+    // Create a temporary div to modify the contents for printing
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = printContents;
-    const noPrintSection = tempDiv.querySelector(".no-print");
-    if (noPrintSection) {
-      noPrintSection.remove();
-    }
+
+    // Remove any elements you don't want to print (with class 'no-print')
+    const noPrintSection = tempDiv.querySelectorAll(".no-print");
+    noPrintSection.forEach((section) => section.remove());
+
     const modifiedPrintContents = tempDiv.innerHTML;
 
+    // Open a new window for printing
     const printWindow = window.open("", "", "height=500, width=500");
     printWindow.document.write(
       "<html><head><title>Appointment Details</title></head><body>"
     );
+
+    // Add custom styles for the print layout, including setting the paper size to legal (8.5x13 inches)
     printWindow.document.write("<style>");
     printWindow.document.write(`
-      @media print {
-        .page-break { page-break-before: always; }
-        .print-section { page-break-inside: avoid; }
-        .print-image { width: 100%; height: 100%; object-fit: cover; }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        table, th, td {
-          border: 1px solid black;
-        }
-        th, td {
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #f2f2f2;
-        }
-        .section-title {
-          color: #a34bc9;
-          font-size: 16px;
-        }
-        .no-print {
-          display: none;
-        }
-        .print-only {
-          display: block;
-        }
-      }
-    `);
+          @media print {
+            @page {
+              size: 8.5in 13in;
+              margin: 0.5in; /* Set margins for the print */
+            }
+            .page-break { page-break-before: always; }
+            .print-section { page-break-inside: avoid; }
+            .print-image { width: 100%; height: auto; object-fit: cover; }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            table, th, td {
+              border: 1px solid black;
+            }
+            th, td {
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f2f2f2;
+            }
+            .section-title {
+              color: #a34bc9;
+              font-size: 16px;
+            }
+            .no-print {
+              display: none;
+            }
+            .print-only {
+              display: block;
+            }
+          }
+        `);
     printWindow.document.write("</style>");
+
+    // Add the IBP logo and QR code to the print layout
     printWindow.document.write(`
-      <div style="text-align: center;">
-        <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
-        <h2>Integrated Bar of the Philippines - Malolos</h2>
-        <img src="${selectedAppointment.appointmentDetails.qrCode}" alt="QR Code" style="width: 100px; display: block; margin: 0 auto;" />
-      </div>
-      <hr />
-    `);
+          <div style="text-align: center;">
+            <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
+            <h2>Integrated Bar of the Philippines - Malolos</h2>
+            ${
+              selectedAppointment.appointmentDetails.qrCode
+                ? `<img src="${selectedAppointment.appointmentDetails.qrCode}" alt="QR Code" style="width: 100px; display: block; margin: 0 auto;" />`
+                : ""
+            }
+          </div>
+          <hr />
+        `);
+
+    // Insert the modified contents
     printWindow.document.write(modifiedPrintContents);
 
+    // Add the reschedule history section
+    if (
+      selectedAppointment.rescheduleHistory &&
+      selectedAppointment.rescheduleHistory.length > 0
+    ) {
+      printWindow.document.write(`
+        <h2 style="color: #a34bc9; font-size: 16px;">Reschedule History</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid black; padding: 8px;">Original Date</th>
+              <th style="border: 1px solid black; padding: 8px;">Original Type</th>
+              <th style="border: 1px solid black; padding: 8px;">Reason</th>
+              <th style="border: 1px solid black; padding: 8px;">Reschedule Time</th>
+            </tr>
+          </thead>
+          <tbody>
+      `);
+
+      selectedAppointment.rescheduleHistory.forEach((entry) => {
+        printWindow.document.write(`
+          <tr>
+            <td style="border: 1px solid black; padding: 8px;">${getFormattedDate(
+              entry.rescheduleDate,
+              true
+            )}</td>
+            <td style="border: 1px solid black; padding: 8px;">${
+              entry.rescheduleAppointmentType || "N/A"
+            }</td>
+            <td style="border: 1px solid black; padding: 8px;">${
+              entry.rescheduleReason || "N/A"
+            }</td>
+            <td style="border: 1px solid black; padding: 8px;">${getFormattedDate(
+              entry.rescheduleTimestamp,
+              true
+            )}</td>
+          </tr>
+        `);
+      });
+
+      printWindow.document.write(`
+          </tbody>
+        </table>
+        <br />
+      `);
+    }
+
+    // Include any relevant images for printing
     const images = document.querySelectorAll(".img-thumbnail");
     images.forEach((image) => {
       if (!image.classList.contains("qr-code-image")) {
@@ -177,12 +274,14 @@ function AppsHead() {
       }
     });
 
+    // Close and trigger the print dialog
     printWindow.document.write("</body></html>");
     printWindow.document.close();
-    printWindow.print();
-    printWindow.close();
+    printWindow.focus(); // Focus the window to ensure it shows up
+    printWindow.print(); // Trigger print
 
-    window.location.reload(); // Reload to ensure the app state is consistent
+    // Close the print window after printing
+    printWindow.onafterprint = () => printWindow.close();
   };
 
   useEffect(() => {
@@ -810,7 +909,7 @@ function AppsHead() {
         <button onClick={resetFilters}>Reset Filters</button>
         <br />
         <p>Total Filtered Items: {totalFilteredItems}</p>
-        <table className="table table-striped table-bordered">
+        <table class="flexible-table">
           <thead>
             <tr>
               <th>#</th>
@@ -834,7 +933,20 @@ function AppsHead() {
                   <td>{getFormattedDate(appointment.appointmentDate, true)}</td>
                   <td>{appointment.appointmentDetails?.apptType}</td>
                   <td>
-                    {capitalizeFirstLetter(appointment.appointmentStatus)}
+                    <span
+                      style={{
+                        color:
+                          appointment.appointmentStatus === "pending"
+                            ? "red"
+                            : "black", // Highlight the "Pending" status
+                        fontWeight:
+                          appointment.appointmentStatus === "pending"
+                            ? "bold"
+                            : "normal", // Make it bold for "Pending"
+                      }}
+                    >
+                      {capitalizeFirstLetter(appointment.appointmentStatus)}
+                    </span>
                   </td>
                   <td>
                     <button
@@ -981,7 +1093,6 @@ function AppsHead() {
                           )}
                         </td>
                       </tr>
-
                       <tr>
                         <th>Control Number:</th>
                         <td>{selectedAppointment.controlNumber}</td>
@@ -1181,6 +1292,62 @@ function AppsHead() {
                     </tbody>
                   </table>
                 </section>
+                {selectedAppointment?.rescheduleHistory &&
+                selectedAppointment.rescheduleHistory.length > 0 ? (
+                  <section className="mb-4">
+                    <h2
+                      style={{ cursor: "pointer" }}
+                      onClick={toggleRescheduleHistory}
+                    >
+                      <em style={{ color: "#a34bc9", fontSize: "16px" }}>
+                        Reschedule History {isRescheduleHistoryOpen ? "▲" : "▼"}
+                      </em>
+                    </h2>
+                    {isRescheduleHistoryOpen && (
+                      <table className="table table-striped table-bordered">
+                        <thead>
+                          <tr
+                            style={{
+                              backgroundColor: "#f2f2f2",
+                              textAlign: "left",
+                            }}
+                          >
+                            <th style={{ padding: "10px" }}>Original Date</th>
+                            <th style={{ padding: "10px" }}>Original Type</th>
+                            <th style={{ padding: "10px" }}>Reason</th>
+                            <th style={{ padding: "10px" }}>Reschedule Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedAppointment.rescheduleHistory.map(
+                            (entry, index) => (
+                              <tr key={index}>
+                                <td style={{ padding: "10px" }}>
+                                  {getFormattedDate(entry.rescheduleDate, true)}
+                                </td>
+                                <td style={{ padding: "10px" }}>
+                                  {entry.rescheduleAppointmentType || "N/A"}
+                                </td>
+                                <td style={{ padding: "10px" }}>
+                                  {entry.rescheduleReason || "N/A"}
+                                </td>
+                                <td style={{ padding: "10px" }}>
+                                  {getFormattedDate(
+                                    entry.rescheduleTimestamp,
+                                    true
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+                  </section>
+                ) : (
+                  <p>No reschedule history available.</p>
+                )}
+
                 <section className="mb-4 print-section">
                   <h2>
                     <em
@@ -1721,4 +1888,4 @@ const ImageModal = ({ isOpen, url, onClose }) => {
   );
 };
 
-export default AppsHead;
+export default ApptsHead;

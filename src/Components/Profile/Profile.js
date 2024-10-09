@@ -4,6 +4,7 @@ import {
   getUserById,
   updateUser,
   uploadImage,
+  sendNotification, // Import the notification function
 } from "../../Config/FirebaseServices";
 import { useAuth } from "../../AuthContext";
 import "./Profile.css";
@@ -22,6 +23,7 @@ function Profile() {
     gender: "",
     city: "",
   });
+  const [originalUserData, setOriginalUserData] = useState({});
   const [profileImage, setProfileImage] = useState(null);
   const [imageUrl, setImageUrl] = useState(defaultImageUrl);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,6 +34,7 @@ function Profile() {
     const fetchUserData = async () => {
       const user = await getUserById(currentUser.uid);
       setUserData(user);
+      setOriginalUserData(user); // Store original data for comparison
       setImageUrl(user.photo_url || defaultImageUrl);
     };
 
@@ -51,6 +54,19 @@ function Profile() {
       const objectUrl = URL.createObjectURL(e.target.files[0]);
       setImageUrl(objectUrl);
     }
+  };
+
+  const findChangedFields = () => {
+    const changes = {};
+    Object.keys(userData).forEach((key) => {
+      if (userData[key] !== originalUserData[key]) {
+        changes[key] = {
+          oldValue: originalUserData[key] || "Not specified",
+          newValue: userData[key] || "Not specified",
+        };
+      }
+    });
+    return changes;
   };
 
   const handleSubmit = async (e) => {
@@ -75,7 +91,16 @@ function Profile() {
     }
 
     try {
+      const changes = findChangedFields(); // Track the changes before updating
       await updateUser(currentUser.uid, updatedData);
+    
+      if (Object.keys(changes).length > 0) {
+        const message = `Your profile has been updated. Fields changed: ${Object.keys(changes).join(", ")}`;
+        
+        // Call sendNotification with the correct parameters
+        await sendNotification(message, currentUser.uid, "profile");
+      }
+    
       setSnackbarMessage("Profile has been successfully updated.");
     } catch (error) {
       setSnackbarMessage("Failed to update profile. Please try again.");

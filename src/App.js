@@ -40,7 +40,7 @@ function App() {
           <Route path="/ratings" element={<Ratings />} />
           <Route path="/auditLogs" element={<AuditLogs />}/>
           <Route path="/appointment/:controlNumber" element={<AppointmentDetails />} /> 
-          <Route path="/meeting/:id" element={<MeetingPage />} /> 
+          <Route path="/vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/:id" element={<MeetingPage />} /> 
         </Routes>
     </Router>
   );

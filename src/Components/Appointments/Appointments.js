@@ -6,20 +6,25 @@ import ReactDatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import Pagination from "react-bootstrap/Pagination";
 import {
-  getAdminAppointments,
+  getLawyerAppointments,
   updateAppointment,
   getBookedSlots,
   getUserById,
   getUsers,
+  sendNotification,
+  getHeadLawyerUid,
+  getAppointments,
 } from "../../Config/FirebaseServices";
-import { Timestamp } from "firebase/firestore";
 import { useAuth } from "../../AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { auth } from "../../Config/Firebase";
+import { fs, auth, signInWithGoogle } from "../../Config/Firebase";
+import { doc, getDoc, updateDoc, Timestamp } from "firebase/firestore"; // Add these imports for Firestore
+
 import {
   faEye,
   faCheck,
   faCalendarAlt,
+  faVideo,
 } from "@fortawesome/free-solid-svg-icons";
 import { Tooltip, OverlayTrigger } from "react-bootstrap";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
@@ -33,6 +38,7 @@ function Appointments() {
   const [totalPages, setTotalPages] = useState(1);
   const [lastVisible, setLastVisible] = useState(null);
   const pageSize = 7;
+  const [clientAttend, setClientAttend] = useState(null);
   const [clientEligibility, setClientEligibility] = useState({
     eligibility: "",
     denialReason: "",
@@ -43,9 +49,13 @@ function Appointments() {
   const [appointmentDate, setAppointmentDate] = useState(null);
   const [rescheduleDate, setRescheduleDate] = useState(null);
   const [rescheduleReason, setRescheduleReason] = useState("");
+  const [appointmentType, setAppointmentType] = useState(""); // Appointment Type (In-person or Online)
+  const [rescheduleAppointmentType, setRescheduleAppointmentType] =
+    useState(""); // Rescheduled appointment type
   const [bookedSlots, setBookedSlots] = useState([]);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [showSnackbar, setShowSnackbar] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // New state to prevent duplicate submissions
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState("");
   const { currentUser } = useAuth();
@@ -59,6 +69,265 @@ function Appointments() {
   const [totalFilteredItems, setTotalFilteredItems] = useState(0);
   const [lawyers, setLawyers] = useState([]);
   const [assignedLawyerDetails, setAssignedLawyerDetails] = useState(null);
+  const [holidays, setHolidays] = useState([]);
+  const [isRescheduleHistoryOpen, setIsRescheduleHistoryOpen] = useState(false);
+
+  const toggleRescheduleHistory = () => {
+    setIsRescheduleHistoryOpen((prevState) => !prevState);
+  };
+
+  const generateJitsiLink = (controlNumber) => {
+    const roomName = controlNumber ? controlNumber : `room-${Date.now()}`;
+    const password = Math.random().toString(36).substring(2, 8); // Random password
+
+    return {
+      link: `https://8x8.vc/vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/${roomName}`,
+      password: password,
+    };
+  };
+
+  const handleScheduleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!appointmentDate || !appointmentType) {
+      setSnackbarMessage("Appointment date and type are required.");
+      setShowSnackbar(true);
+      return;
+    }
+
+    let meetingLink = null;
+    let meetingPass = null;
+
+    if (appointmentType === "Online") {
+      const { link, password } = generateJitsiLink(
+        selectedAppointment.controlNumber
+      );
+      meetingLink = link;
+      meetingPass = password;
+    }
+
+    const updatedData = {
+      "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
+      "appointmentDetails.appointmentStatus": "scheduled",
+      "appointmentDetails.apptType": appointmentType,
+      ...(meetingLink && {
+        "appointmentDetails.meetingLink": meetingLink,
+        "appointmentDetails.meetingPass": meetingPass,
+      }),
+    };
+
+    try {
+      await updateAppointment(selectedAppointment.id, updatedData);
+
+      const clientFullName = selectedAppointment.fullName;
+      const appointmentId = selectedAppointment.id;
+      const appointmentDateFormatted = getFormattedDate(appointmentDate, true);
+
+      const lawyerFullName = assignedLawyerDetails
+        ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
+        : "Assigned Lawyer Not Available";
+
+      // Send notifications to the client, assigned lawyer, and head lawyer
+      await sendNotification(
+        `Your appointment (ID: ${appointmentId}) has been scheduled for ${appointmentDateFormatted} as an ${appointmentType} appointment. The assigned lawyer for your case is ${lawyerFullName}.`,
+        selectedAppointment.uid,
+        "appointment"
+      );
+
+      if (assignedLawyerDetails?.uid) {
+        await sendNotification(
+          `You have scheduled the appointment (ID: ${appointmentId}) for ${clientFullName} on ${appointmentDateFormatted} as an ${appointmentType} appointment.`,
+          assignedLawyerDetails.uid,
+          "appointment"
+        );
+      }
+
+      // Notify the head lawyer
+      const headLawyerUid = await getHeadLawyerUid();
+      if (headLawyerUid) {
+        await sendNotification(
+          `The appointment (ID: ${appointmentId}) for ${clientFullName} has been scheduled for ${appointmentDateFormatted} as an ${appointmentType} appointment. The assigned lawyer is ${lawyerFullName}.`,
+          headLawyerUid,
+          "appointment"
+        );
+      }
+
+      // Update the appointments state directly for immediate UI update
+      setAppointments((prevAppointments) =>
+        prevAppointments.map((appt) =>
+          appt.id === selectedAppointment.id
+            ? { ...appt, ...updatedData }
+            : appt
+        )
+      );
+
+      // Clear form fields
+      setAppointmentDate(null);
+      setAppointmentType("");
+
+      setSnackbarMessage("Appointment successfully scheduled.");
+      setShowSnackbar(true);
+      setTimeout(() => {
+        setShowSnackbar(false);
+        setSelectedAppointment(null);
+      }, 3000);
+    } catch (error) {
+      console.error("Error scheduling appointment:", error);
+      setSnackbarMessage("Error scheduling appointment, please try again.");
+      setShowSnackbar(true);
+    }
+  };
+
+  const handlePrint = () => {
+    if (!selectedAppointment) {
+      alert("No appointment selected");
+      return;
+    }
+
+    // Get the contents of the appointment details section
+    const printContents = document.getElementById(
+      "appointment-details-section"
+    ).innerHTML;
+
+    // Create a temporary div to modify the contents for printing
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = printContents;
+
+    // Remove any elements you don't want to print (with class 'no-print')
+    const noPrintSection = tempDiv.querySelectorAll(".no-print");
+    noPrintSection.forEach((section) => section.remove());
+
+    const modifiedPrintContents = tempDiv.innerHTML;
+
+    // Open a new window for printing
+    const printWindow = window.open("", "", "height=500, width=500");
+    printWindow.document.write(
+      "<html><head><title>Appointment Details</title></head><body>"
+    );
+
+    // Add custom styles for the print layout, including setting the paper size to legal (8.5x13 inches)
+    printWindow.document.write("<style>");
+    printWindow.document.write(`
+          @media print {
+            @page {
+              size: 8.5in 13in;
+              margin: 0.5in; /* Set margins for the print */
+            }
+            .page-break { page-break-before: always; }
+            .print-section { page-break-inside: avoid; }
+            .print-image { width: 100%; height: auto; object-fit: cover; }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            table, th, td {
+              border: 1px solid black;
+            }
+            th, td {
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f2f2f2;
+            }
+            .section-title {
+              color: #a34bc9;
+              font-size: 16px;
+            }
+            .no-print {
+              display: none;
+            }
+            .print-only {
+              display: block;
+            }
+          }
+        `);
+    printWindow.document.write("</style>");
+
+    // Add the IBP logo and QR code to the print layout
+    printWindow.document.write(`
+          <div style="text-align: center;">
+            <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
+            <h2>Integrated Bar of the Philippines - Malolos</h2>
+            ${
+              selectedAppointment.appointmentDetails.qrCode
+                ? `<img src="${selectedAppointment.appointmentDetails.qrCode}" alt="QR Code" style="width: 100px; display: block; margin: 0 auto;" />`
+                : ""
+            }
+          </div>
+          <hr />
+        `);
+
+    // Insert the modified contents
+    printWindow.document.write(modifiedPrintContents);
+
+    // Add the reschedule history section
+    if (
+      selectedAppointment.rescheduleHistory &&
+      selectedAppointment.rescheduleHistory.length > 0
+    ) {
+      printWindow.document.write(`
+        <h2 style="color: #a34bc9; font-size: 16px;">Reschedule History</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid black; padding: 8px;">Original Date</th>
+              <th style="border: 1px solid black; padding: 8px;">Original Type</th>
+              <th style="border: 1px solid black; padding: 8px;">Reason</th>
+              <th style="border: 1px solid black; padding: 8px;">Reschedule Time</th>
+            </tr>
+          </thead>
+          <tbody>
+      `);
+
+      selectedAppointment.rescheduleHistory.forEach((entry) => {
+        printWindow.document.write(`
+          <tr>
+            <td style="border: 1px solid black; padding: 8px;">${getFormattedDate(
+              entry.rescheduleDate,
+              true
+            )}</td>
+            <td style="border: 1px solid black; padding: 8px;">${
+              entry.rescheduleAppointmentType || "N/A"
+            }</td>
+            <td style="border: 1px solid black; padding: 8px;">${
+              entry.rescheduleReason || "N/A"
+            }</td>
+            <td style="border: 1px solid black; padding: 8px;">${getFormattedDate(
+              entry.rescheduleTimestamp,
+              true
+            )}</td>
+          </tr>
+        `);
+      });
+
+      printWindow.document.write(`
+          </tbody>
+        </table>
+        <br />
+      `);
+    }
+
+    // Include any relevant images for printing
+    const images = document.querySelectorAll(".img-thumbnail");
+    images.forEach((image) => {
+      if (!image.classList.contains("qr-code-image")) {
+        printWindow.document.write("<div class='page-break'></div>");
+        printWindow.document.write(
+          `<img src='${image.src}' class='print-image' />`
+        );
+      }
+    });
+
+    // Close and trigger the print dialog
+    printWindow.document.write("</body></html>");
+    printWindow.document.close();
+    printWindow.focus(); // Focus the window to ensure it shows up
+    printWindow.print(); // Trigger print
+
+    // Close the print window after printing
+    printWindow.onafterprint = () => printWindow.close();
+  };
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -71,120 +340,28 @@ function Appointments() {
   }, []);
 
   useEffect(() => {
-    if (!currentUser) return;
-
     const fetchAppointments = async () => {
-      const { data, total } = await getAdminAppointments(
+      const { data, total } = await getAppointments(
         filter,
         lastVisible,
         pageSize,
         searchText,
-        natureOfLegalAssistanceFilter,
-        currentUser
+        natureOfLegalAssistanceFilter
       );
       setAppointments(data);
       setTotalPages(Math.ceil(total / pageSize));
       setTotalFilteredItems(total);
     };
+
     fetchAppointments();
-  }, [
-    filter,
-    lastVisible,
-    searchText,
-    natureOfLegalAssistanceFilter,
-    currentUser,
-  ]);
-
-  const handlePrint = () => {
-    if (!selectedAppointment) {
-      alert("No appointment selected");
-      return;
-    }
-
-    const printContents = document.getElementById(
-      "appointment-details-section"
-    ).innerHTML;
-
-    // Exclude the uploaded images section from the print
-    const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = printContents;
-    const noPrintSection = tempDiv.querySelector(".no-print");
-    if (noPrintSection) {
-      noPrintSection.remove();
-    }
-    const modifiedPrintContents = tempDiv.innerHTML;
-
-    const printWindow = window.open("", "", "height=500, width=500");
-    printWindow.document.write(
-      "<html><head><title>Appointment Details</title></head><body>"
-    );
-    printWindow.document.write("<style>");
-    printWindow.document.write(`
-      @media print {
-        .page-break { page-break-before: always; }
-        .print-section { page-break-inside: avoid; }
-        .print-image { width: 100%; height: 100%; object-fit: cover; }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        table, th, td {
-          border: 1px solid black;
-        }
-        th, td {
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #f2f2f2;
-        }
-        .section-title {
-          color: #a34bc9;
-          font-size: 16px;
-        }
-        .no-print {
-          display: none;
-        }
-        .print-only {
-          display: block;
-        }
-      }
-    `);
-    printWindow.document.write("</style>");
-    printWindow.document.write(`
-      <div style="text-align: center;">
-        <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
-        <h2>Integrated Bar of the Philippines - Malolos</h2>
-        <img src="${selectedAppointment.appointmentDetails.qrCode}" alt="QR Code" style="width: 100px; display: block; margin: 0 auto;" />
-      </div>
-      <hr />
-    `);
-    printWindow.document.write(modifiedPrintContents);
-
-    const images = document.querySelectorAll(".img-thumbnail");
-    images.forEach((image) => {
-      if (!image.classList.contains("qr-code-image")) {
-        printWindow.document.write("<div class='page-break'></div>");
-        printWindow.document.write(
-          `<img src='${image.src}' class='print-image' />`
-        );
-      }
-    });
-
-    printWindow.document.write("</body></html>");
-    printWindow.document.close();
-    printWindow.print();
-    printWindow.close();
-
-    window.location.reload(); // Reload to ensure the app state is consistent
-  };
+  }, [filter, lastVisible, searchText, natureOfLegalAssistanceFilter]);
 
   useEffect(() => {
     const unsubscribe = getBookedSlots((slots) => {
       setBookedSlots(slots);
     });
 
-    return () => unsubscribe();
+    return () => unsubscribe && unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -251,30 +428,25 @@ function Appointments() {
     return day === 2 || day === 4;
   };
 
-  const isSlotBooked = (dateTime) => {
-    return bookedSlots.some(
-      (bookedDate) =>
-        dateTime.getDate() === bookedDate.getDate() &&
-        dateTime.getMonth() === bookedDate.getMonth() &&
-        dateTime.getFullYear() === bookedDate.getFullYear() &&
-        dateTime.getHours() === bookedDate.getHours() &&
-        dateTime.getMinutes() === bookedDate.getMinutes()
+  const isSlotBooked = (dateTime, slots = bookedSlots) => {
+    return slots.some(
+      (bookedDate) => dateTime.toISOString() === bookedDate.toISOString()
     );
   };
 
   const filterDate = (date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    const isHoliday = holidays.some(
+      (holiday) => holiday.toDateString() === date.toDateString()
+    );
+
     const isFullyBooked =
-      bookedSlots.filter(
-        (slot) =>
-          slot.getDate() === date.getDate() &&
-          slot.getMonth() === date.getMonth() &&
-          slot.getFullYear() === date.getFullYear() &&
-          slot.getHours() >= 13 &&
-          slot.getHours() < 17
-      ).length === 4;
-    return isWeekday(date) && date >= today && !isFullyBooked;
+      bookedSlots.filter((slot) => slot.toDateString() === date.toDateString())
+        .length === 4;
+
+    return !isHoliday && isWeekday(date) && date >= today && !isFullyBooked;
   };
 
   const filterTime = (time) => {
@@ -288,21 +460,12 @@ function Appointments() {
     const dateTime = new Date(appointmentDate);
     dateTime.setHours(hours, minutes, 0, 0);
 
-    // Check if the time slot is booked by the assigned lawyer (selected appointment)
     return !isSlotBookedByAssignedLawyer(dateTime);
-  };
-
-  const isTimeSlotAssignedToCurrentLawyer = (dateTime) => {
-    return appointments.some(
-      (appointment) =>
-        appointment.assignedLawyer === currentUser.uid &&
-        appointment.appointmentDate.toDate().getTime() === dateTime.getTime()
-    );
   };
 
   const handleNext = async () => {
     if (currentPage < totalPages) {
-      const { data, lastDoc } = await getAdminAppointments(
+      const { data, lastDoc } = await getLawyerAppointments(
         filter,
         lastVisible,
         pageSize,
@@ -312,13 +475,13 @@ function Appointments() {
       );
       setAppointments(data);
       setLastVisible(lastDoc);
-      setCurrentPage((prevPage) => prevPage + 1);
+      setCurrentPage(currentPage + 1);
     }
   };
 
   const handlePrevious = async () => {
     if (currentPage > 1) {
-      const { data, firstDoc } = await getAdminAppointments(
+      const { data, firstDoc } = await getLawyerAppointments(
         filter,
         lastVisible,
         pageSize,
@@ -334,7 +497,7 @@ function Appointments() {
   };
 
   const handleFirst = async () => {
-    const { data, firstDoc } = await getAdminAppointments(
+    const { data, firstDoc } = await getLawyerAppointments(
       filter,
       null,
       pageSize,
@@ -348,7 +511,7 @@ function Appointments() {
   };
 
   const handleLast = async () => {
-    const { data, lastDoc } = await getAdminAppointments(
+    const { data, lastDoc } = await getLawyerAppointments(
       filter,
       lastVisible,
       pageSize,
@@ -364,6 +527,8 @@ function Appointments() {
   };
 
   const toggleDetails = (appointment) => {
+    console.log("Selected Appointment: ", appointment);
+
     setSelectedAppointment(
       selectedAppointment?.id === appointment.id ? null : appointment
     );
@@ -384,6 +549,28 @@ function Appointments() {
   const openImageModal = (url) => {
     setCurrentImageUrl(url);
     setIsModalOpen(true);
+  };
+
+  // ImageModal Component Definition
+  const ImageModal = ({ isOpen, url, onClose }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="image-container">
+            <img
+              src={url}
+              alt="Fullscreen Image"
+              className="fullscreen-image"
+            />
+          </div>
+          <button onClick={onClose} className="close-button">
+            &times;
+          </button>
+        </div>
+      </div>
+    );
   };
 
   const handleDenialReasonChange = (e) => {
@@ -416,166 +603,189 @@ function Appointments() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    let status = "pending";
-    if (clientEligibility.eligibility === "yes") {
-      status = "approved";
-    } else if (clientEligibility.eligibility === "no") {
-      status = "denied";
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const updatedData = {
+        "clientEligibility.eligibility": clientEligibility.eligibility,
+        "appointmentDetails.appointmentStatus":
+          clientEligibility.eligibility === "yes" ? "approved" : "denied",
+        "clientEligibility.denialReason": clientEligibility.denialReason,
+        "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+      };
+
+      await updateAppointment(selectedAppointment.id, updatedData);
+      setSnackbarMessage("Form has been successfully submitted.");
+      setSelectedAppointment(null);
+    } catch (error) {
+      setSnackbarMessage("Error submitting form, please try again.");
+    } finally {
+      setIsSubmitting(false);
+      setShowSnackbar(true);
+      setTimeout(() => setShowSnackbar(false), 3000);
     }
-
-    const updatedData = {
-      "clientEligibility.eligibility": clientEligibility.eligibility,
-      "clientEligibility.notes": clientEligibility.notes,
-      "appointmentDetails.appointmentStatus": status,
-      "appointmentDetails.assignedLawyer": clientEligibility.assistingCounsel,
-      "clientEligibility.denialReason": clientEligibility.denialReason,
-      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-    };
-
-    await updateAppointment(selectedAppointment.id, updatedData);
-
-    setSelectedAppointment(null);
-    setClientEligibility({
-      eligibility: "",
-      denialReason: "",
-      notes: "",
-      ibpParalegalStaff: "",
-      assistingCounsel: "",
-    });
-    setShowProceedingNotesForm(false);
-    setShowRescheduleForm(false);
-    setShowScheduleForm(false);
-
-    const { data, total } = await getAdminAppointments(
-      filter,
-      lastVisible,
-      pageSize,
-      searchText,
-      natureOfLegalAssistanceFilter,
-      currentUser
-    );
-    setAppointments(data);
-    setTotalPages(Math.ceil(total / pageSize));
-
-    setSnackbarMessage("Form has been successfully submitted.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
   };
 
   const handleSubmitProceedingNotes = async (e) => {
     e.preventDefault();
 
-    const updatedData = {
-      "appointmentDetails.proceedingNotes": proceedingNotes,
-      "appointmentDetails.ibpParalegalStaff":
-        clientEligibility.ibpParalegalStaff,
-      "appointmentDetails.assistingCounsel": clientEligibility.assistingCounsel,
-      "appointmentDetails.appointmentStatus": "done",
-      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-    };
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-    await updateAppointment(selectedAppointment.id, updatedData);
+    try {
+      const updatedData = {
+        "appointmentDetails.proceedingNotes": proceedingNotes,
+        "appointmentDetails.ibpParalegalStaff":
+          clientEligibility.ibpParalegalStaff,
+        "appointmentDetails.assistingCounsel":
+          clientEligibility.assistingCounsel,
+        "appointmentDetails.appointmentStatus": "done",
+        "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+        "appointmentDetails.clientAttend": clientAttend,
+      };
 
-    setSelectedAppointment(null);
-    setProceedingNotes("");
-    setShowProceedingNotesForm(false);
+      await updateAppointment(selectedAppointment.id, updatedData);
+      setSnackbarMessage("Remarks have been successfully submitted.");
 
-    const { data, total } = await getAdminAppointments(
-      filter,
-      lastVisible,
-      pageSize,
-      searchText,
-      natureOfLegalAssistanceFilter,
-      currentUser
-    );
-    setAppointments(data);
-    setTotalPages(Math.ceil(total / pageSize));
+      // Clear form fields after successful submission
+      setProceedingNotes("");
+      setClientAttend(null);
+      setClientEligibility({
+        ...clientEligibility,
+        ibpParalegalStaff: "",
+        assistingCounsel: "",
+      });
 
-    setSnackbarMessage("Remarks has been successfully submitted.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
-  };
-
-  const handleScheduleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!appointmentDate) {
-      setSnackbarMessage("Appointment date is required.");
+      // Optionally, close the form/modal if needed
+      setShowProceedingNotesForm(false);
+    } catch (error) {
+      setSnackbarMessage("Error submitting remarks, please try again.");
+    } finally {
       setShowSnackbar(true);
       setTimeout(() => setShowSnackbar(false), 3000);
-      return;
+      setIsSubmitting(false);
     }
-
-    const updatedData = {
-      "appointmentDetails.appointmentDate": Timestamp.fromDate(appointmentDate),
-      "appointmentDetails.appointmentStatus": "scheduled",
-      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
-    };
-
-    await updateAppointment(selectedAppointment.id, updatedData);
-
-    setSelectedAppointment(null);
-    setAppointmentDate(null);
-    setShowScheduleForm(false);
-
-    const { data, total } = await getAdminAppointments(
-      filter,
-      lastVisible,
-      pageSize,
-      searchText,
-      natureOfLegalAssistanceFilter,
-      currentUser
-    );
-    setAppointments(data);
-    setTotalPages(Math.ceil(total / pageSize));
-
-    setSnackbarMessage("Appointment has been successfully scheduled.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
   };
 
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!rescheduleDate) {
-      setSnackbarMessage("Reschedule date is required.");
+    if (!rescheduleDate || !rescheduleAppointmentType) {
+      setSnackbarMessage("Reschedule date and type are required.");
       setShowSnackbar(true);
-      setTimeout(() => setShowSnackbar(false), 3000);
       return;
     }
 
-    const updatedData = {
-      "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
-      "appointmentDetails.rescheduleReason": rescheduleReason,
-      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+    let meetingLink =
+      selectedAppointment.appointmentDetails?.meetingLink || null;
+    let meetingPass =
+      selectedAppointment.appointmentDetails?.meetingPass || null;
+
+    if (rescheduleAppointmentType === "Online") {
+      const { link, password } = generateJitsiLink(
+        selectedAppointment.controlNumber
+      );
+      meetingLink = link;
+      meetingPass = password;
+    } else if (rescheduleAppointmentType === "In-person") {
+      meetingLink = null;
+      meetingPass = null;
+    }
+
+    const appointmentRef = doc(fs, "appointments", selectedAppointment.id);
+    const appointmentSnapshot = await getDoc(appointmentRef);
+    const appointmentData = appointmentSnapshot.data();
+
+    const rescheduleEntry = {
+      rescheduleDate: selectedAppointment.appointmentDetails?.appointmentDate,
+      rescheduleAppointmentType:
+        selectedAppointment.appointmentDetails?.apptType,
+      rescheduleReason: rescheduleReason,
+      rescheduleTimestamp: Timestamp.fromDate(new Date()),
     };
 
-    await updateAppointment(selectedAppointment.id, updatedData);
+    const updatedRescheduleHistory = appointmentData.rescheduleHistory
+      ? [...appointmentData.rescheduleHistory, rescheduleEntry]
+      : [rescheduleEntry];
 
-    setSelectedAppointment(null);
-    setRescheduleDate(null);
-    setRescheduleReason("");
-    setShowRescheduleForm(false);
+    const updatedData = {
+      "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
+      "appointmentDetails.apptType": rescheduleAppointmentType,
+      rescheduleHistory: updatedRescheduleHistory,
+      "appointmentDetails.updatedTime": Timestamp.fromDate(new Date()),
+      ...(meetingLink && {
+        "appointmentDetails.meetingLink": meetingLink,
+        "appointmentDetails.meetingPass": meetingPass,
+      }),
+    };
 
-    const { data, total } = await getAdminAppointments(
-      filter,
-      lastVisible,
-      pageSize,
-      searchText,
-      natureOfLegalAssistanceFilter,
-      currentUser
-    );
-    setAppointments(data);
-    setTotalPages(Math.ceil(total / pageSize));
+    try {
+      // Save the updated appointment information first
+      await updateDoc(appointmentRef, updatedData);
 
-    setSnackbarMessage("Appointment has been successfully rescheduled.");
-    setShowSnackbar(true);
-    setTimeout(() => setShowSnackbar(false), 3000);
+      const clientFullName = selectedAppointment.fullName;
+      const appointmentId = selectedAppointment.id;
+
+      const lawyerFullName = assignedLawyerDetails
+        ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
+        : "Assigned Lawyer Not Available";
+
+      // Send notifications after successfully updating Firestore
+      await sendNotification(
+        `Your appointment (ID: ${appointmentId}) has been rescheduled to a different date and as an ${rescheduleAppointmentType} appointment. The assigned lawyer for your case is ${lawyerFullName}.`,
+        selectedAppointment.uid,
+        "appointment"
+      );
+
+      if (assignedLawyerDetails?.uid) {
+        await sendNotification(
+          `The appointment (ID: ${appointmentId}) for ${clientFullName} has been rescheduled to a different date and as an ${rescheduleAppointmentType} appointment.`,
+          assignedLawyerDetails.uid,
+          "appointment"
+        );
+      }
+
+      const headLawyerUid = await getHeadLawyerUid();
+      if (headLawyerUid) {
+        await sendNotification(
+          `The appointment (ID: ${appointmentId}) for ${clientFullName} has been rescheduled to a different date and as an ${rescheduleAppointmentType} appointment. The assigned lawyer is ${lawyerFullName}.`,
+          headLawyerUid,
+          "appointment"
+        );
+      }
+
+      setAppointments((prevAppointments) =>
+        prevAppointments.map((appt) =>
+          appt.id === selectedAppointment.id
+            ? { ...appt, ...updatedData }
+            : appt
+        )
+      );
+
+      setRescheduleDate(null);
+      setRescheduleReason("");
+      setRescheduleAppointmentType("");
+
+      setSnackbarMessage("Appointment successfully rescheduled.");
+      setShowSnackbar(true);
+      setTimeout(() => {
+        setShowSnackbar(false);
+        setSelectedAppointment(null);
+      }, 3000);
+    } catch (error) {
+      console.error("Error rescheduling appointment:", error);
+      setSnackbarMessage("Error rescheduling appointment, please try again.");
+      setShowSnackbar(true);
+    }
   };
 
   const getFormattedDate = (timestamp, includeTime = false) => {
-    if (!timestamp) return "N/A";
-    const date = new Date(timestamp.seconds * 1000);
+    if (!timestamp || !(timestamp instanceof Timestamp)) {
+      console.error("Invalid timestamp: ", timestamp);
+      return "N/A";
+    }
+    const date = timestamp.toDate();
     const options = { year: "numeric", month: "long", day: "numeric" };
     if (includeTime) {
       options.hour = "numeric";
@@ -596,7 +806,6 @@ function Appointments() {
           slot.getHours() < 17
       ).length === 4;
 
-    // Check if the date is assigned to the current lawyer
     const isAssignedToCurrentLawyer = appointments.some(
       (appointment) =>
         appointment.assignedLawyer === currentUser.uid &&
@@ -639,7 +848,6 @@ function Appointments() {
     const dateTime = new Date(rescheduleDate);
     dateTime.setHours(hours, minutes, 0, 0);
 
-    // Check if the time slot is booked by the assigned lawyer (selected appointment)
     return !isSlotBookedByAssignedLawyer(dateTime);
   };
 
@@ -721,7 +929,6 @@ function Appointments() {
         &nbsp;&nbsp;
         <select onChange={(e) => setFilter(e.target.value)} value={filter}>
           <option value="all">Status</option>
-          <option value="pending">Pending</option>
           <option value="approved">Approved</option>
           <option value="scheduled">Scheduled</option>
           <option value="denied">Denied</option>
@@ -747,16 +954,17 @@ function Appointments() {
         <button onClick={resetFilters}>Reset Filters</button>
         <br />
         <p>Total Filtered Items: {totalFilteredItems}</p>
-        <table className="table table-striped table-bordered">
+        <table class="flexible-table">
           <thead>
             <tr>
               <th>#</th>
               <th>Control Number</th>
               <th>Full Name</th>
-              <th>Nature of Legal Assistance Requested</th>
+              <th>Legal Assistance</th>
               <th>Scheduled Date</th>
               <th>Type</th>
               <th>Status</th>
+              <th>Link</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -771,21 +979,68 @@ function Appointments() {
                   <td>{getFormattedDate(appointment.appointmentDate, true)}</td>
                   <td>{appointment.appointmentDetails?.apptType}</td>
                   <td>
-                    {capitalizeFirstLetter(appointment.appointmentStatus)}
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => toggleDetails(appointment)}
+                    <span
                       style={{
-                        backgroundColor: "#4267B2",
-                        color: "white",
-                        border: "none",
-                        padding: "5px 10px",
-                        cursor: "pointer",
+                        color:
+                          appointment.appointmentStatus === "pending"
+                            ? "red"
+                            : "black", // Highlight the "Pending" status
+                        fontWeight:
+                          appointment.appointmentStatus === "pending"
+                            ? "bold"
+                            : "normal", // Make it bold for "Pending"
                       }}
                     >
-                      <FontAwesomeIcon icon={faEye} />
-                    </button>
+                      {capitalizeFirstLetter(appointment.appointmentStatus)}
+                    </span>
+                  </td>
+                  <td>
+                    {appointment.appointmentDetails?.apptType === "Online" &&
+                    appointment.appointmentDetails?.meetingLink ? (
+                      <>
+                        <button
+                          onClick={() =>
+                            window.open(`/meeting/${appointment.id}`, "_blank")
+                          }
+                          style={{
+                            backgroundColor: "#28a745", // Change button color to green
+                            color: "white",
+                            border: "none",
+                            padding: "5px 8px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <FontAwesomeIcon
+                            icon={faVideo}
+                            style={{ marginRight: "8px" }}
+                          />
+                          Join Meeting
+                        </button>
+                      </>
+                    ) : (
+                      "N/A"
+                    )}
+                  </td>
+                  <td>
+                    <OverlayTrigger
+                      placement="top"
+                      overlay={renderTooltip({ title: "View" })}
+                    >
+                      <button
+                        onClick={() => toggleDetails(appointment)}
+                        style={{
+                          backgroundColor: "#4267B2",
+                          color: "white",
+                          border: "none",
+                          padding: "5px 10px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faEye} />
+                      </button>
+                    </OverlayTrigger>
                     &nbsp; &nbsp;
                     {appointment.appointmentStatus === "approved" && (
                       <>
@@ -817,14 +1072,28 @@ function Appointments() {
                           overlay={renderTooltip({ title: "Done" })}
                         >
                           <button
-                            disabled
+                            onClick={() => {
+                              setSelectedAppointment(appointment);
+                              setShowProceedingNotesForm(true);
+                              setShowRescheduleForm(false);
+                              setShowScheduleForm(false);
+                            }}
                             style={{
-                              backgroundColor: "gray",
+                              backgroundColor:
+                                appointment.appointmentStatus === "approved"
+                                  ? "gray"
+                                  : "#1DB954",
                               color: "white",
                               border: "none",
                               padding: "5px 10px",
-                              cursor: "not-allowed",
+                              cursor:
+                                appointment.appointmentStatus === "approved"
+                                  ? "not-allowed"
+                                  : "pointer",
                             }}
+                            disabled={
+                              appointment.appointmentStatus === "approved"
+                            } // Disable when status is approved
                           >
                             <FontAwesomeIcon icon={faCheck} />
                           </button>
@@ -926,7 +1195,7 @@ function Appointments() {
               ))
             ) : (
               <tr>
-                <td colSpan="7" style={{ textAlign: "center" }}>
+                <td colSpan="8" style={{ textAlign: "center" }}>
                   No results found.
                 </td>
               </tr>
@@ -978,17 +1247,7 @@ function Appointments() {
                   ×
                 </button>
               </div>
-              <div style={{ position: "relative" }}>
-                <button
-                  onClick={handleCloseModal}
-                  className="close-button"
-                  style={{ position: "absolute", top: "15px", right: "15px" }}
-                >
-                  ×
-                </button>
-              </div>
               <br />
-
               <h2>Appointment Details</h2>
               <div id="appointment-details-section">
                 <section className="mb-4 print-section">
@@ -1026,7 +1285,34 @@ function Appointments() {
                           )}
                         </td>
                       </tr>
-
+                      {selectedAppointment.appointmentDetails?.apptType ===
+                        "Online" && (
+                        <tr>
+                          <th>Meeting Link:</th>
+                          <td>
+                            <a
+                              href="#"
+                              onClick={() =>
+                                window.open(
+                                  `/meeting/${selectedAppointment.id}`,
+                                  "_blank"
+                                )
+                              }
+                              style={{
+                                color: "blue",
+                                textDecoration: "underline",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Join Meeting
+                            </a>
+                            <br />
+                            <strong>Password:</strong>{" "}
+                            {selectedAppointment.appointmentDetails
+                              ?.meetingPass || "N/A"}
+                          </td>
+                        </tr>
+                      )}
                       <tr>
                         <th>Control Number:</th>
                         <td>{selectedAppointment.controlNumber}</td>
@@ -1089,26 +1375,9 @@ function Appointments() {
                                 )}
                               </td>
                             </tr>
-                            <tr>
-                              <th>Reschedule Reason</th>
-                              <td>
-                                {capitalizeFirstLetter(
-                                  selectedAppointment.rescheduleReason
-                                ) || "N/A"}
-                              </td>
-                            </tr>
-                            <tr>
-                              <th>Updated Date and Time:</th>
-                              <td>
-                                {getFormattedDate(
-                                  selectedAppointment.appointmentDetails
-                                    ?.updatedTime,
-                                  true
-                                )}
-                              </td>
-                            </tr>
                           </>
                         )}
+
                         {selectedAppointment.appointmentStatus === "denied" && (
                           <>
                             <tr>
@@ -1226,6 +1495,62 @@ function Appointments() {
                     </tbody>
                   </table>
                 </section>
+                {selectedAppointment?.rescheduleHistory &&
+                selectedAppointment.rescheduleHistory.length > 0 ? (
+                  <section className="mb-4">
+                    <h2
+                      style={{ cursor: "pointer" }}
+                      onClick={toggleRescheduleHistory}
+                    >
+                      <em style={{ color: "#a34bc9", fontSize: "16px" }}>
+                        Reschedule History {isRescheduleHistoryOpen ? "▲" : "▼"}
+                      </em>
+                    </h2>
+                    {isRescheduleHistoryOpen && (
+                      <table className="table table-striped table-bordered">
+                        <thead>
+                          <tr
+                            style={{
+                              backgroundColor: "#f2f2f2",
+                              textAlign: "left",
+                            }}
+                          >
+                            <th style={{ padding: "10px" }}>Original Date</th>
+                            <th style={{ padding: "10px" }}>Original Type</th>
+                            <th style={{ padding: "10px" }}>Reason</th>
+                            <th style={{ padding: "10px" }}>Reschedule Time</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedAppointment.rescheduleHistory.map(
+                            (entry, index) => (
+                              <tr key={index}>
+                                <td style={{ padding: "10px" }}>
+                                  {getFormattedDate(entry.rescheduleDate, true)}
+                                </td>
+                                <td style={{ padding: "10px" }}>
+                                  {entry.rescheduleAppointmentType || "N/A"}
+                                </td>
+                                <td style={{ padding: "10px" }}>
+                                  {entry.rescheduleReason || "N/A"}
+                                </td>
+                                <td style={{ padding: "10px" }}>
+                                  {getFormattedDate(
+                                    entry.rescheduleTimestamp,
+                                    true
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          )}
+                        </tbody>
+                      </table>
+                    )}
+                  </section>
+                ) : (
+                  <p>No reschedule history available.</p>
+                )}
+
                 <section className="mb-4 print-section">
                   <h2>
                     <em
@@ -1406,64 +1731,6 @@ function Appointments() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                      {selectedAppointment.appointmentDetails?.apptType ===
-                        "Walk-in" && (
-                        <>
-                          <tr>
-                            <th>Application Form 1</th>
-                            <td>
-                              {selectedAppointment.form1 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form1);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form1}
-                                    alt="Application Form 1"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Application Form 2</th>
-                            <td>
-                              {selectedAppointment.form2 ? (
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    openImageModal(selectedAppointment.form2);
-                                  }}
-                                >
-                                  <img
-                                    src={selectedAppointment.form2}
-                                    alt="Application Form 2"
-                                    className="img-thumbnail"
-                                    style={{
-                                      width: "100px",
-                                      cursor: "pointer",
-                                    }}
-                                  />
-                                </a>
-                              ) : (
-                                "Not Available"
-                              )}
-                            </td>
-                          </tr>
-                        </>
-                      )}
-
                       <tr>
                         <th>Barangay Certificate of Indigency:</th>
                         <td>
@@ -1659,7 +1926,7 @@ function Appointments() {
                     required
                   ></textarea>
                 </div>
-                <button>Submit</button>
+                <button disabled={isSubmitting}>Submit</button>
               </form>
             </div>
           )}
@@ -1678,6 +1945,33 @@ function Appointments() {
             <form onSubmit={handleSubmitProceedingNotes}>
               <div>
                 <b>
+                  <label>Did the client attend the appointment? *</label>
+                </b>
+                <label>
+                  <input
+                    type="radio"
+                    name="clientAttend"
+                    value="yes"
+                    onChange={(e) => setClientAttend(e.target.value)}
+                    required
+                  />{" "}
+                  Yes
+                </label>
+                <br />
+                <label>
+                  <input
+                    type="radio"
+                    name="clientAttend"
+                    value="no"
+                    onChange={(e) => setClientAttend(e.target.value)}
+                    required
+                  />{" "}
+                  No
+                </label>
+              </div>
+              <br />
+              <div>
+                <b>
                   <label>Record of Consultation *</label>
                 </b>
                 <textarea
@@ -1689,6 +1983,7 @@ function Appointments() {
                   required
                 ></textarea>
               </div>
+              <br />
               <div>
                 <b>
                   <label>IBP Paralegal/Staff:</label>
@@ -1711,7 +2006,7 @@ function Appointments() {
                   onChange={handleChange}
                 />
               </div>
-              <button>Submit</button>
+              <button disabled={isSubmitting}>Submit</button>
             </form>
           </div>
         )}
@@ -1734,15 +2029,25 @@ function Appointments() {
                 true
               )}
             </p>
-            <br />
-            <p>
-              <strong>Assigned Lawyer:</strong> <br></br>
-              {assignedLawyerDetails
-                ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
-                : "Not Available"}
-            </p>
             <form onSubmit={handleRescheduleSubmit}>
               <div>
+                <b>
+                  <label>Reason for Reschedule: *</label>
+                </b>
+                <textarea
+                  name="rescheduleReason"
+                  rows="4"
+                  placeholder="Enter reason for reschedule..."
+                  value={rescheduleReason}
+                  onChange={handleRescheduleChange}
+                  required
+                ></textarea>
+              </div>
+              <div>
+                <b>
+                  <label>Reschedule Date and Time: *</label>
+                </b>
+                <br />
                 <ReactDatePicker
                   selected={rescheduleDate}
                   onChange={(date) => setRescheduleDate(date)}
@@ -1758,20 +2063,26 @@ function Appointments() {
                   timeClassName={(time) => getTimeRescheduleClassName(time)} // Ensure className application
                 />
               </div>
+              <br />
               <div>
                 <b>
-                  <label>Reason for Reschedule:</label>
+                  <label>Type of Rescheduled Appointment *</label>
                 </b>
-                <textarea
-                  name="rescheduleReason"
-                  rows="4"
-                  placeholder="Enter reason for reschedule here..."
-                  value={rescheduleReason}
-                  onChange={handleRescheduleChange}
+                <select
+                  name="rescheduleAppointmentType"
+                  value={rescheduleAppointmentType}
+                  onChange={(e) => setRescheduleAppointmentType(e.target.value)}
                   required
-                ></textarea>
+                >
+                  <option value="" disabled>
+                    Select Type
+                  </option>
+                  <option value="In-person">In-person Consultation</option>
+                  <option value="Online">Online Video Consultation</option>
+                </select>
               </div>
-              <button>Submit</button>
+              <br />
+              <button disabled={isSubmitting}>Submit</button>
             </form>
           </div>
         )}
@@ -1789,6 +2100,10 @@ function Appointments() {
             <h2>Schedule Appointment</h2>
             <form onSubmit={handleScheduleSubmit}>
               <div>
+                <b>
+                  <label>Appointment Date and Time: *</label>
+                </b>
+                <br />
                 <ReactDatePicker
                   selected={appointmentDate} // Correct state for scheduling
                   onChange={(date) => setAppointmentDate(date)} // Ensure it updates appointmentDate
@@ -1804,31 +2119,38 @@ function Appointments() {
                   timeClassName={(time) => getTimeClassName(time)} // Ensure className application for time
                 />
               </div>
-              <button>Submit</button>
+              <br />
+              <div>
+                <b>
+                  <label>Type of Appointment *</label>
+                </b>
+                <select
+                  name="appointmentType"
+                  value={appointmentType}
+                  onChange={(e) => setAppointmentType(e.target.value)}
+                  required
+                >
+                  <option value="" disabled>
+                    Select Type
+                  </option>
+                  <option value="In-person">In-person Consultation</option>
+                  <option value="Online">Online Video Consultation</option>
+                </select>
+              </div>
+              <br />
+              <button disabled={isSubmitting}>Submit</button>
             </form>
           </div>
         )}
-        {showSnackbar && <div className="snackbar">{snackbarMessage}</div>}
+        <br />
+        {showSnackbar && (
+          <div className="snackbar">
+            <p>{snackbarMessage}</p>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-
-const ImageModal = ({ isOpen, url, onClose }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="image-container">
-          <img src={url} alt="Fullscreen Image" className="fullscreen-image" />
-        </div>
-        <button onClick={onClose} className="close-button">
-          &times;
-        </button>
-      </div>
-    </div>
-  );
-};
 
 export default Appointments;

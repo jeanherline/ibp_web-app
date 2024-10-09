@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Tooltip } from "react-tooltip";
-import { useNavigate, NavLink, Link, useLocation } from "react-router-dom";
+import { useNavigate, NavLink, Link } from "react-router-dom";
 import { auth, doc, fs, signOut } from "../../Config/Firebase";
 import {
-  getDoc,
   onSnapshot,
   collection,
   query,
   where,
   orderBy,
-  getDocs,
   writeBatch,
+  Timestamp,
 } from "firebase/firestore";
+import { format } from "date-fns"; // Import date-fns for date formatting
 import "./SideNavBar.css";
 
 function SideNavBar() {
@@ -21,8 +21,9 @@ function SideNavBar() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
-  const notificationsRef = useRef();
+
+  const notificationsIconRef = useRef();
+  const notificationsDropdownRef = useRef();
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
@@ -45,7 +46,7 @@ function SideNavBar() {
         );
 
         return () => {
-          unsubscribeUserDoc(); // Clean up the user document listener
+          unsubscribeUserDoc();
         };
       } else {
         setLoading(false);
@@ -53,15 +54,107 @@ function SideNavBar() {
     });
 
     return () => {
-      unsubscribeAuth(); // Clean up the auth state listener
+      unsubscribeAuth();
     };
   }, []);
 
   useEffect(() => {
     if (userData) {
-      fetchUnreadCount();
+      const unsubscribe = fetchNotifications();
+      return () => unsubscribe();
     }
   }, [userData]);
+
+  const fetchNotifications = () => {
+    const notificationsRef = collection(fs, "notifications");
+
+    const threeMonthsAgo = Timestamp.fromDate(
+      new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+    );
+
+    const userNotificationsQuery = query(
+      notificationsRef,
+      where("uid", "==", auth.currentUser.uid),
+      where("timestamp", ">=", threeMonthsAgo),
+      orderBy("timestamp", "desc")
+    );
+
+    const memberTypeNotificationsQuery = query(
+      notificationsRef,
+      where("member_type", "==", userData.member_type),
+      where("timestamp", ">=", threeMonthsAgo),
+      orderBy("timestamp", "desc")
+    );
+
+    const unsubscribeUserNotifications = onSnapshot(
+      userNotificationsQuery,
+      (snapshot) => {
+        const userNotifications = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setNotifications((prevNotifications) => {
+          const updatedNotifications = [
+            ...userNotifications,
+            ...prevNotifications.filter(
+              (notif) =>
+                !userNotifications.some((newNotif) => newNotif.id === notif.id)
+            ),
+          ];
+          updateUnreadCount(updatedNotifications); // Update unread count here
+          return updatedNotifications;
+        });
+      }
+    );
+
+    const unsubscribeMemberTypeNotifications = onSnapshot(
+      memberTypeNotificationsQuery,
+      (snapshot) => {
+        const memberTypeNotifications = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setNotifications((prevNotifications) => {
+          const updatedNotifications = [
+            ...memberTypeNotifications,
+            ...prevNotifications.filter(
+              (notif) =>
+                !memberTypeNotifications.some(
+                  (newNotif) => newNotif.id === notif.id
+                )
+            ),
+          ];
+          updateUnreadCount(updatedNotifications); // Update unread count here as well
+          return updatedNotifications;
+        });
+      }
+    );
+
+    return () => {
+      unsubscribeUserNotifications();
+      unsubscribeMemberTypeNotifications();
+    };
+  };
+
+  const updateUnreadCount = (notifications) => {
+    const unreadNotifications = notifications.filter(
+      (notif) => notif.read === false
+    );
+    setUnreadCount(unreadNotifications.length);
+  };
+
+  const updateNotifications = (newNotifications) => {
+    setNotifications((prevNotifications) => {
+      // Merge new and old notifications while removing duplicates
+      const mergedNotifications = [...prevNotifications, ...newNotifications];
+      const uniqueNotifications = mergedNotifications.filter(
+        (notif, index, self) =>
+          index === self.findIndex((n) => n.id === notif.id)
+      );
+      updateUnreadCount(uniqueNotifications); // Update unread count based on unique notifications
+      return uniqueNotifications;
+    });
+  };
 
   const markNotificationsAsRead = async () => {
     if (notifications.length > 0) {
@@ -78,7 +171,7 @@ function SideNavBar() {
           notification.read ? notification : { ...notification, read: true }
         )
       );
-      setUnreadCount(0);
+      setUnreadCount(0); // Reset unread count
     }
   };
 
@@ -91,61 +184,13 @@ function SideNavBar() {
     window.location.replace("/");
   };
 
-  const fetchUnreadCount = async () => {
-    const notificationsRef = collection(fs, "notifications");
-    const unreadQuery = query(
-      notificationsRef,
-      where("uid", "==", auth.currentUser.uid),
-      where("read", "==", false)
-    );
-
-    const unreadSnapshot = await getDocs(unreadQuery);
-    setUnreadCount(unreadSnapshot.size);
-  };
-
   const handleNotificationsClick = async () => {
-    if (!userData) return;
+    setShowNotifications((prevState) => !prevState);
 
-    if (showNotifications) {
-      setShowNotifications(false);
-      return;
+    if (!showNotifications) {
+      // Mark notifications as read when opening
+      await markNotificationsAsRead();
     }
-
-    const notificationsRef = collection(fs, "notifications");
-    const userNotificationsQuery = query(
-      notificationsRef,
-      where("uid", "==", auth.currentUser.uid),
-      orderBy("timestamp", "desc")
-    );
-
-    const memberTypeNotificationsQuery = query(
-      notificationsRef,
-      where("member_type", "==", userData.member_type),
-      orderBy("timestamp", "desc")
-    );
-
-    const userNotificationsSnapshot = await getDocs(userNotificationsQuery);
-    const memberTypeNotificationsSnapshot = await getDocs(
-      memberTypeNotificationsQuery
-    );
-
-    const notificationsData = [
-      ...userNotificationsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })),
-      ...memberTypeNotificationsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })),
-    ];
-
-    setNotifications(notificationsData);
-    setShowNotifications(true);
-
-    // Mark notifications as read
-    await markNotificationsAsRead();
-    fetchUnreadCount(); // Update the unread count after marking notifications as read
   };
 
   const handleNotificationClick = (notification) => {
@@ -166,8 +211,10 @@ function SideNavBar() {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        notificationsRef.current &&
-        !notificationsRef.current.contains(event.target)
+        notificationsDropdownRef.current &&
+        !notificationsDropdownRef.current.contains(event.target) &&
+        notificationsIconRef.current &&
+        !notificationsIconRef.current.contains(event.target)
       ) {
         setShowNotifications(false);
       }
@@ -205,7 +252,7 @@ function SideNavBar() {
         <Link to="/profile">
           <span
             className="material-icons icon"
-            data-tooltip-id="tooltip"
+            data-tooltip-id="tooltip-profile"
             data-tooltip-content="Profile"
           >
             person
@@ -214,20 +261,21 @@ function SideNavBar() {
 
         <span
           className="material-icons icon"
-          data-tooltip-id="tooltip"
-          data-tooltip-content="Notification"
+          data-tooltip-id="tooltip-notifications"
+          data-tooltip-content="Notifications"
           onClick={handleNotificationsClick}
-          ref={notificationsRef}
+          ref={notificationsIconRef}
         >
           notifications
           {unreadCount > 0 && (
-            <span className="notification-count">{unreadCount}</span>
+            <span className="notification-badge">{unreadCount}</span> // Show the badge only if unreadCount > 0
           )}
         </span>
+
         <span
           className="material-icons icon"
           onClick={handleLogout}
-          data-tooltip-id="tooltip"
+          data-tooltip-id="tooltip-logout"
           data-tooltip-content="Logout"
         >
           exit_to_app
@@ -371,8 +419,12 @@ function SideNavBar() {
       </div>
 
       {showNotifications && (
-        <div className="notifications-dropdown" ref={notificationsRef}>
-          <h3>Notifications</h3>
+        <div
+          className="notifications-dropdown"
+          ref={notificationsDropdownRef}
+          style={{ maxHeight: "600px", overflowY: "scroll" }} // Scrollable dropdown
+        >
+          <h4>Notifications</h4>
           <ul>
             {notifications.length > 0 ? (
               notifications.map((notification) => (
@@ -382,6 +434,15 @@ function SideNavBar() {
                   onClick={() => handleNotificationClick(notification)}
                 >
                   {notification.message}
+                  <br />
+                  <br />
+                  <small>
+                    {format(
+                      new Date(notification.timestamp.seconds * 1000),
+                      "PPpp"
+                    )}
+                  </small>{" "}
+                  {/* Display formatted timestamp */}
                 </li>
               ))
             ) : (
@@ -395,6 +456,9 @@ function SideNavBar() {
         className="custom-tooltip"
         style={{ backgroundColor: "black", color: "white" }}
       />
+      <Tooltip id="tooltip-profile" />
+      <Tooltip id="tooltip-notifications" />
+      <Tooltip id="tooltip-logout" />
     </>
   );
 }

@@ -44,17 +44,19 @@ select {
   border-radius: 4px;
 }
 
+/* Add this CSS to your existing styles */
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 30px;
+  table-layout: fixed; /* Ensures each column has a fixed width */
 }
 
-th,
-td {
+th, td {
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid #ddd;
+  word-wrap: break-word; /* Ensures text wraps if it exceeds the column width */
+  overflow: hidden; /* Prevents content overflow */
 }
 
 th {
@@ -63,6 +65,69 @@ th {
 
 tr:hover {
   background-color: #f5f5f5;
+}
+
+/* Ensure this only applies to tables with the 'flexible-table' class */
+.flexible-table {
+  table-layout: auto;
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.flexible-table thead th {
+  padding: 12px;
+  text-align: left;
+  background-color: #f2f2f2;
+  border-bottom: 2px solid #ddd;
+}
+
+/* Unique width settings for each header column */
+.flexible-table thead th:nth-child(1) {
+  width: 5%; /* Control number column */
+}
+
+.flexible-table thead th:nth-child(2) {
+  width: 20%; /* Full Name column */
+}
+
+.flexible-table thead th:nth-child(3) {
+  width: 25%; /* Legal Assistance column */
+}
+
+.flexible-table thead th:nth-child(4) {
+  width: 20%; /* Scheduled Date column */
+}
+
+.flexible-table thead th:nth-child(5) {
+  width: 10%; /* Type column */
+}
+
+.flexible-table thead th:nth-child(6) {
+  width: 10%; /* Status column */
+}
+
+.flexible-table thead th:nth-child(7) {
+  width: 5%; /* Link column */
+}
+
+.flexible-table thead th:nth-child(8) {
+  width: 15%; /* Action column */
+}
+
+/* Make rows dependent on content, not aligned */
+.flexible-table td {
+  padding: 8px;
+  border: 1px solid #ddd;
+  white-space: nowrap; /* Prevent text from breaking in the table cells */
+}
+
+/* Additional tweaks for irregularity */
+.flexible-table tr td:nth-child(3) {
+  padding-left: 10px;
+}
+
+.flexible-table tr td:nth-child(5) {
+  padding-right: 20px;
 }
 
 button {
@@ -398,9 +463,26 @@ button:disabled {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
   width: 100%;
-  max-width: 700px;
+  max-width: 1000px; /* Updated from 800px */
   margin: 20px auto;
   font-family: 'Arial', sans-serif;
+  font-size: 18px;
+}
+
+.client-eligibility table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 30px;
+}
+
+.client-eligibility th, .client-eligibility td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.client-eligibility th {
+  background-color: #f2f2f2;
 }
 
 .client-eligibility h2 {
@@ -691,5 +773,27 @@ button:disabled {
 .red-time-slot {
   background-color: red !important;
   color: white !important;
+}
+
+.event-container {
+  position: relative;
+}
+
+.join-meeting-btn {
+  display: none;
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  padding: 3px 6px;
+  background-color: #28bd06;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.event-container:hover .join-meeting-btn {
+  display: block;
 }
 

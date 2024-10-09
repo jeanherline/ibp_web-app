@@ -4,12 +4,15 @@ import { Calendar, momentLocalizer } from "react-big-calendar";
 import moment from "moment";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import {
-  aptsLawyerCalendar,
-  getLawyerCalendar,
-} from "../../Config/FirebaseServices"; // Assuming getLawyerCalendar is correctly named
+  aptsCalendar,
+  getCalendar,
+  getUserById,
+} from "../../Config/FirebaseServices"; // Assuming getCalendar is correctly named
 import "./Appointments.css";
-import { auth, doc, fs, getDoc } from "../../Config/Firebase";
+import { fs, auth } from "../../Config/Firebase";
 import ibpLogo from "../../Assets/img/ibp_logo.png";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faVideo } from "@fortawesome/free-solid-svg-icons"; // Import the video icon
 
 const localizer = momentLocalizer(moment);
 
@@ -21,25 +24,10 @@ function CalendarLawyer() {
   const [assignedLawyerDetails, setAssignedLawyerDetails] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState("");
+  const [isRescheduleHistoryOpen, setIsRescheduleHistoryOpen] = useState(false);
 
-  const fetchReviewerDetails = async (reviewerId) => {
-    const reviewerRef = doc(fs, "users", reviewerId);
-    const reviewerDoc = await getDoc(reviewerRef);
-    if (reviewerDoc.exists()) {
-      setReviewerDetails(reviewerDoc.data());
-    } else {
-      console.log("No such document!");
-    }
-  };
-
-  const fetchAssignedLawyerDetails = async (lawyerId) => {
-    const lawyerRef = doc(fs, "users", lawyerId);
-    const lawyerDoc = await getDoc(lawyerRef);
-    if (lawyerDoc.exists()) {
-      setAssignedLawyerDetails(lawyerDoc.data());
-    } else {
-      console.log("No such document!");
-    }
+  const toggleRescheduleHistory = () => {
+    setIsRescheduleHistoryOpen((prevState) => !prevState);
   };
 
   useEffect(() => {
@@ -52,59 +40,52 @@ function CalendarLawyer() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (selectedAppointment?.appointmentDetails?.reviewedBy) {
-      fetchReviewerDetails(selectedAppointment.appointmentDetails.reviewedBy);
-    }
-  }, [selectedAppointment]);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
-  useEffect(() => {
-    if (selectedAppointment?.appointmentDetails?.assignedLawyer) {
-      fetchAssignedLawyerDetails(
-        selectedAppointment.appointmentDetails.assignedLawyer
-      );
+useEffect(() => {
+  const unsubscribe = auth.onAuthStateChanged((user) => {
+    if (user) {
+      setCurrentUserId(user.uid); // Set currentUserId to logged-in user's UID
+    } else {
+      setCurrentUserId(null);
+      window.location.href = "/"; // Redirect if not logged in
     }
-  }, [selectedAppointment]);
+  });
+
+  return () => unsubscribe();
+}, []);
+
 
   useEffect(() => {
     const fetchAppointmentsAndSlots = async () => {
       try {
-        const user = auth.currentUser;
-        if (!user) {
-          window.location.href = "/";
-          return;
-        }
-
-        const apptData = await aptsLawyerCalendar(
-          statusFilters,
-          null,
-          50,
-          "",
-          user.uid
-        );
-        const slotsData = await getLawyerCalendar(user.uid);
-
+        const apptData = await aptsCalendar(statusFilters, null, 50, "");
+        const slotsData = await getCalendar();
+  
         const formatTime = (date) => {
           let hours = date.getHours();
           const minutes = date.getMinutes().toString().padStart(2, "0");
           const ampm = hours >= 12 ? "PM" : "AM";
           hours = hours % 12;
-          hours = hours ? 12 : 12;
+          hours = hours ? hours : 12;
           return `${hours}:${minutes} ${ampm}`;
         };
-
-        const formattedAppointments = apptData.data.map((appt) => {
-          const appointmentDate = new Date(appt.appointmentDate.seconds * 1000);
-          return {
-            start: appointmentDate,
-            end: appointmentDate,
-            title: `${formatTime(appointmentDate)} - ${appt.fullName}`,
-            allDay: false,
-            appointmentStatus: appt.appointmentStatus, // Include appointmentStatus
-            ...appt,
-          };
-        });
-
+  
+        const formattedAppointments = apptData.data
+          .filter((appt) => appt.appointmentDetails?.assignedLawyer === currentUserId) // Filter by current user's ID
+          .map((appt) => {
+            const appointmentDate = new Date(appt.appointmentDate.seconds * 1000);
+            return {
+              start: appointmentDate,
+              end: appointmentDate,
+              title: `${formatTime(appointmentDate)} - ${appt.fullName}`,
+              allDay: false,
+              appointmentStatus: appt.appointmentStatus,
+              rescheduleHistory: appt.rescheduleHistory || [],
+              ...appt,
+            };
+          });
+  
         const formattedBookedSlots = slotsData.map((slot) => {
           const appointmentDate = new Date(slot.appointmentDate.seconds * 1000);
           return {
@@ -112,19 +93,48 @@ function CalendarLawyer() {
             end: appointmentDate,
             title: `${formatTime(appointmentDate)} - ${slot.fullName}`,
             allDay: false,
-            appointmentStatus: "scheduled", // Include appointmentStatus
+            appointmentStatus: "scheduled",
             ...slot,
           };
         });
-
+  
         setAppointments([...formattedAppointments, ...formattedBookedSlots]);
       } catch (error) {
         console.error("Error fetching appointments and slots:", error);
       }
     };
+  
+    if (currentUserId) {
+      fetchAppointmentsAndSlots();
+    }
+  }, [statusFilters, currentUserId]);
+  
 
-    fetchAppointmentsAndSlots();
-  }, [statusFilters]);
+  useEffect(() => {
+    const fetchReviewerDetails = async (reviewedBy) => {
+      if (reviewedBy) {
+        const userData = await getUserById(reviewedBy);
+        setReviewerDetails(userData);
+      }
+    };
+
+    const fetchAssignedLawyerDetails = async (assignedLawyerId) => {
+      if (assignedLawyerId) {
+        const userData = await getUserById(assignedLawyerId);
+        setAssignedLawyerDetails(userData);
+      }
+    };
+
+    if (selectedAppointment?.appointmentDetails?.reviewedBy) {
+      fetchReviewerDetails(selectedAppointment.appointmentDetails.reviewedBy);
+    }
+
+    if (selectedAppointment?.appointmentDetails?.assignedLawyer) {
+      fetchAssignedLawyerDetails(
+        selectedAppointment.appointmentDetails.assignedLawyer
+      );
+    }
+  }, [selectedAppointment]);
 
   const handlePrint = () => {
     if (!selectedAppointment) {
@@ -132,66 +142,131 @@ function CalendarLawyer() {
       return;
     }
 
+    // Get the contents of the appointment details section
     const printContents = document.getElementById(
       "appointment-details-section"
     ).innerHTML;
 
-    // Exclude the uploaded images section from the print
+    // Create a temporary div to modify the contents for printing
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = printContents;
-    const noPrintSection = tempDiv.querySelector(".no-print");
-    if (noPrintSection) {
-      noPrintSection.remove();
-    }
+
+    // Remove any elements you don't want to print (with class 'no-print')
+    const noPrintSection = tempDiv.querySelectorAll(".no-print");
+    noPrintSection.forEach((section) => section.remove());
+
     const modifiedPrintContents = tempDiv.innerHTML;
 
+    // Open a new window for printing
     const printWindow = window.open("", "", "height=500, width=500");
     printWindow.document.write(
       "<html><head><title>Appointment Details</title></head><body>"
     );
+
+    // Add custom styles for the print layout, including setting the paper size to legal (8.5x13 inches)
     printWindow.document.write("<style>");
     printWindow.document.write(`
-      @media print {
-        .page-break { page-break-before: always; }
-        .print-section { page-break-inside: avoid; }
-        .print-image { width: 100%; height: 100%; object-fit: cover; }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        table, th, td {
-          border: 1px solid black;
-        }
-        th, td {
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #f2f2f2;
-        }
-        .section-title {
-          color: #a34bc9;
-          font-size: 16px;
-        }
-        .no-print {
-          display: none;
-        }
-        .print-only {
-          display: block;
-        }
-      }
-    `);
+          @media print {
+            @page {
+              size: 8.5in 13in;
+              margin: 0.5in; /* Set margins for the print */
+            }
+            .page-break { page-break-before: always; }
+            .print-section { page-break-inside: avoid; }
+            .print-image { width: 100%; height: auto; object-fit: cover; }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            table, th, td {
+              border: 1px solid black;
+            }
+            th, td {
+              padding: 8px;
+              text-align: left;
+            }
+            th {
+              background-color: #f2f2f2;
+            }
+            .section-title {
+              color: #a34bc9;
+              font-size: 16px;
+            }
+            .no-print {
+              display: none;
+            }
+            .print-only {
+              display: block;
+            }
+          }
+        `);
     printWindow.document.write("</style>");
+
+    // Add the IBP logo and QR code to the print layout
     printWindow.document.write(`
-      <div style="text-align: center;">
-        <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
-        <h2>Integrated Bar of the Philippines - Malolos</h2>
-        <img src="${selectedAppointment.appointmentDetails.qrCode}" alt="QR Code" style="width: 100px; display: block; margin: 0 auto;" />
-      </div>
-      <hr />
-    `);
+          <div style="text-align: center;">
+            <img src="${ibpLogo}" alt="IBP Logo" style="width: 100px; display: block; margin: 0 auto;" />
+            <h2>Integrated Bar of the Philippines - Malolos</h2>
+            ${
+              selectedAppointment.appointmentDetails.qrCode
+                ? `<img src="${selectedAppointment.appointmentDetails.qrCode}" alt="QR Code" style="width: 100px; display: block; margin: 0 auto;" />`
+                : ""
+            }
+          </div>
+          <hr />
+        `);
+
+    // Insert the modified contents
     printWindow.document.write(modifiedPrintContents);
 
+    // Add the reschedule history section
+    if (
+      selectedAppointment.rescheduleHistory &&
+      selectedAppointment.rescheduleHistory.length > 0
+    ) {
+      printWindow.document.write(`
+        <h2 style="color: #a34bc9; font-size: 16px;">Reschedule History</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="border: 1px solid black; padding: 8px;">Original Date</th>
+              <th style="border: 1px solid black; padding: 8px;">Original Type</th>
+              <th style="border: 1px solid black; padding: 8px;">Reason</th>
+              <th style="border: 1px solid black; padding: 8px;">Reschedule Time</th>
+            </tr>
+          </thead>
+          <tbody>
+      `);
+
+      selectedAppointment.rescheduleHistory.forEach((entry) => {
+        printWindow.document.write(`
+          <tr>
+            <td style="border: 1px solid black; padding: 8px;">${getFormattedDate(
+              entry.rescheduleDate,
+              true
+            )}</td>
+            <td style="border: 1px solid black; padding: 8px;">${
+              entry.rescheduleAppointmentType || "N/A"
+            }</td>
+            <td style="border: 1px solid black; padding: 8px;">${
+              entry.rescheduleReason || "N/A"
+            }</td>
+            <td style="border: 1px solid black; padding: 8px;">${getFormattedDate(
+              entry.rescheduleTimestamp,
+              true
+            )}</td>
+          </tr>
+        `);
+      });
+
+      printWindow.document.write(`
+          </tbody>
+        </table>
+        <br />
+      `);
+    }
+
+    // Include any relevant images for printing
     const images = document.querySelectorAll(".img-thumbnail");
     images.forEach((image) => {
       if (!image.classList.contains("qr-code-image")) {
@@ -202,20 +277,50 @@ function CalendarLawyer() {
       }
     });
 
+    // Close and trigger the print dialog
     printWindow.document.write("</body></html>");
     printWindow.document.close();
-    printWindow.print();
-    printWindow.close();
+    printWindow.focus(); // Focus the window to ensure it shows up
+    printWindow.print(); // Trigger print
 
-    window.location.reload(); // Reload to ensure the app state is consistent
+    // Close the print window after printing
+    printWindow.onafterprint = () => printWindow.close();
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
   };
 
-  const handleSelectEvent = (event) => {
+  const handleSelectEvent = async (event) => {
     setSelectedAppointment(event);
+    const appointmentId = event.id; // Assuming id exists in the event data
+    await fetchRescheduleHistory(appointmentId);
+  };
+
+  const fetchRescheduleHistory = async (appointmentId) => {
+    try {
+      const appointmentRef = fs.collection("appointments").doc(appointmentId);
+      const appointmentSnapshot = await appointmentRef.get();
+
+      if (appointmentSnapshot.exists) {
+        const appointmentData = appointmentSnapshot.data();
+        const rescheduleHistory = appointmentData.rescheduleHistory || null;
+
+        if (rescheduleHistory && Object.keys(rescheduleHistory).length > 0) {
+          setSelectedAppointment((prev) => ({
+            ...prev,
+            rescheduleHistory: Object.values(rescheduleHistory), // Assuming rescheduleHistory is a map
+          }));
+        } else {
+          setSelectedAppointment((prev) => ({
+            ...prev,
+            rescheduleHistory: [],
+          }));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching reschedule history:", error);
+    }
   };
 
   const handleCloseModal = () => {
@@ -231,7 +336,7 @@ function CalendarLawyer() {
 
   const getFormattedDate = (timestamp, includeTime = false) => {
     if (!timestamp) return "N/A";
-    const date = new Date(timestamp.seconds * 1000);
+    const date = new Date(timestamp.seconds * 1000 || timestamp);
     const options = { year: "numeric", month: "long", day: "numeric" };
     if (includeTime) {
       options.hour = "numeric";
@@ -262,8 +367,26 @@ function CalendarLawyer() {
             onSelectEvent={handleSelectEvent}
             components={{
               event: ({ event }) => (
-                <span>
+                <span
+                  className="event-container"
+                  style={{ display: "flex", alignItems: "center" }}
+                >
                   <strong>{event.title}</strong>
+                  {/* Check if the appointment is online */}
+                  {event.appointmentDetails?.apptType === "Online" && (
+                    <button
+                      onClick={() =>
+                        window.open(`/meeting/${event.id}`, "_blank")
+                      }
+                      className="join-meeting-btn"
+                    >
+                      <FontAwesomeIcon
+                        icon={faVideo}
+                        style={{ marginRight: "5px" }}
+                      />
+                      Join
+                    </button>
+                  )}
                 </span>
               ),
               month: {
@@ -310,33 +433,69 @@ function CalendarLawyer() {
                 </h2>
                 <table className="table table-striped table-bordered">
                   <tbody>
-                      <tr className="no-print">
-                        <th>QR Code:</th>
+                    <tr className="no-print">
+                      <th>QR Code:</th>
+                      <td>
+                        {selectedAppointment.appointmentDetails ? (
+                          <a
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openImageModal(
+                                selectedAppointment.appointmentDetails.qrCode
+                              );
+                            }}
+                          >
+                            <img
+                              src={
+                                selectedAppointment.appointmentDetails.qrCode
+                              }
+                              alt="QR Code"
+                              className="img-thumbnail qr-code-image"
+                              style={{ width: "100px", cursor: "pointer" }}
+                            />
+                          </a>
+                        ) : (
+                          "Not Available"
+                        )}
+                      </td>
+                    </tr>
+                    {selectedAppointment.appointmentDetails?.apptType ===
+                      "Online" && (
+                      <tr>
+                        <th>Meeting Link:</th>
                         <td>
-                          {selectedAppointment.appointmentDetails ? (
-                            <a
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                openImageModal(
-                                  selectedAppointment.appointmentDetails.qrCode
-                                );
-                              }}
-                            >
-                              <img
-                                src={
-                                  selectedAppointment.appointmentDetails.qrCode
-                                }
-                                alt="QR Code"
-                                className="img-thumbnail qr-code-image"
-                                style={{ width: "100px", cursor: "pointer" }}
-                              />
-                            </a>
-                          ) : (
-                            "Not Available"
-                          )}
+                          <button
+                            onClick={() =>
+                              window.open(
+                                `/meeting/${selectedAppointment.id}`,
+                                "_blank"
+                              )
+                            }
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              padding: "5px 10px",
+                              backgroundColor: "#3c74d1",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "5px",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <FontAwesomeIcon
+                              icon={faVideo}
+                              style={{ marginRight: "5px" }}
+                            />{" "}
+                            Join Meeting
+                          </button>
+                          <strong>Password:</strong>{" "}
+                          {selectedAppointment.appointmentDetails
+                            ?.meetingPass || "N/A"}
                         </td>
                       </tr>
+                    )}
+
                     <tr>
                       <th>Control Number:</th>
                       <td>{selectedAppointment.controlNumber}</td>
@@ -367,33 +526,6 @@ function CalendarLawyer() {
                         "scheduled" && (
                         <>
                           <tr>
-                            <th>Appointment Date:</th>
-                            <td>
-                              {getFormattedDate(
-                                selectedAppointment.appointmentDate,
-                                true
-                              )}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Reschedule Reason</th>
-                            <td>
-                              {capitalizeFirstLetter(
-                                selectedAppointment.rescheduleReason
-                              ) || "N/A"}
-                            </td>
-                          </tr>
-                          <tr>
-                            <th>Updated Date and Time:</th>
-                            <td>
-                              {getFormattedDate(
-                                selectedAppointment.appointmentDetails
-                                  ?.updatedTime,
-                                true
-                              )}
-                            </td>
-                          </tr>
-                          <tr>
                             <th>Eligibility:</th>
                             <td>
                               {capitalizeFirstLetter(
@@ -403,27 +535,13 @@ function CalendarLawyer() {
                             </td>
                           </tr>
                           <tr>
-                            <th>Reviewed By:</th>
-                            <td>
-                              {reviewerDetails
-                                ? `${reviewerDetails.display_name} ${
-                                    reviewerDetails.middle_name || ""
-                                  } ${reviewerDetails.last_name}`
-                                : "Not Available"}
-                            </td>
-                          </tr>
-
-                          <tr>
                             <th>Assigned Lawyer:</th>
                             <td>
                               {assignedLawyerDetails
-                                ? `${assignedLawyerDetails.display_name} ${
-                                    assignedLawyerDetails.middle_name || ""
-                                  } ${assignedLawyerDetails.last_name}`
+                                ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
                                 : "Not Available"}
                             </td>
                           </tr>
-
                           <tr>
                             <th>Eligibility Notes:</th>
                             <td>
@@ -431,15 +549,25 @@ function CalendarLawyer() {
                                 "N/A"}
                             </td>
                           </tr>
+                          <tr>
+                            <th>Appointment Date:</th>
+                            <td>
+                              {getFormattedDate(
+                                selectedAppointment.appointmentDate,
+                                true
+                              )}
+                            </td>
+                          </tr>
                         </>
                       )}
+
                       {selectedAppointment.appointmentStatus === "denied" && (
                         <>
                           <tr>
-                            <th>Reviewed By:</th>
+                            <th>Assigned Lawyer:</th>
                             <td>
-                              {reviewerDetails
-                                ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
+                              {assignedLawyerDetails
+                                ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
                                 : "Not Available"}
                             </td>
                           </tr>
@@ -461,37 +589,32 @@ function CalendarLawyer() {
                       )}
                       {selectedAppointment.appointmentStatus === "done" && (
                         <>
-                        <tr>
-                              <th>Appointment Date:</th>
-                              <td>
-                                {getFormattedDate(
-                                  selectedAppointment.appointmentDate,
-                                  true
-                                )}
-                              </td>
-                            </tr>
                           <tr>
-                            <th>Reviewed By:</th>
+                            <th>Appointment Date:</th>
                             <td>
-                              {reviewerDetails
-                                ? `${reviewerDetails.display_name} ${
-                                    reviewerDetails.middle_name || ""
-                                  } ${reviewerDetails.last_name}`
-                                : "Not Available"}
+                              {getFormattedDate(
+                                selectedAppointment.appointmentDate,
+                                true
+                              )}
                             </td>
                           </tr>
-
+                          <tr>
+                            <th>Eligibility:</th>
+                            <td>
+                              {capitalizeFirstLetter(
+                                selectedAppointment.clientEligibility
+                                  ?.eligibility || "N/A"
+                              )}
+                            </td>
+                          </tr>
                           <tr>
                             <th>Assigned Lawyer:</th>
                             <td>
                               {assignedLawyerDetails
-                                ? `${assignedLawyerDetails.display_name} ${
-                                    assignedLawyerDetails.middle_name || ""
-                                  } ${assignedLawyerDetails.last_name}`
+                                ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
                                 : "Not Available"}
                             </td>
                           </tr>
-
                           <tr>
                             <th>Eligibility Notes:</th>
                             <td>
@@ -534,14 +657,6 @@ function CalendarLawyer() {
                             </td>
                           </tr>
                           <tr>
-                            <th>Reviewed By:</th>
-                            <td>
-                              {reviewerDetails
-                                ? `${reviewerDetails.display_name} ${reviewerDetails.middle_name} ${reviewerDetails.last_name}`
-                                : "Not Available"}
-                            </td>
-                          </tr>
-                          <tr>
                             <th>Assigned Lawyer:</th>
                             <td>
                               {assignedLawyerDetails
@@ -562,9 +677,70 @@ function CalendarLawyer() {
                   </tbody>
                 </table>
               </section>
+              {/* {selectedAppointment?.rescheduleHistory &&
+              selectedAppointment.rescheduleHistory.length > 0 ? (
+                <section className="mb-4">
+                  <h2
+                    style={{ cursor: "pointer" }}
+                    onClick={toggleRescheduleHistory}
+                  >
+                    <em style={{ color: "#a34bc9", fontSize: "16px" }}>
+                      Reschedule History {isRescheduleHistoryOpen ? "▲" : "▼"}
+                    </em>
+                  </h2>
+                  {isRescheduleHistoryOpen && (
+                    <table className="table table-striped table-bordered">
+                      <thead>
+                        <tr
+                          style={{
+                            backgroundColor: "#f2f2f2",
+                            textAlign: "left",
+                          }}
+                        >
+                          <th style={{ padding: "10px" }}>Original Date</th>
+                          <th style={{ padding: "10px" }}>Original Type</th>
+                          <th style={{ padding: "10px" }}>Reason</th>
+                          <th style={{ padding: "10px" }}>Reschedule Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedAppointment.rescheduleHistory.map(
+                          (entry, index) => (
+                            <tr key={index}>
+                              <td style={{ padding: "10px" }}>
+                                {getFormattedDate(entry.rescheduleDate, true)}
+                              </td>
+                              <td style={{ padding: "10px" }}>
+                                {entry.rescheduleAppointmentType || "N/A"}
+                              </td>
+                              <td style={{ padding: "10px" }}>
+                                {entry.rescheduleReason || "N/A"}
+                              </td>
+                              <td style={{ padding: "10px" }}>
+                                {getFormattedDate(
+                                  entry.rescheduleTimestamp,
+                                  true
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+                </section>
+              ) : (
+                <p>No reschedule history available.</p>
+              )} */}
+
               <section className="mb-4 print-section">
                 <h2>
-                  <em style={{ color: "#a34bc9", fontSize: "16px" }}>
+                  <em
+                    style={{
+                      color: "#a34bc9",
+                      fontSize: "16px",
+                    }}
+                  >
                     Applicant Profile
                   </em>
                 </h2>
@@ -589,101 +765,98 @@ function CalendarLawyer() {
                       </td>
                     </tr>
                     <tr>
-                      <th>Address:</th>
-                      <td>{selectedAppointment?.address || "Not Available"}</td>
-                    </tr>
-                    <tr>
                       <th>Contact Number:</th>
                       <td>
                         {selectedAppointment?.contactNumber || "Not Available"}
                       </td>
                     </tr>
-                      <>
-                        <tr>
-                          <th>Address:</th>
-                          <td>
-                            {selectedAppointment?.address || "Not Available"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Gender:</th>
-                          <td>
-                            {selectedAppointment?.selectedGender ||
-                              "Not Specified"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Spouse Name:</th>
-                          <td>
-                            {selectedAppointment.spouseName || "Not Available"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Spouse Occupation:</th>
-                          <td>
-                            {selectedAppointment.spouseOccupation ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Children Names and Ages:</th>
-                          <td>
-                            {selectedAppointment.childrenNamesAges ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                      </>
-                  </tbody>
-                </table>
-              </section>
-                <section className="mb-4 print-section">
-                  <h2>
-                    <em
-                      style={{
-                        color: "#a34bc9",
-                        fontSize: "16px",
-                      }}
-                    >
-                      Employment Profile
-                    </em>
-                  </h2>
-                  <table className="table table-striped table-bordered">
-                    <tbody>
+                    <>
                       <tr>
-                        <th>Occupation:</th>
+                        <th>Address:</th>
                         <td>
-                          {selectedAppointment.occupation || "Not Available"}
+                          {selectedAppointment?.address || "Not Available"}
                         </td>
                       </tr>
                       <tr>
-                        <th>Type of Employment:</th>
+                        <th>Gender:</th>
                         <td>
-                          {selectedAppointment?.kindOfEmployment ||
+                          {selectedAppointment?.selectedGender ||
                             "Not Specified"}
                         </td>
                       </tr>
                       <tr>
-                        <th>Employer Name:</th>
+                        <th>Spouse Name:</th>
                         <td>
-                          {selectedAppointment?.employerName || "Not Available"}
+                          {selectedAppointment.spouseName || "Not Available"}
                         </td>
                       </tr>
                       <tr>
-                        <th>Employer Address:</th>
+                        <th>Spouse Occupation:</th>
                         <td>
-                          {selectedAppointment.employerAddress ||
+                          {selectedAppointment.spouseOccupation ||
                             "Not Available"}
                         </td>
                       </tr>
                       <tr>
-                        <th>Monthly Income:</th>
+                        <th>Children Names and Ages:</th>
                         <td>
-                          {selectedAppointment.monthlyIncome || "Not Available"}
+                          {selectedAppointment.childrenNamesAges ||
+                            "Not Available"}
                         </td>
                       </tr>
-                    </tbody>
-                  </table>
-                </section>
+                    </>
+                  </tbody>
+                </table>
+              </section>
+
+              <section className="mb-4 print-section">
+                <h2>
+                  <em
+                    style={{
+                      color: "#a34bc9",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Employment Profile
+                  </em>
+                </h2>
+                <table className="table table-striped table-bordered">
+                  <tbody>
+                    <tr>
+                      <th>Occupation:</th>
+                      <td>
+                        {selectedAppointment.occupation || "Not Available"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Type of Employment:</th>
+                      <td>
+                        {selectedAppointment?.kindOfEmployment ||
+                          "Not Specified"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Employer Name:</th>
+                      <td>
+                        {selectedAppointment?.employerName || "Not Available"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Employer Address:</th>
+                      <td>
+                        {selectedAppointment.employerAddress || "Not Available"}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th>Monthly Income:</th>
+                      <td>
+                        {selectedAppointment.monthlyIncome || "Not Available"}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </section>
+
               <section className="mb-4 print-section">
                 <h2>
                   <em
@@ -704,31 +877,27 @@ function CalendarLawyer() {
                           "Not Specified"}
                       </td>
                     </tr>
-                    {selectedAppointment.appointmentDetails?.apptType ===
-                      "Online" && (
-                      <>
-                        <tr>
-                          <th>Problem:</th>
-                          <td>
-                            {selectedAppointment.problems || "Not Available"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Reason for Problem:</th>
-                          <td>
-                            {selectedAppointment.problemReason ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                        <tr>
-                          <th>Desired Solutions:</th>
-                          <td>
-                            {selectedAppointment.desiredSolutions ||
-                              "Not Available"}
-                          </td>
-                        </tr>
-                      </>
-                    )}
+                    <>
+                      <tr>
+                        <th>Problem:</th>
+                        <td>
+                          {selectedAppointment.problems || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Reason for Problem:</th>
+                        <td>
+                          {selectedAppointment.problemReason || "Not Available"}
+                        </td>
+                      </tr>
+                      <tr>
+                        <th>Desired Solutions:</th>
+                        <td>
+                          {selectedAppointment.desiredSolutions ||
+                            "Not Available"}
+                        </td>
+                      </tr>
+                    </>
                   </tbody>
                 </table>
               </section>
@@ -749,7 +918,9 @@ function CalendarLawyer() {
                             href="#"
                             onClick={(e) => {
                               e.preventDefault();
-                              openImageModal(selectedAppointment.barangayImageUrl);
+                              openImageModal(
+                                selectedAppointment.barangayImageUrl
+                              );
                             }}
                           >
                             <img
