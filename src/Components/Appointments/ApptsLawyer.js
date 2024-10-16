@@ -114,6 +114,7 @@ function ApptsLawyer() {
         "appointmentDetails.meetingPass": meetingPass,
       }),
     };
+    await updateAppointment(selectedAppointment.id, updatedData);
 
     try {
       await updateAppointment(selectedAppointment.id, updatedData);
@@ -128,7 +129,7 @@ function ApptsLawyer() {
 
       // Send notifications to the client, assigned lawyer, and head lawyer
       await sendNotification(
-        `Your appointment (ID: ${appointmentId}) has been scheduled for ${appointmentDateFormatted} as an ${appointmentType} appointment. The assigned lawyer for your case is ${lawyerFullName}.`,
+        `Your appointment (ID: ${appointmentId}) has been scheduled for ${appointmentDateFormatted} as an ${appointmentType} appointment.`,
         selectedAppointment.uid,
         "appointment"
       );
@@ -678,18 +679,18 @@ function ApptsLawyer() {
 
   const handleRescheduleSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!rescheduleDate || !rescheduleAppointmentType) {
       setSnackbarMessage("Reschedule date and type are required.");
       setShowSnackbar(true);
       return;
     }
-  
+
     let meetingLink =
       selectedAppointment.appointmentDetails?.meetingLink || null;
     let meetingPass =
       selectedAppointment.appointmentDetails?.meetingPass || null;
-  
+
     if (rescheduleAppointmentType === "Online") {
       const { link, password } = generateJitsiLink(
         selectedAppointment.controlNumber
@@ -700,22 +701,23 @@ function ApptsLawyer() {
       meetingLink = null;
       meetingPass = null;
     }
-  
+
     const appointmentRef = doc(fs, "appointments", selectedAppointment.id);
     const appointmentSnapshot = await getDoc(appointmentRef);
     const appointmentData = appointmentSnapshot.data();
-  
+
     const rescheduleEntry = {
       rescheduleDate: selectedAppointment.appointmentDetails?.appointmentDate,
-      rescheduleAppointmentType: selectedAppointment.appointmentDetails?.apptType,
+      rescheduleAppointmentType:
+        selectedAppointment.appointmentDetails?.apptType,
       rescheduleReason: rescheduleReason,
       rescheduleTimestamp: Timestamp.fromDate(new Date()),
     };
-  
+
     const updatedRescheduleHistory = appointmentData.rescheduleHistory
       ? [...appointmentData.rescheduleHistory, rescheduleEntry]
       : [rescheduleEntry];
-  
+
     const updatedData = {
       "appointmentDetails.appointmentDate": Timestamp.fromDate(rescheduleDate),
       "appointmentDetails.apptType": rescheduleAppointmentType,
@@ -726,25 +728,25 @@ function ApptsLawyer() {
         "appointmentDetails.meetingPass": meetingPass,
       }),
     };
-  
+
     try {
       // Save the updated appointment information first
       await updateDoc(appointmentRef, updatedData);
-  
+
       const clientFullName = selectedAppointment.fullName;
       const appointmentId = selectedAppointment.id;
-  
+
       const lawyerFullName = assignedLawyerDetails
         ? `${assignedLawyerDetails.display_name} ${assignedLawyerDetails.middle_name} ${assignedLawyerDetails.last_name}`
         : "Assigned Lawyer Not Available";
-  
+
       // Send notifications after successfully updating Firestore
       await sendNotification(
         `Your appointment (ID: ${appointmentId}) has been rescheduled to a different date and as an ${rescheduleAppointmentType} appointment. The assigned lawyer for your case is ${lawyerFullName}.`,
         selectedAppointment.uid,
         "appointment"
       );
-  
+
       if (assignedLawyerDetails?.uid) {
         await sendNotification(
           `The appointment (ID: ${appointmentId}) for ${clientFullName} has been rescheduled to a different date and as an ${rescheduleAppointmentType} appointment.`,
@@ -752,7 +754,7 @@ function ApptsLawyer() {
           "appointment"
         );
       }
-  
+
       const headLawyerUid = await getHeadLawyerUid();
       if (headLawyerUid) {
         await sendNotification(
@@ -761,17 +763,19 @@ function ApptsLawyer() {
           "appointment"
         );
       }
-  
+
       setAppointments((prevAppointments) =>
         prevAppointments.map((appt) =>
-          appt.id === selectedAppointment.id ? { ...appt, ...updatedData } : appt
+          appt.id === selectedAppointment.id
+            ? { ...appt, ...updatedData }
+            : appt
         )
       );
-  
+
       setRescheduleDate(null);
       setRescheduleReason("");
       setRescheduleAppointmentType("");
-  
+
       setSnackbarMessage("Appointment successfully rescheduled.");
       setShowSnackbar(true);
       setTimeout(() => {
@@ -784,8 +788,7 @@ function ApptsLawyer() {
       setShowSnackbar(true);
     }
   };
-  
-  
+
   const getFormattedDate = (timestamp, includeTime = false) => {
     if (!timestamp || !(timestamp instanceof Timestamp)) {
       console.error("Invalid timestamp: ", timestamp);
@@ -800,7 +803,7 @@ function ApptsLawyer() {
     }
     return date.toLocaleString("en-US", options);
   };
-  
+
   const getDayClassName = (date) => {
     const isFullyBooked =
       bookedSlots.filter(
@@ -993,7 +996,10 @@ function ApptsLawyer() {
                       <>
                         <button
                           onClick={() =>
-                            window.open(`/vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/${appointment.id}`, "_blank")
+                            window.open(
+                              `/vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/${appointment.id}`,
+                              "_blank"
+                            )
                           }
                           style={{
                             backgroundColor: "#28a745", // Change button color to green
@@ -1251,7 +1257,7 @@ function ApptsLawyer() {
                   </h2>
                   <table className="table table-striped table-bordered">
                     <tbody>
-                    <tr className="no-print">
+                      <tr className="no-print">
                         <th>QR Code:</th>
                         <td>
                           {selectedAppointment.appointmentDetails ? (
@@ -1280,24 +1286,31 @@ function ApptsLawyer() {
                       </tr>
                       {selectedAppointment.appointmentDetails?.apptType ===
                         "Online" && (
-                          <tr>
+                        <tr>
                           <th>Meeting Link:</th>
                           <td>
                             <a
                               href="#"
                               onClick={() =>
-                                window.open(`/meeting/${selectedAppointment.id}`, "_blank")
+                                window.open(
+                                  `/meeting/${selectedAppointment.id}`,
+                                  "_blank"
+                                )
                               }
-                              style={{ color: "blue", textDecoration: "underline", cursor: "pointer" }}
+                              style={{
+                                color: "blue",
+                                textDecoration: "underline",
+                                cursor: "pointer",
+                              }}
                             >
                               Join Meeting
                             </a>
                             <br />
                             <strong>Password:</strong>{" "}
-                            {selectedAppointment.appointmentDetails?.meetingPass || "N/A"}
+                            {selectedAppointment.appointmentDetails
+                              ?.meetingPass || "N/A"}
                           </td>
                         </tr>
-                        
                       )}
                       <tr>
                         <th>Control Number:</th>

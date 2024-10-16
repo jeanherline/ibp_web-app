@@ -83,7 +83,9 @@ const MeetingPage = () => {
 
     try {
       const domain = "8x8.vc";
-      const roomName = meetingData.appointmentDetails?.meetingLink.split("/").pop();
+      const roomName = meetingData.appointmentDetails?.meetingLink
+        .split("/")
+        .pop();
 
       if (!roomName) {
         console.error("Room name is missing or invalid");
@@ -92,7 +94,7 @@ const MeetingPage = () => {
 
       const options = {
         roomName: `vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/${roomName}`,
-        parentNode: document.querySelector('#jaas-container'),
+        parentNode: document.querySelector("#jaas-container"),
         userInfo: {
           displayName: getDisplayName(),
         },
@@ -132,8 +134,9 @@ const MeetingPage = () => {
   // Load Jitsi API script and start the meeting
   useEffect(() => {
     if (!window.JitsiMeetExternalAPI) {
-      const script = document.createElement('script');
-      script.src = 'https://8x8.vc/vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/external_api.js';
+      const script = document.createElement("script");
+      script.src =
+        "https://8x8.vc/vpaas-magic-cookie-ef5ce88c523d41a599c8b1dc5b3ab765/external_api.js";
       script.async = true;
       script.onload = () => {
         if (meetingData) {
@@ -173,7 +176,10 @@ const MeetingPage = () => {
         <br />
         <h3>Meeting Details</h3>
         <br />
-        <div id="jaas-container" style={{ height: "800px", width: "100%" }}></div>
+        <div
+          id="jaas-container"
+          style={{ height: "800px", width: "100%" }}
+        ></div>
       </div>
     </div>
   );

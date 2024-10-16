@@ -10,7 +10,7 @@ import { useAuth } from "../../AuthContext";
 import "./Profile.css";
 
 const defaultImageUrl =
-  "https://as2.ftcdn.net/v2/jpg/03/49/49/79/1000_F_349497933_Ly4im8BDmHLaLzgyKg2f2yZOvJjBtlw5.jpg";
+  "https://firebasestorage.googleapis.com/v0/b/lawyer-app-ed056.appspot.com/o/DefaultUserImage.jpg?alt=media&token=3ba45526-99d8-4d30-9cb5-505a5e23eda1";
 
 function Profile() {
   const { currentUser } = useAuth();
