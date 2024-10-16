@@ -1,0 +1,221 @@
+[debug] [2024-10-16T23:44:53.121Z] ----------------------------------------------------------------------
+[debug] [2024-10-16T23:44:53.124Z] Command:       C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\firebase-tools\lib\bin\firebase.js deploy
+[debug] [2024-10-16T23:44:53.124Z] CLI Version:   13.22.0
+[debug] [2024-10-16T23:44:53.124Z] Platform:      win32
+[debug] [2024-10-16T23:44:53.125Z] Node Version:  v18.20.4
+[debug] [2024-10-16T23:44:53.133Z] Time:          Thu Oct 17 2024 07:44:53 GMT+0800 (Philippine Standard Time)
+[debug] [2024-10-16T23:44:53.134Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2024-10-16T23:44:53.213Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2024-10-16T23:44:53.214Z] > authorizing via signed-in user (nubcapstone@gmail.com)
+[debug] [2024-10-16T23:44:53.214Z] [iam] checking project lawyer-app-ed056 for permissions ["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2024-10-16T23:44:53.216Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:53.216Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:53.217Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions [none]
+[debug] [2024-10-16T23:44:53.218Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions x-goog-quota-user=projects/lawyer-app-ed056
+[debug] [2024-10-16T23:44:53.218Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-10-16T23:44:54.629Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions 200
+[debug] [2024-10-16T23:44:54.630Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions {"permissions":["cloudfunctions.functions.create","cloudfunctions.functions.delete","cloudfunctions.functions.get","cloudfunctions.functions.list","cloudfunctions.functions.update","cloudfunctions.operations.get","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2024-10-16T23:44:54.630Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:54.631Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:54.631Z] >>> [apiv2][query] POST https://iam.googleapis.com/v1/projects/lawyer-app-ed056/serviceAccounts/lawyer-app-ed056@appspot.gserviceaccount.com:testIamPermissions [none]
+[debug] [2024-10-16T23:44:54.631Z] >>> [apiv2][body] POST https://iam.googleapis.com/v1/projects/lawyer-app-ed056/serviceAccounts/lawyer-app-ed056@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2024-10-16T23:44:55.714Z] <<< [apiv2][status] POST https://iam.googleapis.com/v1/projects/lawyer-app-ed056/serviceAccounts/lawyer-app-ed056@appspot.gserviceaccount.com:testIamPermissions 200
+[debug] [2024-10-16T23:44:55.714Z] <<< [apiv2][body] POST https://iam.googleapis.com/v1/projects/lawyer-app-ed056/serviceAccounts/lawyer-app-ed056@appspot.gserviceaccount.com:testIamPermissions {"permissions":["iam.serviceAccounts.actAs"]}
+[debug] [2024-10-16T23:44:55.715Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:55.715Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:55.715Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/lawyer-app-ed056 [none]
+[debug] [2024-10-16T23:44:55.987Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/lawyer-app-ed056 200
+[debug] [2024-10-16T23:44:55.987Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/lawyer-app-ed056 {"projectId":"lawyer-app-ed056","projectNumber":"610288789461","displayName":"lawyer-app","name":"projects/lawyer-app-ed056","resources":{"hostingSite":"lawyer-app-ed056","storageBucket":"lawyer-app-ed056.appspot.com","locationId":"asia-southeast1"},"state":"ACTIVE","etag":"1_66ec455c-c02e-4ec7-a207-93a78079ef6f"}
+[info] 
+[info] === Deploying to 'lawyer-app-ed056'...
+[info] 
+[info] i  deploying functions, hosting 
+[debug] [2024-10-16T23:44:55.998Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:55.998Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:55.998Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/lawyer-app-ed056 [none]
+[debug] [2024-10-16T23:44:56.253Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/lawyer-app-ed056 200
+[debug] [2024-10-16T23:44:56.253Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/lawyer-app-ed056 {"projectId":"lawyer-app-ed056","projectNumber":"610288789461","displayName":"lawyer-app","name":"projects/lawyer-app-ed056","resources":{"hostingSite":"lawyer-app-ed056","storageBucket":"lawyer-app-ed056.appspot.com","locationId":"asia-southeast1"},"state":"ACTIVE","etag":"1_66ec455c-c02e-4ec7-a207-93a78079ef6f"}
+[info] i  functions: preparing codebase default for deployment 
+[info] i  functions: ensuring required API cloudfunctions.googleapis.com is enabled... 
+[debug] [2024-10-16T23:44:56.255Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:56.255Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:56.255Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:56.255Z] Checked if tokens are valid: true, expires at: 1729124973181
+[info] i  functions: ensuring required API cloudbuild.googleapis.com is enabled... 
+[debug] [2024-10-16T23:44:56.256Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:56.256Z] Checked if tokens are valid: true, expires at: 1729124973181
+[info] i  artifactregistry: ensuring required API artifactregistry.googleapis.com is enabled... 
+[debug] [2024-10-16T23:44:56.256Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:56.256Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:56.257Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/cloudfunctions.googleapis.com [none]
+[debug] [2024-10-16T23:44:56.257Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/cloudfunctions.googleapis.com x-goog-quota-user=projects/lawyer-app-ed056
+[debug] [2024-10-16T23:44:56.257Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/runtimeconfig.googleapis.com [none]
+[debug] [2024-10-16T23:44:56.258Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/runtimeconfig.googleapis.com x-goog-quota-user=projects/lawyer-app-ed056
+[debug] [2024-10-16T23:44:56.258Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/cloudbuild.googleapis.com [none]
+[debug] [2024-10-16T23:44:56.258Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/cloudbuild.googleapis.com x-goog-quota-user=projects/lawyer-app-ed056
+[debug] [2024-10-16T23:44:56.259Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/artifactregistry.googleapis.com [none]
+[debug] [2024-10-16T23:44:56.259Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/artifactregistry.googleapis.com x-goog-quota-user=projects/lawyer-app-ed056
+[debug] [2024-10-16T23:44:57.410Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/cloudfunctions.googleapis.com 200
+[debug] [2024-10-16T23:44:57.411Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/cloudfunctions.googleapis.com [omitted]
+[info] +  functions: required API cloudfunctions.googleapis.com is enabled 
+[debug] [2024-10-16T23:44:57.421Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/runtimeconfig.googleapis.com 200
+[debug] [2024-10-16T23:44:57.421Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/runtimeconfig.googleapis.com [omitted]
+[debug] [2024-10-16T23:44:57.431Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/cloudbuild.googleapis.com 200
+[debug] [2024-10-16T23:44:57.431Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/cloudbuild.googleapis.com [omitted]
+[info] +  functions: required API cloudbuild.googleapis.com is enabled 
+[debug] [2024-10-16T23:44:57.507Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/artifactregistry.googleapis.com 200
+[debug] [2024-10-16T23:44:57.507Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/artifactregistry.googleapis.com [omitted]
+[info] +  artifactregistry: required API artifactregistry.googleapis.com is enabled 
+[debug] [2024-10-16T23:44:57.509Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:57.509Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:57.509Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/lawyer-app-ed056/adminSdkConfig [none]
+[debug] [2024-10-16T23:44:58.270Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/lawyer-app-ed056/adminSdkConfig 200
+[debug] [2024-10-16T23:44:58.270Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/lawyer-app-ed056/adminSdkConfig {"projectId":"lawyer-app-ed056","storageBucket":"lawyer-app-ed056.appspot.com","locationId":"asia-southeast1"}
+[debug] [2024-10-16T23:44:58.270Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.271Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.271Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs [none]
+[debug] [2024-10-16T23:44:58.535Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs 200
+[debug] [2024-10-16T23:44:58.535Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs {"configs":[{"name":"projects/lawyer-app-ed056/configs/google"},{"name":"projects/lawyer-app-ed056/configs/google_meet"}]}
+[debug] [2024-10-16T23:44:58.535Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.535Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.536Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.536Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.536Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables [none]
+[debug] [2024-10-16T23:44:58.538Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google_meet/variables [none]
+[debug] [2024-10-16T23:44:58.802Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google_meet/variables 200
+[debug] [2024-10-16T23:44:58.803Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google_meet/variables {"variables":[{"name":"projects/lawyer-app-ed056/configs/google_meet/variables/key_path","updateTime":"2024-09-18T02:43:30.473536279Z"}]}
+[debug] [2024-10-16T23:44:58.803Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.803Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.803Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google_meet/variables/key_path [none]
+[debug] [2024-10-16T23:44:58.813Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables 200
+[debug] [2024-10-16T23:44:58.813Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables {"variables":[{"name":"projects/lawyer-app-ed056/configs/google/variables/client_id","updateTime":"2024-10-01T18:56:33.525946992Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/project_id","updateTime":"2024-09-24T20:28:00.696993685Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/auth_provider_x509_cert_url","updateTime":"2024-09-24T20:28:41.015149400Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/private_key","updateTime":"2024-09-24T20:28:12.046130296Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/client_secret","updateTime":"2024-10-01T18:56:39.631245250Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/service_account_key_path","updateTime":"2024-09-18T03:57:20.718144765Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/client_email","updateTime":"2024-09-24T20:28:17.654718710Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/auth_uri","updateTime":"2024-09-24T20:28:29.256558480Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/type","updateTime":"2024-09-24T20:27:54.931519978Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/private_key_id","updateTime":"2024-09-24T20:28:06.363375485Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/token_uri","updateTime":"2024-09-24T20:28:35.199503820Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/client_x509_cert_url","updateTime":"2024-09-24T20:28:46.715848250Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/redirect_uri","updateTime":"2024-09-27T10:17:37.198611167Z"},{"name":"projects/lawyer-app-ed056/configs/google/variables/refresh_token","updateTime":"2024-10-01T19:00:18.897128407Z"}]}
+[debug] [2024-10-16T23:44:58.814Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.814Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.814Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.814Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.815Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.816Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.816Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:44:58.816Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_id [none]
+[debug] [2024-10-16T23:44:58.817Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/project_id [none]
+[debug] [2024-10-16T23:44:58.819Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/auth_provider_x509_cert_url [none]
+[debug] [2024-10-16T23:44:58.821Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/private_key [none]
+[debug] [2024-10-16T23:44:58.823Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_secret [none]
+[debug] [2024-10-16T23:44:58.825Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/service_account_key_path [none]
+[debug] [2024-10-16T23:44:58.827Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_email [none]
+[debug] [2024-10-16T23:44:58.828Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/auth_uri [none]
+[debug] [2024-10-16T23:44:58.830Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/type [none]
+[debug] [2024-10-16T23:44:58.832Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/private_key_id [none]
+[debug] [2024-10-16T23:44:58.833Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/token_uri [none]
+[debug] [2024-10-16T23:44:58.835Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_x509_cert_url [none]
+[debug] [2024-10-16T23:44:58.836Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/redirect_uri [none]
+[debug] [2024-10-16T23:44:58.838Z] >>> [apiv2][query] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/refresh_token [none]
+[debug] [2024-10-16T23:44:59.058Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google_meet/variables/key_path 200
+[debug] [2024-10-16T23:44:59.059Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google_meet/variables/key_path {"name":"projects/lawyer-app-ed056/configs/google_meet/variables/key_path","updateTime":"2024-09-18T02:43:30.473536279Z","text":"keys/google-meet-service-account.json"}
+[debug] [2024-10-16T23:44:59.086Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/service_account_key_path 200
+[debug] [2024-10-16T23:44:59.086Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/service_account_key_path {"name":"projects/lawyer-app-ed056/configs/google/variables/service_account_key_path","updateTime":"2024-09-18T03:57:20.718144765Z","text":"functions/keys/google-meet-services.json"}
+[debug] [2024-10-16T23:44:59.100Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/redirect_uri 200
+[debug] [2024-10-16T23:44:59.100Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/redirect_uri {"name":"projects/lawyer-app-ed056/configs/google/variables/redirect_uri","updateTime":"2024-09-27T10:17:37.198611167Z","text":"https://lawyer-app-ed056.web.app/__/auth/handler"}
+[debug] [2024-10-16T23:44:59.102Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/private_key_id 200
+[debug] [2024-10-16T23:44:59.102Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/private_key_id {"name":"projects/lawyer-app-ed056/configs/google/variables/private_key_id","updateTime":"2024-09-24T20:28:06.363375485Z","text":"8d98ee88125d121528717d5274a5fe8c75483b01"}
+[debug] [2024-10-16T23:44:59.103Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/auth_provider_x509_cert_url 200
+[debug] [2024-10-16T23:44:59.103Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/auth_provider_x509_cert_url {"name":"projects/lawyer-app-ed056/configs/google/variables/auth_provider_x509_cert_url","updateTime":"2024-09-24T20:28:41.015149400Z","text":"https://www.googleapis.com/oauth2/v1/certs"}
+[debug] [2024-10-16T23:44:59.105Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_secret 200
+[debug] [2024-10-16T23:44:59.105Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_secret {"name":"projects/lawyer-app-ed056/configs/google/variables/client_secret","updateTime":"2024-10-01T18:56:39.631245250Z","text":"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"}
+[debug] [2024-10-16T23:44:59.106Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/private_key 200
+[debug] [2024-10-16T23:44:59.107Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/private_key {"name":"projects/lawyer-app-ed056/configs/google/variables/private_key","updateTime":"2024-09-24T20:28:12.046130296Z","text":"-----BEGIN PRIVATE KEY-----\\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDB2y6Z4XZJYiAA\\nbWGs0MvHMDy/63Dvky14pYkVdXbiWcID0smLlhD62vPBoxQ71uusBdQ9mw2jdrBo\\ncmiyeOHDNPEr3EzdXZzGl0O+H229I6st1VNjaImXvTuS766ommG1nktrlHN9QgjC\\nlhZmdTy2fFnPLeQlCU7aWW3GSpCVvkt5MEnOrR2Y3dp7ZNx22PPKmFIHJZnlC4ZJ\\nFHOY+Uy+U9UvIqUAFUHBna0FrU7Bgd3bT21WQC3UJfYUjmZHgS0xbA78V6md3pN9\\nDUYhzhvZR+6BX2cxvtMPA7+eAlH44fVvnyX5WJ9rcxm2Z51xGeoTrfVkK6rlIV1J\\nJDb4etnBAgMBAAECggEAAMk3G+C6F1Rpk836LOhCQ0IZ+knltH6GGyyfUIA8s8Xp\\nSE4hboNmazmE0gzkf/Fj3K0xmJt11aQA8eGw31DSfYOhRZbdk86jv8/wa1IXMMKh\\nw1NsC76G0Z/19grVTEq1SUSB3zi87D+XkkdLLPUP9FhZumzRtX1mj4Ci/UBVJTAO\\nPlixzgx8HgKdsddLWg+Wr3F335xiohGdCLsQDbHyN7bApiJ30qh2943G5Ge2w3MC\\nfP8j59qQCQQuvflDkNlA3K/jy4IZ9RLoaBTQOQ/+KfMPvDjHQpQGlSQbCGfsneSe\\nKFxyJdYAWfpAU2rpTvGvFgFDOCCXqVn7gLQ7E8546Q==\\n-----END PRIVATE KEY-----\\n"}
+[debug] [2024-10-16T23:44:59.109Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_id 200
+[debug] [2024-10-16T23:44:59.110Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_id {"name":"projects/lawyer-app-ed056/configs/google/variables/client_id","updateTime":"2024-10-01T18:56:33.525946992Z","text":"610288789461-pqa7pcoqt93ut18cclg3dljtald9qjqt.apps.googleusercontent.com"}
+[debug] [2024-10-16T23:44:59.113Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/project_id 200
+[debug] [2024-10-16T23:44:59.113Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/project_id {"name":"projects/lawyer-app-ed056/configs/google/variables/project_id","updateTime":"2024-09-24T20:28:00.696993685Z","text":"lawyer-app-ed056"}
+[debug] [2024-10-16T23:44:59.114Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/auth_uri 200
+[debug] [2024-10-16T23:44:59.115Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/auth_uri {"name":"projects/lawyer-app-ed056/configs/google/variables/auth_uri","updateTime":"2024-09-24T20:28:29.256558480Z","text":"https://accounts.google.com/o/oauth2/auth"}
+[debug] [2024-10-16T23:44:59.115Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_email 200
+[debug] [2024-10-16T23:44:59.115Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_email {"name":"projects/lawyer-app-ed056/configs/google/variables/client_email","updateTime":"2024-09-24T20:28:17.654718710Z","text":"google-calendar-meet-service@lawyer-app-ed056.iam.gserviceaccount.com"}
+[debug] [2024-10-16T23:44:59.115Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/type 200
+[debug] [2024-10-16T23:44:59.116Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/type {"name":"projects/lawyer-app-ed056/configs/google/variables/type","updateTime":"2024-09-24T20:27:54.931519978Z","text":"service_account"}
+[debug] [2024-10-16T23:44:59.116Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/token_uri 200
+[debug] [2024-10-16T23:44:59.116Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/token_uri {"name":"projects/lawyer-app-ed056/configs/google/variables/token_uri","updateTime":"2024-09-24T20:28:35.199503820Z","text":"https://oauth2.googleapis.com/token"}
+[debug] [2024-10-16T23:44:59.117Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_x509_cert_url 200
+[debug] [2024-10-16T23:44:59.117Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/client_x509_cert_url {"name":"projects/lawyer-app-ed056/configs/google/variables/client_x509_cert_url","updateTime":"2024-09-24T20:28:46.715848250Z","text":"https://www.googleapis.com/robot/v1/metadata/x509/google-calendar-meet-service%40lawyer-app-ed056.iam.gserviceaccount.com"}
+[debug] [2024-10-16T23:44:59.117Z] <<< [apiv2][status] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/refresh_token 200
+[debug] [2024-10-16T23:44:59.117Z] <<< [apiv2][body] GET https://runtimeconfig.googleapis.com/v1beta1/projects/lawyer-app-ed056/configs/google/variables/refresh_token {"name":"projects/lawyer-app-ed056/configs/google/variables/refresh_token","updateTime":"2024-10-01T19:00:18.897128407Z","text":"1//04NOFgbpUMdLSCgYIARAAGAQSNwF-L9IrQMKpytj-5Eg0tXGB6LNfsyoPSSgf6volBMA6owqFgHLSpA1Q45ci-MeWxX06yUCRUSk"}
+[debug] [2024-10-16T23:44:59.119Z] Validating nodejs source
+[warn] !  functions: package.json indicates an outdated version of firebase-functions. Please upgrade using npm install --save firebase-functions@latest in your functions directory. 
+[warn] !  functions: Please note that there will be breaking changes when you upgrade. 
+[debug] [2024-10-16T23:45:05.324Z] > [functions] package.json contents: {
+  "name": "functions",
+  "description": "Cloud Functions for Firebase",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "shell": "firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "@google-cloud/secret-manager": "^5.6.0",
+    "express": "^4.21.1",
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.0",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "firebase-functions-test": "^3.1.0"
+  },
+  "private": true
+}
+[debug] [2024-10-16T23:45:05.324Z] Building nodejs source
+[info] i  functions: Loading and analyzing source code for codebase default to determine what to deploy 
+[debug] [2024-10-16T23:45:05.326Z] Could not find functions.yaml. Must use http discovery
+[debug] [2024-10-16T23:45:05.335Z] Found firebase-functions binary at 'C:\Users\Jea\OneDrive - National University\Desktop\ibp_web-app\meeting-functions\node_modules\.bin\firebase-functions'
+[info] Serving at port 8348
+
+[debug] [2024-10-16T23:45:06.681Z] Got response from /__/functions.yaml {"endpoints":{"api":{"platform":"gcfv1","availableMemoryMb":null,"timeoutSeconds":null,"minInstances":null,"maxInstances":null,"ingressSettings":null,"serviceAccountEmail":null,"vpc":null,"httpsTrigger":{},"entryPoint":"api"}},"specVersion":"v1alpha1","requiredAPIs":[],"extensions":{}}
+[info] i  extensions: ensuring required API firebaseextensions.googleapis.com is enabled... 
+[debug] [2024-10-16T23:45:06.722Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:45:06.722Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:45:06.722Z] >>> [apiv2][query] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/firebaseextensions.googleapis.com [none]
+[debug] [2024-10-16T23:45:06.722Z] >>> [apiv2][(partial)header] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/firebaseextensions.googleapis.com x-goog-quota-user=projects/lawyer-app-ed056
+[debug] [2024-10-16T23:45:09.652Z] <<< [apiv2][status] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/firebaseextensions.googleapis.com 200
+[debug] [2024-10-16T23:45:09.652Z] <<< [apiv2][body] GET https://serviceusage.googleapis.com/v1/projects/lawyer-app-ed056/services/firebaseextensions.googleapis.com [omitted]
+[info] +  extensions: required API firebaseextensions.googleapis.com is enabled 
+[debug] [2024-10-16T23:45:09.653Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2024-10-16T23:45:09.653Z] > authorizing via signed-in user (nubcapstone@gmail.com)
+[debug] [2024-10-16T23:45:09.653Z] [iam] checking project lawyer-app-ed056 for permissions ["firebase.projects.get","firebaseextensions.instances.list"]
+[debug] [2024-10-16T23:45:09.653Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:45:09.653Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:45:09.653Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions [none]
+[debug] [2024-10-16T23:45:09.653Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions x-goog-quota-user=projects/lawyer-app-ed056
+[debug] [2024-10-16T23:45:09.653Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2024-10-16T23:45:10.531Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions 200
+[debug] [2024-10-16T23:45:10.532Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/lawyer-app-ed056:testIamPermissions {"permissions":["firebase.projects.get","firebaseextensions.instances.list"]}
+[debug] [2024-10-16T23:45:10.532Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:45:10.532Z] Checked if tokens are valid: true, expires at: 1729124973181
+[debug] [2024-10-16T23:45:10.532Z] >>> [apiv2][query] GET https://firebaseextensions.googleapis.com/v1beta/projects/lawyer-app-ed056/instances pageSize=100&pageToken=
